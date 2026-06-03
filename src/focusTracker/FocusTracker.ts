@@ -1,4 +1,4 @@
-import { Plugin, WorkspaceLeaf, View, TFile } from 'obsidian';
+import { Plugin, TFile, View, WorkspaceLeaf } from 'obsidian';
 
 const TRACKED_VIEW_TYPES = new Set(['markdown', 'canvas', 'excalidraw']);
 
@@ -17,15 +17,6 @@ export interface FocusListener {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-export const ConsoleFocusListener: FocusListener = {
-  onFocus(event: FocusEvent): void {
-    console.log('[FocusTracker] focus', event);
-  },
-  onUnfocus(event: FocusEvent): void {
-    console.log('[FocusTracker] unfocus', event);
-  },
-};
 
 function isTrackedType(view: View | null): boolean {
   return TRACKED_VIEW_TYPES.has(view?.getViewType() ?? '');

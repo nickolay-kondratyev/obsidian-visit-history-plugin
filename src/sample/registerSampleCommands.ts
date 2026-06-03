@@ -43,8 +43,4 @@ export function registerSampleCommands(plugin: VisitHistoryPlugin): void {
     new Notice('Click6');
   });
 
-  //
-  // plugin.registerInterval(
-  //   window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000),
-  // );
 }
