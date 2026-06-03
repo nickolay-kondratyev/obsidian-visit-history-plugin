@@ -1,11 +1,11 @@
 {
-	"id": "sample-plugin",
-	"name": "Sample Plugin",
+	"id": "vintrin-visit-history-plugin",
+	"name": "Visit History Plugin",
 	"version": "1.0.0",
 	"minAppVersion": "1.0.0",
-	"description": "Demonstrates some of the capabilities of the Obsidian API.",
-	"author": "Obsidian",
-	"authorUrl": "https://obsidian.md",
-	"fundingUrl": "https://obsidian.md/pricing",
+	"description": "Records the visit history of notes",
+	"author": "Nickolay Kondratyev",
+	"authorUrl": "http://glassthought.com",
+	"fundingUrl": "http://glassthought.com",
 	"isDesktopOnly": false
 }
