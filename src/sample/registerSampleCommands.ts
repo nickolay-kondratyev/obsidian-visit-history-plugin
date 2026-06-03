@@ -40,7 +40,7 @@ export function registerSampleCommands(plugin: VisitHistoryPlugin): void {
   plugin.addSettingTab(new SampleSettingTab(plugin.app, plugin));
 
   plugin.registerDomEvent(activeDocument, 'click', (_evt: MouseEvent) => {
-    new Notice('Click5');
+    new Notice('Click6');
   });
 
   //

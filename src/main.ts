@@ -1,7 +1,7 @@
 import { Plugin } from 'obsidian';
 import { DEFAULT_SETTINGS, VisitHistoryPluginSettings } from './settings';
 import { registerSampleCommands } from './sample/registerSampleCommands';
-import { FocusTracker } from './FocusTracker';
+import { ConsoleFocusListener, FocusTracker } from "./focusTracker/FocusTracker";
 
 // ── VisitHistoryPlugin ────────────────────────────────────────────────────────
 export default class VisitHistoryPlugin extends Plugin {
@@ -12,7 +12,7 @@ export default class VisitHistoryPlugin extends Plugin {
     await this.loadSettings();
 
     this.focusTracker = new FocusTracker(this);
-    this.focusTracker.register();
+    this.focusTracker.registerListener(ConsoleFocusListener);
 
     registerSampleCommands(this);
   }
