@@ -1,12 +1,12 @@
 import { Plugin, } from 'obsidian';
-import { DEFAULT_SETTINGS, MyPluginSettings, } from './settings';
+import { DEFAULT_SETTINGS, VisitHistoryPluginSettings } from './settings';
 import { registerSampleCommands } from "./sample/registerSampleCommands";
 
 // Remember to rename these classes and interfaces!
 
 // ── VisitHistoryPlugin ────────────────────────────────────────────────────────
 export default class VisitHistoryPlugin extends Plugin {
-  settings!: MyPluginSettings;
+  settings!: VisitHistoryPluginSettings;
 
   async onload() {
     await this.loadSettings();

@@ -1,11 +1,11 @@
 import { App, PluginSettingTab, Setting } from 'obsidian';
 import VisitHistoryPlugin from './main';
 
-export interface MyPluginSettings {
+export interface VisitHistoryPluginSettings {
 	mySetting: string;
 }
 
-export const DEFAULT_SETTINGS: MyPluginSettings = {
+export const DEFAULT_SETTINGS: VisitHistoryPluginSettings = {
 	mySetting: 'default',
 };
 
