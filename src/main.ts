@@ -1,104 +1,97 @@
 import {
-	Editor,
-	MarkdownView,
-	MarkdownFileInfo,
-	Modal,
-	Notice,
-	Plugin,
+  Editor,
+  MarkdownView,
+  MarkdownFileInfo,
+  Modal,
+  Notice,
+  Plugin,
 } from 'obsidian';
 import {
-	DEFAULT_SETTINGS,
-	MyPluginSettings,
-	SampleSettingTab,
+  DEFAULT_SETTINGS,
+  MyPluginSettings,
+  SampleSettingTab,
 } from './settings';
 
 // Remember to rename these classes and interfaces!
 
+// ── registerSampleCommands ────────────────────────────────────────────────────
+// Registers all boilerplate sample functionality onto the given plugin instance.
+// Call from onload() after settings are ready.
+function registerSampleCommands(plugin: Plugin): void {
+  plugin.addRibbonIcon('dice', 'Sample', (_evt: MouseEvent) => {
+    new Notice('This is a notice!');
+  });
+
+  const statusBarItemEl = plugin.addStatusBarItem();
+  statusBarItemEl.setText('Status bar text');
+
+  plugin.addCommand({
+    id: 'open-modal-simple',
+    name: 'Open modal (simple)',
+    callback: () => {
+      new SampleModal(plugin.app).open();
+    },
+  });
+
+  plugin.addCommand({
+    id: 'open-modal-complex',
+    name: 'Open modal (complex)',
+    checkCallback: (checking: boolean) => {
+      const markdownView = plugin.app.workspace.getActiveViewOfType(MarkdownView);
+      if (markdownView) {
+        if (!checking) {
+          new SampleModal(plugin.app).open();
+        }
+        return true;
+      }
+      return false;
+    },
+  });
+
+  plugin.addSettingTab(new SampleSettingTab(plugin.app, plugin));
+
+  plugin.registerDomEvent(activeDocument, 'click', (_evt: MouseEvent) => {
+    new Notice('Click2');
+  });
+
+  plugin.registerInterval(
+    window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000),
+  );
+}
+
+// ── VisitHistoryPlugin ────────────────────────────────────────────────────────
 export default class VisitHistoryPlugin extends Plugin {
-	settings!: MyPluginSettings;
+  settings!: MyPluginSettings;
 
-	async onload() {
-		await this.loadSettings();
+  async onload() {
+    await this.loadSettings();
+    registerSampleCommands(this);
+  }
 
-		// This creates an icon in the left ribbon.
-		this.addRibbonIcon('dice', 'Sample', (_evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
-		});
+  onunload() {
+  }
 
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status bar text');
+  async loadSettings() {
+    this.settings = Object.assign(
+      {},
+      DEFAULT_SETTINGS,
+      (await this.loadData()) as Partial<MyPluginSettings>,
+    );
+  }
 
-		// This adds a simple command that can be triggered anywhere
-		this.addCommand({
-			id: 'open-modal-simple',
-			name: 'Open modal (simple)',
-			callback: () => {
-				new SampleModal(this.app).open();
-			},
-		});
-
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
-		this.addCommand({
-			id: 'open-modal-complex',
-			name: 'Open modal (complex)',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView =
-					this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new SampleModal(this.app).open();
-					}
-
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
-				}
-				return false;
-			},
-		});
-
-		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
-
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(activeDocument, 'click', (_evt: MouseEvent) => {
-			new Notice('Click');
-		});
-
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(
-			window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000),
-		);
-	}
-
-	onunload() {}
-
-	async loadSettings() {
-		this.settings = Object.assign(
-			{},
-			DEFAULT_SETTINGS,
-			(await this.loadData()) as Partial<MyPluginSettings>,
-		);
-	}
-
-	async saveSettings() {
-		await this.saveData(this.settings);
-	}
+  async saveSettings() {
+    await this.saveData(this.settings);
+  }
 }
 
 class SampleModal extends Modal {
-	onOpen() {
-		const { contentEl } = this;
-		contentEl.setText('Woah!');
-	}
+  onOpen() {
+    const {contentEl} = this;
+    contentEl.setText('Woah!');
+  }
 
-	onClose() {
-		const { contentEl } = this;
-		contentEl.empty();
-	}
+  onClose() {
+    const {contentEl} = this;
+    contentEl.empty();
+  }
 }
