@@ -3,7 +3,7 @@
 	"name": "Visit History Plugin",
 	"version": "1.0.0",
 	"minAppVersion": "1.0.0",
-	"description": "Records the visit history of notes",
+	"description": "Records the visit history of notes and canvases.",
 	"author": "Nickolay Kondratyev",
 	"authorUrl": "http://glassthought.com",
 	"fundingUrl": "http://glassthought.com",
