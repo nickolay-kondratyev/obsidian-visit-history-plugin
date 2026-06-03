@@ -3,6 +3,7 @@ import { DEFAULT_SETTINGS, VisitHistoryPluginSettings } from './settings';
 import { registerSampleCommands } from './sample/registerSampleCommands';
 import { FocusTracker } from "./focusTracker/FocusTracker";
 import { ConsoleFocusListener } from "./focusTracker/listener/ConsoleFocusListener";
+import { LinkUtilDefault } from "./util";
 
 // ── VisitHistoryPlugin ────────────────────────────────────────────────────────
 export default class VisitHistoryPlugin extends Plugin {
@@ -12,7 +13,7 @@ export default class VisitHistoryPlugin extends Plugin {
   async onload() {
     await this.loadSettings();
 
-    this.focusTracker = new FocusTracker(this);
+    this.focusTracker = new FocusTracker(this, new LinkUtilDefault());
     this.focusTracker.registerListener(ConsoleFocusListener);
 
     registerSampleCommands(this);

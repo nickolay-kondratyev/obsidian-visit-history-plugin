@@ -36,7 +36,10 @@ export class FocusTracker {
   private previousLeaf: WorkspaceLeaf | null = null;
   private listeners: FocusListener[] = [];
 
-  constructor(private readonly plugin: Plugin) {
+  constructor(
+    private readonly plugin: Plugin,
+    private readonly linkUtil: LinkUtil
+    ) {
     this.plugin.registerEvent(
       this.plugin.app.workspace.on('active-leaf-change', (leaf) => {
         this.handleLeafChange(leaf ?? null);
