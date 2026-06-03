@@ -1,15 +1,19 @@
-import { Plugin, } from 'obsidian';
+import { Plugin } from 'obsidian';
 import { DEFAULT_SETTINGS, VisitHistoryPluginSettings } from './settings';
-import { registerSampleCommands } from "./sample/registerSampleCommands";
-
-// Remember to rename these classes and interfaces!
+import { registerSampleCommands } from './sample/registerSampleCommands';
+import { FocusTracker } from './FocusTracker';
 
 // ── VisitHistoryPlugin ────────────────────────────────────────────────────────
 export default class VisitHistoryPlugin extends Plugin {
   settings!: VisitHistoryPluginSettings;
+  private focusTracker!: FocusTracker;
 
   async onload() {
     await this.loadSettings();
+
+    this.focusTracker = new FocusTracker(this);
+    this.focusTracker.register();
+
     registerSampleCommands(this);
   }
 
@@ -20,7 +24,7 @@ export default class VisitHistoryPlugin extends Plugin {
     this.settings = Object.assign(
       {},
       DEFAULT_SETTINGS,
-      (await this.loadData()) as Partial<MyPluginSettings>,
+      (await this.loadData()) as Partial<VisitHistoryPluginSettings>,
     );
   }
 
@@ -28,4 +32,3 @@ export default class VisitHistoryPlugin extends Plugin {
     await this.saveData(this.settings);
   }
 }
-
