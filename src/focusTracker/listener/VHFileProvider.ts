@@ -1,7 +1,6 @@
 import { LinkUtil } from "../../util";
 import { UserNotifier } from "../../util/userComm/UserNotifier";
-import { FocusEvent } from "../FocusTracker";
-
+import { TFile } from 'obsidian';
 import { ulid } from 'ulid';
 import { LRUCache } from 'lru-cache';
 import { NoteFileUtil } from "../../util/file/note/NoteFileUtil";
@@ -28,8 +27,9 @@ export class VHFileProvider {
 
   private static readonly V1_VH_FOCUS_DIR: string = "_visit_history/v1/focus";
 
-  async getOrCreateVHFilePath(event: FocusEvent): Promise<string | null> {
-    const noteFilePathInVault = event.file.path;
+  /** Gets or Creates the VH file for this machine. */
+  async getOrCreateVHFilePath(file: TFile): Promise<string | null> {
+    const noteFilePathInVault = file.path;
 
     // Fast path: we previously created this VH file ourselves and cached the
     // result. Skip backlink querying and file creation entirely.
@@ -42,7 +42,7 @@ export class VHFileProvider {
     // Always re-query backlinks rather than caching the result. The user may
     // rename or move notes, and a stale cached path would silently log visits
     // to the wrong (or nonexistent) VH file.
-    const allBacklinks = this.linkUtil.getBacklinks(event.file);
+    const allBacklinks = this.linkUtil.getBacklinks(file);
     const vhBacklinks =
       allBacklinks
         .filter(bl =>
