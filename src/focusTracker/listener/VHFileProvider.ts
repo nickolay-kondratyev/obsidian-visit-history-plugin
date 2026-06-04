@@ -27,6 +27,22 @@ export class VHFileProvider {
 
   private static readonly V1_VH_FOCUS_DIR: string = "_visit_history/v1/focus";
 
+  async getAllVHFocusFiles(file: TFile): Promise<TFile[]> {
+    const allBacklinks = this.linkUtil.getBacklinks(file);
+
+    const vhBacklinks =
+      allBacklinks
+        .filter(bl =>
+          bl.path.startsWith(VHFileProvider.V1_VH_FOCUS_DIR)
+        );
+
+    if (vhBacklinks.length === 0) return [];
+
+    return vhBacklinks.map((bl) => {
+      return bl.file
+    });
+  }
+
   /** Gets or Creates the VH file for this machine. */
   async getOrCreateVHFilePathForThisMachine(file: TFile): Promise<string | null> {
     const noteFilePathInVault = file.path;

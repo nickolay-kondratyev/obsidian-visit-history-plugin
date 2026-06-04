@@ -13,4 +13,6 @@ export interface NoteFileUtil {
    * Appends content to an existing note. Throws if the file does not exist.
    */
   appendLineToNote(existingFilePathInVault: string, contentToAppend: string): Promise<void>;
+
+  cachedRead(file: TFile): Promise<string>;
 }

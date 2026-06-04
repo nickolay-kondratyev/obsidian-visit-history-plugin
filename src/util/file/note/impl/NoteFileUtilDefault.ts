@@ -7,6 +7,10 @@ export class NoteFileUtilDefault implements NoteFileUtil {
   constructor(private readonly app: App) {
   }
 
+  async cachedRead(file: TFile): Promise<string> {
+    return await this.app.vault.cachedRead(file);
+  }
+
   /**
    * Creates a new note at the given vault path with optional initial content.
    * Intermediate folders are created automatically if they don't exist.
