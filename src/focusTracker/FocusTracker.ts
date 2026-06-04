@@ -7,7 +7,7 @@ const TRACKED_VIEW_TYPES = new Set(['markdown', 'canvas', 'excalidraw']);
 export interface FocusEvent {
   type: string;   // 'markdown' | 'canvas' | 'excalidraw'
   title: string;
-  file: TFile | null;
+  file: TFile;
 }
 
 export interface FocusListener {
@@ -18,15 +18,17 @@ export interface FocusListener {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function isTrackedType(view: View | null): boolean {
-  return TRACKED_VIEW_TYPES.has(view?.getViewType() ?? '');
+function isTrackedView(view: View | null): boolean {
+  let ofRightType = TRACKED_VIEW_TYPES.has(view?.getViewType() ?? '');
+
+  return ofRightType && (view as any).file !== null;
 }
 
 function viewToFocusEvent(view: View): FocusEvent {
   return {
     type: view.getViewType(),
     title: view.getDisplayText(),
-    file: (view as any).file ?? null,
+    file: (view as any).file,
   };
 }
 
@@ -38,8 +40,7 @@ export class FocusTracker {
 
   constructor(
     private readonly plugin: Plugin,
-    private readonly linkUtil: LinkUtil
-    ) {
+  ) {
     this.plugin.registerEvent(
       this.plugin.app.workspace.on('active-leaf-change', (leaf) => {
         this.handleLeafChange(leaf ?? null);
@@ -56,13 +57,13 @@ export class FocusTracker {
   private handleLeafChange(leaf: WorkspaceLeaf | null): void {
     if (this.previousLeaf && this.previousLeaf !== leaf) {
       const prev = this.previousLeaf.view;
-      if (isTrackedType(prev)) {
+      if (isTrackedView(prev)) {
         const event = viewToFocusEvent(prev);
         this.listeners.forEach((l) => l.onUnfocus(event));
       }
     }
 
-    if (leaf && isTrackedType(leaf.view)) {
+    if (leaf && isTrackedView(leaf.view)) {
       const event = viewToFocusEvent(leaf.view);
       this.listeners.forEach((l) => l.onFocus(event));
     }
