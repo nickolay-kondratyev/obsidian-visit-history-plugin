@@ -5,6 +5,7 @@ import { FocusEvent } from "../FocusTracker";
 import { ulid } from 'ulid';
 import { LRUCache } from 'lru-cache';
 import { NoteFileUtil } from "../../util/file/note/NoteFileUtil";
+import { DeviceNameProvider } from "../../util/env/DeviceNameProvider";
 
 // Only cache paths for VH files that THIS plugin created. We intentionally
 // do NOT cache backlink-resolved paths because the user may rename/move notes,
@@ -21,14 +22,14 @@ export class VHFileProvider {
   constructor(
     private readonly linkUtil: LinkUtil,
     private readonly userNotifier: UserNotifier,
-    private readonly noteFileUtil: NoteFileUtil) {
+    private readonly noteFileUtil: NoteFileUtil,
+    private readonly deviceNameProvider: DeviceNameProvider) {
   }
 
   private static readonly V1_VH_FOCUS_DIR: string = "_visit_history/v1/focus";
 
   async getOrCreateVHFilePath(event: FocusEvent): Promise<string | null> {
     const noteFilePathInVault = event.file.path;
-    console.log("[VHP][getOrCreateVHFilePath] AT_START createdVhPathCache=", Object.fromEntries(createdVhPathCache.entries()));
 
     // Fast path: we previously created this VH file ourselves and cached the
     // result. Skip backlink querying and file creation entirely.
@@ -43,7 +44,11 @@ export class VHFileProvider {
     // to the wrong (or nonexistent) VH file.
     const allBacklinks = this.linkUtil.getBacklinks(event.file);
     const vhBacklinks =
-      allBacklinks.filter(bl => bl.path.startsWith(VHFileProvider.V1_VH_FOCUS_DIR));
+      allBacklinks
+        .filter(bl =>
+          bl.path.startsWith(VHFileProvider.V1_VH_FOCUS_DIR)
+          && bl.path.contains(this.deviceNameProvider.getDeviceName())
+        );
 
     if (vhBacklinks === undefined) {
       this.userNotifier.showError("[VHP][getOrCreateVHFilePath] visit history backlinks are undefined");
@@ -76,7 +81,7 @@ export class VHFileProvider {
       // unique, time-sortable, and not derived from the note title (which
       // could change). The backlink embedded in the file content is what ties
       // it to the source note.
-      const filePathInVault = `${VHFileProvider.V1_VH_FOCUS_DIR}/_vh_${ulid()}.md`;
+      const filePathInVault = `${VHFileProvider.V1_VH_FOCUS_DIR}/${this.deviceNameProvider.getDeviceName()}/_vh_${ulid()}.md`;
 
       vhFilePath = (await this.noteFileUtil.createNote(
         filePathInVault,
