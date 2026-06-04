@@ -23,7 +23,6 @@ export default class VisitHistoryPlugin extends Plugin {
     await this.loadSettings();
 
     const linkUtil = new LinkUtilDefault(this.app);
-    const outFactory = new OutFactoryConsole();
 
     const deviceNameProvider = new DeviceNameProviderDefault();
     const noteFileUtil = new NoteFileUtilDefault(this.app);
