@@ -12,17 +12,41 @@ export class VisitHistoryFocusListenerDefault implements FocusListener {
     private readonly noteFileUtil: NoteFileUtil) {
   }
 
+  private static readonly V1_VH_FOCUS_DIR: string = "_visit_history/v1/focus";
+
+  private lastRecordedVhPath: string = "I_DONT_EXIST_PATH";
+
   async onFocus(event: FocusEvent): Promise<void> {
-    const allBacklinks = this.linkUtil.getBacklinks(event.file);
-    const vhBacklinks =
-      allBacklinks.filter(bl => bl.path.startsWith("_visit_history/v1/"));
-    if (vhBacklinks === undefined) {
-      this.userNotifier.showError("[VHP] visit history backlinks are undefined");
+    const vhFile = await this.getVHFile(event);
+    if (vhFile === null) {
       return;
     }
+    const vhFilePath = vhFile.path;
 
-    console.log("");
-    console.log('[FocusTracker] FOCUS EVENT:', event);
+    if (this.lastRecordedVhPath === vhFilePath) {
+      console.log("[VHP] Skip last focus was already the same file.");
+    } else {
+      await this.noteFileUtil.appendLineToNote(
+        vhFilePath,
+        Date.now().toString()
+      );
+    }
+
+    this.lastRecordedVhPath = vhFilePath;
+  }
+
+  async onUnfocus(event: FocusEvent): Promise<void> {
+    console.log('[FocusTracker] UNFOCUS', event);
+  }
+
+  async getVHFile(event: FocusEvent): Promise<TFile | null> {
+    const allBacklinks = this.linkUtil.getBacklinks(event.file);
+    const vhBacklinks =
+      allBacklinks.filter(bl => bl.path.startsWith(VisitHistoryFocusListenerDefault.V1_VH_FOCUS_DIR));
+    if (vhBacklinks === undefined) {
+      this.userNotifier.showError("[VHP] visit history backlinks are undefined");
+      return null;
+    }
 
     let vhFile: TFile;
 
@@ -34,20 +58,18 @@ export class VisitHistoryFocusListenerDefault implements FocusListener {
       const bl = vhBacklinks[0];
       if (bl?.file === undefined) {
         this.userNotifier.showError("[VHP] backlink has no associated file");
-        return;
+        return null;
       }
       vhFile = bl.file;
 
     } else {
-      vhFile = await this.noteFileUtil.createNote("_visit_history/v1/_visit_history_" + ulid() + ".md",
+      let filePathInVault = `${VisitHistoryFocusListenerDefault.V1_VH_FOCUS_DIR}/_vh_${ulid()}.md`;
+
+      vhFile = await this.noteFileUtil.createNote(filePathInVault,
         `VISIT_HISTORY_V1_FOR:[[${event.file.path}]]\n` +
         "### VISIT_HISTORY_V1:\n")
     }
 
-    console.log("[VHP] VH FILE: ", vhFile);
-  }
-
-  async onUnfocus(event: FocusEvent): Promise<void> {
-    console.log('[FocusTracker] UNFOCUS', event);
+    return vhFile;
   }
 };
