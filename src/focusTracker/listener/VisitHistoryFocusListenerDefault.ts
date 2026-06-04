@@ -20,7 +20,7 @@ export class VisitHistoryFocusListenerDefault implements FocusListener {
       if (vhBacklinks.length > 1) {
         this.userNotifier.showError("More than one visit history backlink found for the file=" + event.file.path);
       }
-      
+
       console.log('[FocusTracker] FOCUS VH-BACKLINKS:', vhBacklinks);
     } else {
 

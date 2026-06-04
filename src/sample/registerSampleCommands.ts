@@ -5,6 +5,7 @@ import { MarkdownView, Notice, Plugin } from "obsidian";
 import { VisitHistorySampleModal } from "./visitHistorySampleModal";
 import { SampleSettingTab } from "../settings";
 import VisitHistoryPlugin from "../main";
+import { ulid } from 'ulid';
 
 export function registerSampleCommands(plugin: VisitHistoryPlugin): void {
   plugin.addRibbonIcon('dice', 'Sample', (_evt: MouseEvent) => {
@@ -40,6 +41,9 @@ export function registerSampleCommands(plugin: VisitHistoryPlugin): void {
   plugin.addSettingTab(new SampleSettingTab(plugin.app, plugin));
 
   plugin.registerDomEvent(activeDocument, 'click', (_evt: MouseEvent) => {
+
+    const id = ulid();
+
     plugin.userNotifier.showInfo("Click13");
   });
 
