@@ -21,4 +21,8 @@ data.json
 # Exclude macOS Finder (System Explorer) View States
 .DS_Store
 
+# Gradle
+.gradle
+build/
+
 *do_not_commit*

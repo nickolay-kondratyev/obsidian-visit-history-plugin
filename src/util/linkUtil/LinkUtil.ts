@@ -30,19 +30,17 @@ export class LinkUtilDefault implements LinkUtil {
    * indexed by the metadata cache.
    */
   getBacklinks(file: TFile): Backlink[] {
-    const backlinksData = this.app.metadataCache.getBacklinksForFile(file);
-
-    return backlinksData.keys()
-      .map((sourcePath: string): Backlink | null => {
+    return Object.entries(this.app.metadataCache.resolvedLinks)
+      .filter(([_sourcePath, destinations]) => file.path in destinations)
+      .flatMap(([sourcePath]) => {
         const sourceFile = this.app.vault.getFileByPath(sourcePath);
-        if (!sourceFile) return null;  // file deleted since last index
+        if (!sourceFile) return [];
 
-        return {
+        return [{
           file: sourceFile,
           path: sourceFile.path,
           title: sourceFile.basename,
-        };
-      })
-      .filter((b): b is Backlink => b !== null);
+        }];
+      });
   }
 }
