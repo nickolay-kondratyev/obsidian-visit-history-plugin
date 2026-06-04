@@ -10,6 +10,7 @@ import { UserNotifierDefault } from "./util/userComm/impl/UserNotifierDefault";
 import { NoteFileUtilDefault } from "./util/file/note/impl/NoteFileUtilDefault";
 import { VHFileProvider } from "./focusTracker/listener/VHFileProvider";
 import { DeviceNameProviderDefault } from "./util/env/DeviceNameProvider";
+import { VisitHistoryServiceDefault } from "./service/visitHistoryService/VisitHistoryService";
 
 // ── VisitHistoryPlugin ────────────────────────────────────────────────────────
 export default class VisitHistoryPlugin extends Plugin {
@@ -27,8 +28,9 @@ export default class VisitHistoryPlugin extends Plugin {
     const noteFileUtil = new NoteFileUtilDefault(this.app);
     this.focusTracker = new FocusTracker(this);
     const vhFileProvider = new VHFileProvider(linkUtil, this.userNotifier, noteFileUtil, deviceNameProvider);
+    const visitHistoryService = new VisitHistoryServiceDefault(vhFileProvider, noteFileUtil);
     const focusListener = new VisitHistoryFocusListenerDefault(
-      vhFileProvider, noteFileUtil);
+      visitHistoryService);
 
     this.focusTracker.registerListener(focusListener);
 

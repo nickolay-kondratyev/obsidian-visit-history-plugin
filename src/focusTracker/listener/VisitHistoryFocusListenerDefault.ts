@@ -1,17 +1,13 @@
 import { FocusEvent, FocusListener } from "../FocusTracker";
 
-import { NoteFileUtil } from "../../util/file/note/NoteFileUtil";
-import { VHFileProvider } from "./VHFileProvider";
+import { VisitHistoryService } from "../../service/visitHistoryService/VisitHistoryService";
 
 
 export class VisitHistoryFocusListenerDefault implements FocusListener {
   constructor(
-    private readonly vhFileProvider: VHFileProvider,
-    private readonly noteFileUtil: NoteFileUtil) {
+    private readonly visitHistoryService: VisitHistoryService) {
   }
 
-
-  private lastRecordedVhPath: string = "I_DONT_EXIST_PATH";
 
   // Tracks in-flight onFocus executions keyed by note path.
   //
@@ -59,21 +55,7 @@ export class VisitHistoryFocusListenerDefault implements FocusListener {
   }
 
   private async _doOnFocus(event: FocusEvent): Promise<void> {
-    const vhFilePath = await this.vhFileProvider.getOrCreateVHFilePathForThisMachine(event.file);
-    if (vhFilePath === null) {
-      return;
-    }
-
-    if (this.lastRecordedVhPath === vhFilePath) {
-      console.log("[VHP] Skip — last focus was already the same file.");
-    } else {
-      await this.noteFileUtil.appendLineToNote(
-        vhFilePath,
-        Date.now().toString()
-      );
-    }
-
-    this.lastRecordedVhPath = vhFilePath;
+    await this.visitHistoryService.recordVisitNowOnFocus(event.file);
   }
 
   async onUnfocus(event: FocusEvent): Promise<void> {

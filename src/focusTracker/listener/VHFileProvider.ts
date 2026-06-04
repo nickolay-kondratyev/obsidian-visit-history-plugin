@@ -5,6 +5,7 @@ import { ulid } from 'ulid';
 import { LRUCache } from 'lru-cache';
 import { NoteFileUtil } from "../../util/file/note/NoteFileUtil";
 import { DeviceNameProvider } from "../../util/env/DeviceNameProvider";
+import { FocusFile } from "../data/FocusFile";
 
 // Only cache paths for VH files that THIS plugin created. We intentionally
 // do NOT cache backlink-resolved paths because the user may rename/move notes,
@@ -27,7 +28,8 @@ export class VHFileProvider {
 
   private static readonly V1_VH_FOCUS_DIR: string = "_visit_history/v1/focus";
 
-  async getAllVHFocusFiles(file: TFile): Promise<TFile[]> {
+  /** Gets all the Visit history V1 files if they exist (focus files). */
+  async getAllVHFocusFiles(file: TFile): Promise<FocusFile[]> {
     const allBacklinks = this.linkUtil.getBacklinks(file);
 
     const vhBacklinks =
@@ -39,7 +41,7 @@ export class VHFileProvider {
     if (vhBacklinks.length === 0) return [];
 
     return vhBacklinks.map((bl) => {
-      return bl.file
+      return new FocusFile(bl.file)
     });
   }
 
