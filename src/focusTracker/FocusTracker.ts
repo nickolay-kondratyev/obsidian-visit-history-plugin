@@ -11,9 +11,9 @@ export interface FocusEvent {
 }
 
 export interface FocusListener {
-  onFocus(event: FocusEvent): void;
+  onFocus(event: FocusEvent): Promise<void>;
 
-  onUnfocus(event: FocusEvent): void;
+  onUnfocus(event: FocusEvent): Promise<void>;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -38,7 +38,7 @@ export class FocusTracker {
   ) {
     this.plugin.registerEvent(
       this.plugin.app.workspace.on('active-leaf-change', (leaf) => {
-        this.handleLeafChange(leaf ?? null);
+        void this.handleLeafChange(leaf ?? null);
       })
     );
   }
@@ -49,18 +49,22 @@ export class FocusTracker {
 
   // ── private ───────────────────────────────────────────────────────────────
 
-  private handleLeafChange(leaf: WorkspaceLeaf | null): void {
+  private async handleLeafChange(leaf: WorkspaceLeaf | null): Promise<void> {
     if (this.previousLeaf && this.previousLeaf !== leaf) {
       const prev = this.previousLeaf.view;
       if (this.isTrackedView(prev)) {
         const event = viewToFocusEvent(prev);
-        this.listeners.forEach((l) => l.onUnfocus(event));
+        for (const l of this.listeners) {
+          await l.onUnfocus(event);
+        }
       }
     }
 
     if (leaf && this.isTrackedView(leaf.view)) {
       const event = viewToFocusEvent(leaf.view);
-      this.listeners.forEach((l) => l.onFocus(event));
+      for (const l of this.listeners) {
+        await l.onFocus(event);
+      }
     }
 
     this.previousLeaf = leaf;

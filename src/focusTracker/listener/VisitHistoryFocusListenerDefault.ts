@@ -11,7 +11,7 @@ export class VisitHistoryFocusListenerDefault implements FocusListener {
     private readonly noteFileUtil: NoteFileUtil) {
   }
 
-  onFocus(event: FocusEvent) {
+  async onFocus(event: FocusEvent): Promise<void> {
     const allBacklinks = this.linkUtil.getBacklinks(event.file);
     const vhBacklinks =
       allBacklinks.filter(bl => bl.path.startsWith("_visit_history/v1/"));
@@ -28,7 +28,7 @@ export class VisitHistoryFocusListenerDefault implements FocusListener {
       console.log('[FocusTracker] FOCUS VH-BACKLINKS:', vhBacklinks);
 
     } else {
-      this.noteFileUtil.createNote("_visit_history/v1/_visit_history_" + ulid() + ".md",
+      await this.noteFileUtil.createNote("_visit_history/v1/_visit_history_" + ulid() + ".md",
         `VISIT_HISTORY_V1_FOR:[[${event.file.path}]]\n` +
         "### VISIT_HISTORY_V1:\n")
 
@@ -36,7 +36,7 @@ export class VisitHistoryFocusListenerDefault implements FocusListener {
     }
   }
 
-  onUnfocus(event: FocusEvent) {
+  async onUnfocus(event: FocusEvent): Promise<void> {
     console.log('[FocusTracker] UNFOCUS', event);
   }
 };
