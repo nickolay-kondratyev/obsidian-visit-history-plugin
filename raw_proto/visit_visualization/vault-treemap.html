@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+<!--
+  VAULT TREEMAP — STANDALONE PROTOTYPE
+  ─────────────────────────────────────────────────────────────────
+  This file is the reference prototype for the vault-treemap Obsidian
+  plugin feature. It is intentionally self-contained (no build step).
+
+  RUNTIME DEPS (CDN) → PLUGIN EQUIVALENTS
+  ┌─────────────────────────────┬─────────────────────────────────────┐
+  │ Prototype (CDN)             │ Plugin                              │
+  ├─────────────────────────────┼─────────────────────────────────────┤
+  │ preact + preact/hooks       │ react + react-dom  (Obsidian-bundled│
+  │ htm                         │ JSX via tsconfig jsx setting        │
+  │ d3 (full bundle)            │ d3-hierarchy, d3-zoom, d3-interpolate│
+  │                             │ d3-color  (subpackages, tree-shaken)│
+  └─────────────────────────────┴─────────────────────────────────────┘
+
+  COMPONENT → FILE MAP (see integration-plan.md for full detail)
+  App              → src/vault-treemap/components/App.tsx
+  Header           → src/vault-treemap/components/Header.tsx
+  Legend           → src/vault-treemap/components/Legend.tsx
+  ConfigPanel      → src/vault-treemap/components/ConfigPanel/index.tsx
+  HeatmapOptions   → src/vault-treemap/components/ConfigPanel/HeatmapOptions.tsx
+  GradientPicker   → src/vault-treemap/components/ConfigPanel/GradientPicker.tsx
+  TreemapView      → src/vault-treemap/components/TreemapViz.tsx  (renamed)
+  FolderNode       → src/vault-treemap/components/FolderNode.tsx
+  LeafNode         → src/vault-treemap/components/LeafNode.tsx
+  Tooltip          → src/vault-treemap/components/Tooltip.tsx
+  TYPE_C/GRADIENTS → src/vault-treemap/constants.ts
+  pure functions   → src/vault-treemap/utils.ts
+  VaultNode type   → src/vault-treemap/types.ts
+  DATA constant    → src/vault-treemap/dataAdapter.ts  (vault API → tree)
+-->
+<head>
+<meta charset="UTF-8">
+<title>Vault Treemap</title>
+<!-- PLUGIN: remove all four script tags; deps come from npm + bundler -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/preact/10.19.3/preact.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/preact/10.19.3/hooks.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/htm/dist/htm.umd.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/*
+  PLUGIN CSS MIGRATION
+  ────────────────────
+  Extract this block to styles/vault-treemap.css (or append to styles.css).
+  Scope every rule under .vault-treemap-view { ... } to avoid leaking
+  into Obsidian's own UI.
+
+  CSS variable mapping (prototype → Obsidian theme vars):
+    --bg        → --background-primary
+    --surface   → --background-secondary
+    --border    → --background-modifier-border
+    --border2   → --background-modifier-border  (darker variant, keep as-is)
+    --text      → --text-normal
+    --text-dim  → --text-muted
+    --text-mut  → --text-faint
+
+  File-type colors (--md, --canvas, --exd) and gradient colors have no
+  Obsidian equivalent — keep as plugin-specific custom properties.
+  With the Obsidian variable mappings above, both light and dark themes
+  will be respected automatically.
+*/
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --bg:       #0c0c0f;
+  --surface:  #131318;
+  --border:   #222230;
+  --border2:  #2e2e3e;
+  --text:     #c0c0d0;
+  --text-dim: #505062;
+  --text-mut: #282835;
+  --md:       #4a5ed4; --md-h:#6070e8; --md-b:#3248b0; --md-fg:#a0b0ff;
+  --canvas:   #be7220; --cn-h:#d48832; --cn-b:#9a5a10; --cn-fg:#f0c070;
+  --exd:      #1e9e8e; --ex-h:#2cb4a2; --ex-b:#14786c; --ex-fg:#70d4c8;
+}
+html, body { width:100%; height:100%; overflow:hidden; background:var(--bg); color:var(--text); font-family:'IBM Plex Mono',monospace; }
+
+/* ── header ─────────────────────────────── */
+#header { position:fixed; top:0; left:0; right:0; height:42px; background:var(--surface); border-bottom:1px solid var(--border); display:flex; align-items:center; padding:0 14px; gap:14px; z-index:100; overflow:hidden; }
+#title { font-size:11px; font-weight:500; letter-spacing:.14em; text-transform:uppercase; white-space:nowrap; }
+.stats { display:flex; gap:16px; font-size:10px; color:var(--text-dim); border-left:1px solid var(--border); padding-left:14px; flex-shrink:0; }
+.stat strong { color:var(--text); }
+.ts-indicator { font-size:10px; color:var(--text-dim); border-left:1px solid var(--border); padding-left:14px; white-space:nowrap; flex-shrink:0; }
+.ts-indicator strong { color:var(--text); }
+.spacer { flex:1; min-width:4px; }
+.legend { display:flex; gap:10px; font-size:10px; color:var(--text-dim); align-items:center; flex-shrink:0; }
+.legend-item { display:flex; align-items:center; gap:5px; white-space:nowrap; }
+.pip { width:8px; height:8px; border-radius:2px; flex-shrink:0; }
+.legend-grad { height:8px; width:88px; border-radius:3px; }
+.header-btn { font-family:inherit; font-size:10px; background:none; border:1px solid var(--border); color:var(--text-dim); padding:4px 10px; cursor:pointer; letter-spacing:.06em; white-space:nowrap; transition:color .15s,border-color .15s; flex-shrink:0; }
+.header-btn:hover { color:var(--text); border-color:var(--border2); }
+
+/* ── config panel ────────────────────────── */
+#config { position:fixed; top:42px; right:0; width:236px; background:var(--surface); border-left:1px solid var(--border); border-bottom:1px solid var(--border); padding:14px; z-index:99; overflow-y:auto; max-height:calc(100vh - 42px); transform:translateX(100%); transition:transform .2s ease; }
+#config.open { transform:translateX(0); }
+.cfg-h { font-size:9px; letter-spacing:.14em; text-transform:uppercase; color:var(--text-dim); margin-bottom:10px; }
+.cfg-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:9px; }
+.cfg-label { font-size:10px; color:var(--text-dim); display:flex; align-items:center; gap:6px; }
+.cfg-pip { width:6px; height:6px; border-radius:1px; }
+.cfg-input { width:60px; background:var(--bg); border:1px solid var(--border); color:var(--text); font-family:inherit; font-size:10px; padding:3px 6px; text-align:right; }
+.cfg-input:focus { outline:none; border-color:var(--border2); }
+.cfg-sep { border:none; border-top:1px solid var(--border); margin:12px 0; }
+.cfg-select { width:100%; background:var(--bg); border:1px solid var(--border); color:var(--text); font-family:inherit; font-size:10px; padding:4px 6px; margin-bottom:10px; }
+.cfg-select:focus { outline:none; border-color:var(--border2); }
+
+/* ── mode + gradient buttons ─────────────── */
+.mode-row, .grad-row { display:flex; gap:5px; margin-bottom:12px; }
+.mode-btn, .grad-btn { flex:1; font-family:inherit; font-size:10px; letter-spacing:.04em; background:none; border:1px solid var(--border); color:var(--text-dim); padding:6px 4px; cursor:pointer; text-align:center; transition:all .15s; text-transform:uppercase; }
+.grad-btn { text-transform:none; line-height:1.3; padding:6px 4px 5px; }
+.mode-btn:hover, .grad-btn:hover { border-color:var(--border2); color:var(--text); }
+.mode-btn.active, .grad-btn.active { border-color:var(--border2); color:var(--text); }
+.grad-swatch { height:5px; border-radius:2px; margin-bottom:5px; }
+
+/* ── sliders ─────────────────────────────── */
+.slider-wrap { margin-bottom:10px; }
+.slider-label-row { display:flex; justify-content:space-between; font-size:10px; color:var(--text-dim); margin-bottom:4px; }
+.slider-label-row span { color:var(--text); }
+input[type=range] { width:100%; accent-color:var(--border2); cursor:pointer; }
+.grad-preview { height:8px; border-radius:3px; margin:10px 0 4px; }
+.grad-ends { display:flex; justify-content:space-between; font-size:9px; color:var(--text-dim); }
+.null-row { display:flex; align-items:center; gap:6px; font-size:10px; color:var(--text-dim); margin-top:8px; }
+.null-pip { width:10px; height:10px; border-radius:2px; border:1px solid var(--border2); flex-shrink:0; }
+
+/* ── viz + overlay chrome ────────────────── */
+#viz { position:fixed; top:42px; left:0; right:0; bottom:0; }
+#viz svg { width:100%; height:100%; cursor:grab; display:block; }
+#viz svg.drag { cursor:grabbing; }
+#hint { position:fixed; bottom:10px; left:12px; font-size:9px; color:var(--text-mut); letter-spacing:.07em; text-transform:uppercase; pointer-events:none; }
+.zoom-reset { position:fixed; bottom:10px; right:12px; font-family:inherit; font-size:9px; letter-spacing:.07em; text-transform:uppercase; background:none; border:1px solid var(--border); color:var(--text-dim); padding:4px 8px; cursor:pointer; }
+.zoom-reset:hover { color:var(--text); }
+
+/* ── tooltip ─────────────────────────────── */
+#tooltip { position:fixed; background:var(--surface); border:1px solid var(--border2); padding:10px 13px; pointer-events:none; z-index:200; min-width:210px; }
+.tt-name { font-size:11px; font-weight:500; color:var(--text); margin-bottom:6px; word-break:break-all; }
+.tt-row { font-size:10px; color:var(--text-dim); margin-bottom:2px; display:flex; gap:6px; justify-content:space-between; }
+.tt-val { color:var(--text); text-align:right; }
+.tt-badge { display:inline-block; font-size:9px; letter-spacing:.06em; padding:1px 5px; border-radius:2px; font-weight:500; }
+.tt-sep { border:none; border-top:1px solid var(--border); margin:5px 0; }
+.tt-null { color:var(--text-dim) !important; font-style:italic; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+// ─────────────────────────────────────────────────────────────────
+// PREACT + HTM SETUP
+// PLUGIN: delete these three lines entirely and add to each file:
+//   import React, { useState, useEffect, useRef, useMemo, Fragment }
+//     from 'react';                    ← Obsidian bundles React
+//   (JSX replaces htm template literals — see htm→JSX cheatsheet in
+//    integration-plan.md §Component migration guide)
+// ─────────────────────────────────────────────────────────────────
+const { h, render: mount, Fragment } = preact;
+const { useState, useEffect, useRef, useMemo } = preactHooks;
+const html = htm.bind(h);
+
+// ─────────────────────────────────────────────────────────────────
+// SAMPLE DATA
+// PLUGIN: replace this entire block with the output of
+//   dataAdapter.buildVaultTree(vault)  →  src/vault-treemap/dataAdapter.ts
+//
+// Data contract (TypeScript interface, goes in types.ts):
+//
+//   interface VaultNode {
+//     name: string;
+//     children?: VaultNode[];
+//     // leaf-only — undefined on folder nodes:
+//     type?:           'md' | 'canvas' | 'excalidraw';
+//     size?:           number;           // bytes
+//     createdAt?:      number;           // Unix ms — from TFile.stat.ctime
+//     lastModifiedAt?: number;           // Unix ms — from TFile.stat.mtime
+//     lastVisitedAt?:  number | null;    // Unix ms — plugin-tracked; null = never opened
+//   }
+//
+// App receives the tree as a prop:  function App({ data }: { data: VaultNode })
+// TreemapViz receives it too:       function TreemapViz({ data, ...rest })
+// ─────────────────────────────────────────────────────────────────
+function ago(days) { return Date.now() - days * 86400000; } // PLUGIN: delete — only needed for sample data
+
+const DATA = {
+  name: "my-vault",
+  children: [
+    { name:"Inbox", children:[
+      { name:"morning-thoughts.md",     type:"md",         size:1842,  createdAt:ago(2),   lastModifiedAt:ago(1),   lastVisitedAt:ago(1)   },
+      { name:"book-recs.md",            type:"md",         size:654,   createdAt:ago(30),  lastModifiedAt:ago(30),  lastVisitedAt:ago(5)   },
+      { name:"podcast-dump.md",         type:"md",         size:3200,  createdAt:ago(8),   lastModifiedAt:ago(3),   lastVisitedAt:ago(3)   },
+      { name:"quick-sketch.excalidraw", type:"excalidraw", size:18400, createdAt:ago(14),  lastModifiedAt:ago(14),  lastVisitedAt:null     },
+      { name:"ideas.md",                type:"md",         size:2200,  createdAt:ago(45),  lastModifiedAt:ago(10),  lastVisitedAt:ago(10)  },
+    ]},
+    { name:"Projects", children:[
+      { name:"Alpha", children:[
+        { name:"overview.md",           type:"md",         size:8200,  createdAt:ago(180), lastModifiedAt:ago(5),   lastVisitedAt:ago(2)   },
+        { name:"roadmap.canvas",        type:"canvas",     size:42000, createdAt:ago(180), lastModifiedAt:ago(4),   lastVisitedAt:ago(4)   },
+        { name:"wireframes.excalidraw", type:"excalidraw", size:35000, createdAt:ago(120), lastModifiedAt:ago(20),  lastVisitedAt:null     },
+        { name:"meeting-notes.md",      type:"md",         size:5100,  createdAt:ago(60),  lastModifiedAt:ago(1),   lastVisitedAt:ago(1)   },
+        { name:"spec.md",               type:"md",         size:12400, createdAt:ago(150), lastModifiedAt:ago(12),  lastVisitedAt:ago(7)   },
+      ]},
+      { name:"Beta", children:[
+        { name:"brief.md",              type:"md",         size:4800,  createdAt:ago(90),  lastModifiedAt:ago(45),  lastVisitedAt:ago(20)  },
+        { name:"architecture.canvas",   type:"canvas",     size:28000, createdAt:ago(90),  lastModifiedAt:ago(50),  lastVisitedAt:null     },
+        { name:"ui-mockup.excalidraw",  type:"excalidraw", size:22000, createdAt:ago(85),  lastModifiedAt:ago(85),  lastVisitedAt:ago(85)  },
+        { name:"research.md",           type:"md",         size:9600,  createdAt:ago(100), lastModifiedAt:ago(60),  lastVisitedAt:ago(30)  },
+      ]},
+      { name:"Archive", children:[
+        { name:"old-spec.md",        type:"md", size:15000, createdAt:ago(500), lastModifiedAt:ago(480), lastVisitedAt:ago(400) },
+        { name:"legacy-notes.md",    type:"md", size:3200,  createdAt:ago(600), lastModifiedAt:ago(600), lastVisitedAt:null     },
+        { name:"migration-plan.md",  type:"md", size:7800,  createdAt:ago(520), lastModifiedAt:ago(490), lastVisitedAt:ago(490) },
+      ]},
+    ]},
+    { name:"Notes", children:[
+      { name:"Daily", children:[
+        { name:"2024-01-15.md", type:"md", size:1100, createdAt:ago(10), lastModifiedAt:ago(10), lastVisitedAt:ago(10) },
+        { name:"2024-01-16.md", type:"md", size:2300, createdAt:ago(9),  lastModifiedAt:ago(9),  lastVisitedAt:ago(8)  },
+        { name:"2024-01-17.md", type:"md", size:800,  createdAt:ago(8),  lastModifiedAt:ago(8),  lastVisitedAt:ago(8)  },
+        { name:"2024-01-18.md", type:"md", size:3400, createdAt:ago(7),  lastModifiedAt:ago(7),  lastVisitedAt:ago(6)  },
+        { name:"2024-01-19.md", type:"md", size:1650, createdAt:ago(6),  lastModifiedAt:ago(6),  lastVisitedAt:ago(5)  },
+        { name:"2024-01-20.md", type:"md", size:920,  createdAt:ago(5),  lastModifiedAt:ago(5),  lastVisitedAt:ago(5)  },
+        { name:"2024-01-21.md", type:"md", size:2800, createdAt:ago(4),  lastModifiedAt:ago(4),  lastVisitedAt:ago(3)  },
+        { name:"2024-01-22.md", type:"md", size:1400, createdAt:ago(3),  lastModifiedAt:ago(3),  lastVisitedAt:ago(2)  },
+        { name:"2024-01-23.md", type:"md", size:550,  createdAt:ago(2),  lastModifiedAt:ago(2),  lastVisitedAt:ago(1)  },
+        { name:"2024-01-24.md", type:"md", size:1900, createdAt:ago(1),  lastModifiedAt:ago(1),  lastVisitedAt:ago(1)  },
+      ]},
+      { name:"Fleeting", children:[
+        { name:"shower-thought.md", type:"md", size:420,  createdAt:ago(200), lastModifiedAt:ago(200), lastVisitedAt:null    },
+        { name:"podcast-notes.md",  type:"md", size:3800, createdAt:ago(55),  lastModifiedAt:ago(55),  lastVisitedAt:ago(50) },
+        { name:"article-dump.md",   type:"md", size:6200, createdAt:ago(30),  lastModifiedAt:ago(25),  lastVisitedAt:ago(25) },
+        { name:"links.md",          type:"md", size:1100, createdAt:ago(120), lastModifiedAt:ago(15),  lastVisitedAt:null    },
+      ]},
+      { name:"Permanent", children:[
+        { name:"memory-reconsolidation.md", type:"md", size:14200, createdAt:ago(400), lastModifiedAt:ago(30),  lastVisitedAt:ago(3)  },
+        { name:"distributed-systems.md",    type:"md", size:18600, createdAt:ago(350), lastModifiedAt:ago(5),   lastVisitedAt:ago(2)  },
+        { name:"principles.md",             type:"md", size:7400,  createdAt:ago(600), lastModifiedAt:ago(90),  lastVisitedAt:ago(14) },
+        { name:"startup-lessons.md",        type:"md", size:11000, createdAt:ago(300), lastModifiedAt:ago(120), lastVisitedAt:ago(60) },
+        { name:"neuroscience-index.md",     type:"md", size:8800,  createdAt:ago(250), lastModifiedAt:ago(10),  lastVisitedAt:ago(4)  },
+      ]},
+    ]},
+    { name:"Resources", children:[
+      { name:"reading-list.md",           type:"md",         size:5600,  createdAt:ago(365), lastModifiedAt:ago(3),   lastVisitedAt:ago(3)   },
+      { name:"tools.md",                  type:"md",         size:3200,  createdAt:ago(400), lastModifiedAt:ago(60),  lastVisitedAt:ago(30)  },
+      { name:"mind-map.canvas",           type:"canvas",     size:38000, createdAt:ago(200), lastModifiedAt:ago(40),  lastVisitedAt:null     },
+      { name:"system-diagram.excalidraw", type:"excalidraw", size:41000, createdAt:ago(300), lastModifiedAt:ago(300), lastVisitedAt:ago(200) },
+      { name:"links.md",                  type:"md",         size:2100,  createdAt:ago(500), lastModifiedAt:ago(500), lastVisitedAt:null     },
+      { name:"book-notes.md",             type:"md",         size:9400,  createdAt:ago(180), lastModifiedAt:ago(20),  lastVisitedAt:ago(7)   },
+    ]},
+    { name:"Templates", children:[
+      { name:"daily-note.md", type:"md", size:880,  createdAt:ago(700), lastModifiedAt:ago(700), lastVisitedAt:null },
+      { name:"project.md",    type:"md", size:1240, createdAt:ago(700), lastModifiedAt:ago(600), lastVisitedAt:null },
+      { name:"meeting.md",    type:"md", size:760,  createdAt:ago(700), lastModifiedAt:ago(650), lastVisitedAt:null },
+    ]},
+  ]
+};
+
+// ─────────────────────────────────────────────────────────────────
+// CONSTANTS  →  src/vault-treemap/constants.ts
+// Copy as-is; add TypeScript types for TYPE_C and GRADIENTS keys.
+// ─────────────────────────────────────────────────────────────────
+const TYPE_C = {
+  md:         { fill:"#4a5ed4", hover:"#6070e8", badge:"#3248b0", fg:"#a0b0ff" },
+  canvas:     { fill:"#be7220", hover:"#d48832", badge:"#9a5a10", fg:"#f0c070" },
+  excalidraw: { fill:"#1e9e8e", hover:"#2cb4a2", badge:"#14786c", fg:"#70d4c8" },
+};
+
+// hot  = color applied to newest files (≤ hotDays old)
+// cold = color applied to oldest files (≥ coldDays old)
+// nil  = color for null/missing timestamp ("no data")
+const GRADIENTS = {
+  nature: { label:"Nature", sub:"green → blue", hot:"#1db954", cold:"#1a3a7a", nil:"#1a1a20" },
+  ember:  { label:"Ember",  sub:"red → ice",    hot:"#e84020", cold:"#0a1e58", nil:"#111118" },
+  mono:   { label:"Mono",   sub:"white → black", hot:"#d8d8d8", cold:"#1c1c1c", nil:"#6d28d9" },
+};
+
+const FIELD_LABELS = {
+  lastModifiedAt: "modified",
+  createdAt:      "created",
+  lastVisitedAt:  "visited",
+};
+
+// ─────────────────────────────────────────────────────────────────
+// PURE FUNCTIONS  →  src/vault-treemap/utils.ts
+// No changes needed; add TypeScript signatures.
+// heatColor / leafFill / leafOpacity are the rendering hot-path —
+// keep them out of component files for easy unit testing.
+// ─────────────────────────────────────────────────────────────────
+
+// Returns the fill color for a leaf given a timestamp and thresholds.
+function heatColor(ts, gradKey, hotDays, coldDays) {
+  const g = GRADIENTS[gradKey];
+  if (ts == null) return g.nil;
+  const daysOld = (Date.now() - ts) / 86400000;
+  if (daysOld <= hotDays)  return g.hot;
+  if (daysOld >= coldDays) return g.cold;
+  return d3.interpolateRgb(g.hot, g.cold)((daysOld - hotDays) / (coldDays - hotDays));
+}
+
+// Resolves the fill color for a leaf depending on active color mode.
+function leafFill(d, hovered, colorMode, gradKey, field, hotDays, coldDays) {
+  if (colorMode === "heatmap") {
+    const base = heatColor(d.data[field], gradKey, hotDays, coldDays);
+    return (hovered && d.data[field] != null)
+      ? d3.color(base).brighter(0.45).formatHex()
+      : base;
+  }
+  const c = TYPE_C[d.data.type] || { fill:"#555", hover:"#777" };
+  return hovered ? c.hover : c.fill;
+}
+
+// Opacity is reduced for null-timestamp cells to visually signal "no data".
+function leafOpacity(d, colorMode, field) {
+  if (colorMode === "heatmap") return d.data[field] == null ? 0.55 : 0.88;
+  return 0.78;
+}
+
+function fmtBytes(b) {
+  if (b < 1024)    return `${b} B`;
+  if (b < 1048576) return `${(b/1024).toFixed(1)} KB`;
+  return `${(b/1048576).toFixed(2)} MB`;
+}
+
+function fmtDate(ts) {
+  if (ts == null) return null;
+  const d = Math.round((Date.now() - ts) / 86400000);
+  const rel = d === 0 ? "today" : d === 1 ? "yesterday" : `${d}d ago`;
+  return `${new Date(ts).toISOString().slice(0,10)} (${rel})`;
+}
+
+// Builds the display path string from a D3 hierarchy node's ancestors.
+function nodePath(d) {
+  return d.ancestors().reverse().slice(1).map(a => a.data.name).join(" / ");
+}
+
+// ─────────────────────────────────────────────────────────────────
+// COMPONENT: Legend  →  src/vault-treemap/components/Legend.tsx
+// Pure display — no state, no Obsidian API. Copy as-is.
+// ─────────────────────────────────────────────────────────────────
+function Legend({ colorMode, gradKey }) {
+  const g = GRADIENTS[gradKey];
+  if (colorMode === "type") {
+    return html`<div className="legend">
+      ${Object.entries(TYPE_C).map(([type, c]) => html`
+        <div key=${type} className="legend-item">
+          <div className="pip" style=${{ background: c.fill }}></div>
+          .${type}
+        </div>
+      `)}
+    </div>`;
+  }
+  return html`<div className="legend">
+    <span style="font-size:9px;color:var(--text-dim)">new</span>
+    <div className="legend-grad" style=${{ background:`linear-gradient(to right,${g.hot},${g.cold})` }}></div>
+    <span style="font-size:9px;color:var(--text-dim)">old</span>
+    <div className="legend-item" style="margin-left:6px">
+      <div className="pip" style=${{ background:g.nil, border:"1px solid var(--border2)" }}></div>
+      no data
+    </div>
+  </div>`;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// COMPONENT: Header  →  src/vault-treemap/components/Header.tsx
+// Pure display — no state, no Obsidian API. Copy as-is.
+// ─────────────────────────────────────────────────────────────────
+function Header({ colorMode, gradKey, field, stats, onConfigToggle }) {
+  return html`<div id="header">
+    <span id="title">Vault Treemap</span>
+    <div className="stats">
+      <span className="stat"><strong>${stats.files}</strong> files</span>
+      <span className="stat"><strong>${stats.folders}</strong> folders</span>
+      <span className="stat"><strong>${stats.size}</strong> raw</span>
+    </div>
+    ${colorMode === "heatmap" && html`
+      <div className="ts-indicator">
+        field: <strong>${FIELD_LABELS[field] || field}</strong>
+      </div>
+    `}
+    <div className="spacer"></div>
+    <${Legend} colorMode=${colorMode} gradKey=${gradKey}/>
+    <button className="header-btn" onClick=${onConfigToggle}>⚙ config</button>
+  </div>`;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// COMPONENT: GradientPicker  →  src/vault-treemap/components/ConfigPanel/GradientPicker.tsx
+// Pure display — no state. Copy as-is.
+// ─────────────────────────────────────────────────────────────────
+function GradientPicker({ active, onChange }) {
+  return html`<div className="grad-row">
+    ${Object.entries(GRADIENTS).map(([key, g]) => html`
+      <button
+        key=${key}
+        className=${"grad-btn" + (key === active ? " active" : "")}
+        onClick=${() => onChange(key)}
+      >
+        <div className="grad-swatch"
+          style=${{ background:`linear-gradient(to right,${g.hot},${g.cold})` }}>
+        </div>
+        ${g.label}<br/>
+        <span style="font-size:8px;opacity:.55">${g.sub}</span>
+      </button>
+    `)}
+  </div>`;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// COMPONENT: HeatmapOptions  →  src/vault-treemap/components/ConfigPanel/HeatmapOptions.tsx
+// Pure config UI — no state (fully controlled by parent). Copy as-is.
+// ─────────────────────────────────────────────────────────────────
+function HeatmapOptions({ field, setField, gradKey, setGradKey, hotDays, setHotDays, coldDays, setColdDays }) {
+  const g = GRADIENTS[gradKey];
+  // Mono gradient has near-white/near-black endpoints; dim them for dark-bg legibility.
+  const hotColor  = g.hot  === "#d8d8d8" ? "#888888" : g.hot;
+  const coldColor = g.cold === "#1c1c1c" ? "#666666" : g.cold;
+
+  function onHotInput(e) {
+    const v = Math.min(parseInt(e.target.value), coldDays - 1);
+    setHotDays(v);
+  }
+  function onColdInput(e) {
+    const v = Math.max(parseInt(e.target.value), hotDays + 1);
+    setColdDays(v);
+  }
+
+  return html`<div>
+    <div className="cfg-label" style="margin-bottom:6px">Timestamp field</div>
+    <select className="cfg-select" value=${field} onChange=${e => setField(e.target.value)}>
+      ${Object.entries(FIELD_LABELS).map(([val, label]) => html`
+        <option key=${val} value=${val}>${label}</option>
+      `)}
+    </select>
+
+    <div className="cfg-label" style="margin-bottom:8px">Gradient</div>
+    <${GradientPicker} active=${gradKey} onChange=${setGradKey}/>
+
+    <div className="slider-wrap">
+      <div className="slider-label-row">
+        <span style=${{ color: hotColor }}>hot / new</span>
+        <span>${hotDays} days</span>
+      </div>
+      <input type="range" min="1" max="365" step="1"
+        value=${hotDays} onInput=${onHotInput}/>
+    </div>
+
+    <div className="slider-wrap">
+      <div className="slider-label-row">
+        <span style=${{ color: coldColor }}>cold / old</span>
+        <span>${coldDays} days</span>
+      </div>
+      <input type="range" min="2" max="730" step="1"
+        value=${coldDays} onInput=${onColdInput}/>
+    </div>
+
+    <div className="grad-preview"
+      style=${{ background:`linear-gradient(to right,${g.hot},${g.cold})` }}>
+    </div>
+    <div className="grad-ends"><span>← newer</span><span>older →</span></div>
+    <div className="null-row">
+      <div className="null-pip" style=${{ background: g.nil }}></div>
+      <span>null / missing timestamp</span>
+    </div>
+  </div>`;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// COMPONENT: ConfigPanel  →  src/vault-treemap/components/ConfigPanel/index.tsx
+// Pure config UI — no state (all controlled by App). Copy as-is.
+// ─────────────────────────────────────────────────────────────────
+function ConfigPanel({ open, colorMode, setColorMode, gradKey, setGradKey, field, setField,
+                       hotDays, setHotDays, coldDays, setColdDays, scales, setScales }) {
+  function updateScale(type, val) {
+    setScales(prev => ({ ...prev, [type]: parseFloat(val) || 1 }));
+  }
+
+  return html`<div id="config" className=${open ? "open" : ""}>
+    <div className="cfg-h">Scale factors</div>
+    ${Object.entries(TYPE_C).map(([type, c]) => html`
+      <div key=${type} className="cfg-row">
+        <span className="cfg-label">
+          <span className="cfg-pip" style=${{ background: c.fill }}></span>
+          .${type}
+        </span>
+        <input className="cfg-input" type="number"
+          value=${scales[type]} min="0.01" step="0.05"
+          onChange=${e => updateScale(type, e.target.value)}
+        />
+      </div>
+    `)}
+
+    <hr className="cfg-sep"/>
+
+    <div className="cfg-h">Coloring</div>
+    <div className="mode-row">
+      <button className=${"mode-btn" + (colorMode==="type"    ? " active" : "")} onClick=${() => setColorMode("type")}>By type</button>
+      <button className=${"mode-btn" + (colorMode==="heatmap" ? " active" : "")} onClick=${() => setColorMode("heatmap")}>Heatmap</button>
+    </div>
+
+    ${colorMode === "heatmap" && html`
+      <${HeatmapOptions}
+        field=${field}       setField=${setField}
+        gradKey=${gradKey}   setGradKey=${setGradKey}
+        hotDays=${hotDays}   setHotDays=${setHotDays}
+        coldDays=${coldDays} setColdDays=${setColdDays}
+      />
+    `}
+  </div>`;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// COMPONENT: Tooltip  →  src/vault-treemap/components/Tooltip.tsx
+// Pure display — no state. Copy as-is.
+// PLUGIN: position:fixed works inside Obsidian's leaf panel.
+// ─────────────────────────────────────────────────────────────────
+function Tooltip({ x, y, node, scales }) {
+  const d   = node;
+  const c   = TYPE_C[d.data.type] || {};
+  const eff = Math.round(d.data.size * (scales[d.data.type] || 1));
+
+  // Inner helper: one timestamp row, italicised if null.
+  function TsRow({ label, ts }) {
+    const fmt = fmtDate(ts);
+    return html`<div className="tt-row">
+      <span>${label}</span>
+      <span className=${"tt-val" + (fmt ? "" : " tt-null")}>${fmt || "—"}</span>
+    </div>`;
+  }
+
+  return html`<div id="tooltip" style=${{ left:x+"px", top:y+"px" }}>
+    <div className="tt-name">${d.data.name}</div>
+    <div className="tt-row">
+      <span>type</span>
+      <span className="tt-val">
+        <span className="tt-badge" style=${{
+          background: (c.badge||"#333") + "55",
+          color:      c.fg || "#aaa",
+          border:     "1px solid " + (c.badge||"#333"),
+        }}>.${d.data.type}</span>
+      </span>
+    </div>
+    <div className="tt-row"><span>path</span><span className="tt-val">${nodePath(d)}</span></div>
+    <div className="tt-row"><span>raw</span><span className="tt-val">${fmtBytes(d.data.size)}</span></div>
+    <div className="tt-row"><span>effective</span><span className="tt-val">${fmtBytes(eff)} (×${scales[d.data.type]||1})</span></div>
+    <hr className="tt-sep"/>
+    <${TsRow} label="created"  ts=${d.data.createdAt}/>
+    <${TsRow} label="modified" ts=${d.data.lastModifiedAt}/>
+    <${TsRow} label="visited"  ts=${d.data.lastVisitedAt}/>
+  </div>`;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// COMPONENT: FolderNode  →  src/vault-treemap/components/FolderNode.tsx
+// Pure SVG — no state, no event handlers. Copy as-is.
+// PLUGIN: SVG attribute names need camelCase in JSX:
+//   font-family → fontFamily   stroke-width → strokeWidth
+//   font-size   → fontSize     font-weight  → fontWeight
+//   letter-spacing → letterSpacing
+// ─────────────────────────────────────────────────────────────────
+function FolderNode({ d }) {
+  const w = Math.max(0, d.x1 - d.x0);
+  const h = Math.max(0, d.y1 - d.y0);
+  // Nested <svg overflow="hidden"> clips the label text — no clipPath needed.
+  return html`
+    <svg x=${d.x0} y=${d.y0} width=${w} height=${h} overflow="hidden">
+      <rect width=${w} height=${h}
+        fill=${d3.interpolateRgb("#0c0c0f","#28283a")(d.depth * 0.18)}
+        stroke=${d.depth===1 ? "#2e2e3e" : "#222230"}
+        stroke-width=${d.depth===1 ? 1.5 : 0.75}
+      />
+      ${h > 14 && html`
+        <text
+          x=${5} y=${d.depth===1 ? 14 : 12}
+          font-family="'IBM Plex Mono',monospace"
+          font-size=${d.depth===1 ? 10 : 9}
+          font-weight=${d.depth===1 ? 500 : 400}
+          letter-spacing="0.1em"
+          fill="#505062"
+        >${d.data.name.toUpperCase()}</text>
+      `}
+    </svg>`;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// COMPONENT: LeafNode  →  src/vault-treemap/components/LeafNode.tsx
+// Pure SVG — hover state owned by parent (TreemapViz). Copy as-is.
+// PLUGIN: same SVG camelCase note as FolderNode above.
+// PLUGIN: add onClick → open file in Obsidian:
+//   onClick={() => app.workspace.openLinkText(d.data.path, '')}
+// ─────────────────────────────────────────────────────────────────
+function LeafNode({ d, hovered, colorMode, gradKey, field, hotDays, coldDays, onMouseMove, onMouseLeave }) {
+  const lw      = Math.max(0, d.x1 - d.x0);
+  const lh      = Math.max(0, d.y1 - d.y0);
+  const fill    = leafFill(d, hovered, colorMode, gradKey, field, hotDays, coldDays);
+  const opacity = hovered ? 1 : leafOpacity(d, colorMode, field);
+
+  return html`
+    <svg x=${d.x0} y=${d.y0} width=${lw} height=${lh} overflow="hidden"
+         onMouseMove=${onMouseMove} onMouseLeave=${onMouseLeave} style="cursor:pointer">
+      <rect width=${lw} height=${lh} rx=${2}
+        fill=${fill} fill-opacity=${opacity}
+        stroke=${hovered ? "rgba(255,255,255,0.4)" : "none"}
+        stroke-width=${1}
+      />
+      ${lw > 32 && lh > 14 && html`
+        <text x=${3} y=${11}
+          font-family="'IBM Plex Mono',monospace"
+          font-size=${9}
+          fill="rgba(255,255,255,0.65)"
+        >${d.data.name}</text>
+      `}
+    </svg>`;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// COMPONENT: TreemapView  →  src/vault-treemap/components/TreemapViz.tsx
+// Renamed to TreemapViz in the plugin to avoid collision with Obsidian's
+// ItemView class which also gets called *View.
+//
+// Owns: container dimensions, D3 zoom ref, hover state, tooltip state.
+// Receives: all rendering config as props; data as a prop (not hardcoded).
+//
+// D3 BOUNDARY NOTE — two distinct D3 roles here:
+//
+//   1. useMemo (layout math, lines below):
+//      d3.hierarchy + d3.treemap = pure computation, no DOM access.
+//      React re-runs this automatically when scales/dims change.
+//      No changes needed when porting.
+//
+//   2. useEffect (zoom, lines below):
+//      D3 zoom attaches event listeners and mutates the <g> transform
+//      attribute DIRECTLY — bypassing React's VDOM entirely.
+//      This is the one intentional "escape hatch" in the component.
+//      PLUGIN: replace with @visx/zoom to keep transform in React state.
+//      See integration-plan.md §D3/React boundary for the swap sketch.
+//
+// PLUGIN: DATA const below becomes the `data` prop passed from App,
+//   which receives it from the Obsidian vault adapter.
+// ─────────────────────────────────────────────────────────────────
+function TreemapView({ colorMode, gradKey, field, hotDays, coldDays, scales, onStatsChange }) {
+  const containerRef = useRef(null);
+  const svgRef       = useRef(null);
+  const gRef         = useRef(null);
+  const zoomRef      = useRef(null); // PLUGIN: remove when using @visx/zoom
+
+  const [dims,       setDims]       = useState({ w:800, h:600 });
+  const [hoveredIdx, setHoveredIdx] = useState(null);
+  const [tooltip,    setTooltip]    = useState(null); // { x, y, node }
+
+  // Track container size — works unchanged inside an Obsidian ItemView.
+  useEffect(() => {
+    const obs = new ResizeObserver(entries => {
+      const r = entries[0].contentRect;
+      setDims({ w: Math.floor(r.width), h: Math.floor(r.height) });
+    });
+    obs.observe(containerRef.current);
+    return () => obs.disconnect();
+  }, []);
+
+  // PLUGIN: replace this entire useEffect with @visx/zoom.
+  // D3 zoom — attaches once; all subsequent mutations go directly to the DOM.
+  // React never knows the <g> transform changed, which is intentional:
+  // reconciliation only touches props declared in JSX, not attrs set via ref.
+  useEffect(() => {
+    const zoom = d3.zoom()
+      .scaleExtent([0.05, 30])
+      .on("zoom", ev => {
+        if (gRef.current) gRef.current.setAttribute("transform", ev.transform);
+      });
+    d3.select(svgRef.current)
+      .call(zoom)
+      .on("dblclick.zoom", () => {
+        d3.select(svgRef.current).transition().duration(400)
+          .call(zoom.transform, d3.zoomIdentity);
+      });
+    zoomRef.current = zoom;
+  }, []);
+
+  // D3 treemap layout — pure math inside useMemo, no DOM access.
+  // PLUGIN: replace DATA with the `data` prop.
+  const { folders, leaves } = useMemo(() => {
+    const { w, h } = dims;
+    if (!w || !h) return { folders:[], leaves:[] };
+
+    const root = d3.hierarchy(DATA) // PLUGIN: DATA → data prop
+      .sum(d => d.children ? 0 : Math.max(1, Math.round(d.size * (scales[d.type] || 1))))
+      .sort((a, b) => b.value - a.value);
+
+    d3.treemap()
+      .tile(d3.treemapSquarify)
+      .size([w, h])
+      .paddingOuter(8)
+      .paddingTop(d => d.depth === 0 ? 0 : d.depth === 1 ? 20 : 16)
+      .paddingInner(2)
+      .round(true)
+      (root);
+
+    return {
+      folders: root.descendants().filter(d => d.depth > 0 && d.children),
+      leaves:  root.leaves(),
+    };
+  }, [scales, dims]); // PLUGIN: add `data` to dep array
+
+  // Bubble stats up to Header whenever the layout changes.
+  useEffect(() => {
+    onStatsChange({
+      files:   leaves.length,
+      folders: folders.length,
+      size:    fmtBytes(leaves.reduce((s, d) => s + d.data.size, 0)),
+    });
+  }, [leaves, folders, onStatsChange]);
+
+  function handleLeafMove(e, d, i) {
+    if (hoveredIdx !== i) setHoveredIdx(i);
+    const TW=230, TH=165, cx=e.clientX, cy=e.clientY;
+    setTooltip({
+      x: cx+16+TW > window.innerWidth  ? cx-TW-8 : cx+16,
+      y: cy-12+TH > window.innerHeight ? cy-TH-4 : cy-12,
+      node: d,
+    });
+  }
+
+  function handleLeafLeave() {
+    setHoveredIdx(null);
+    setTooltip(null);
+  }
+
+  function resetZoom() {
+    // PLUGIN: with @visx/zoom call zoom.reset() instead.
+    d3.select(svgRef.current).transition().duration(400)
+      .call(zoomRef.current.transform, d3.zoomIdentity);
+  }
+
+  return html`<div id="viz" ref=${containerRef}>
+    <svg ref=${svgRef}>
+      <g ref=${gRef}>
+        ${folders.map((d, i) => html`<${FolderNode} key=${"f"+i} d=${d}/>`)}
+        ${leaves.map((d, i)  => html`<${LeafNode}
+          key=${"l"+i} d=${d}
+          hovered=${hoveredIdx === i}
+          colorMode=${colorMode} gradKey=${gradKey} field=${field}
+          hotDays=${hotDays} coldDays=${coldDays}
+          onMouseMove=${e => handleLeafMove(e, d, i)}
+          onMouseLeave=${handleLeafLeave}
+        />`)}
+      </g>
+    </svg>
+    ${tooltip && html`<${Tooltip} ...${tooltip} scales=${scales}/>`}
+    <div id="hint">scroll · zoom &nbsp;|&nbsp; drag · pan &nbsp;|&nbsp; dbl-click · reset</div>
+    <button className="zoom-reset" onClick=${resetZoom}>reset zoom</button>
+  </div>`;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// COMPONENT: App  →  src/vault-treemap/components/App.tsx
+//
+// Owns all config state. No Obsidian API access — deliberately kept
+// ignorant of Obsidian so the component tree is independently testable.
+//
+// PLUGIN: App receives `data` (the vault tree) as a prop from the
+//   ItemView. The ItemView calls buildVaultTree(vault) and passes the
+//   result here. On vault change events, the ItemView refreshes the
+//   data prop, triggering a re-render automatically.
+//
+//   function App({ data }: { data: VaultNode }) { ... }
+//   Pass `data` through to TreemapViz.
+// ─────────────────────────────────────────────────────────────────
+function App() {
+  const [colorMode,   setColorMode]  = useState("heatmap");
+  const [gradKey,     setGradKey]    = useState("nature");
+  const [field,       setField]      = useState("lastModifiedAt");
+  const [hotDays,     setHotDays]    = useState(7);
+  const [coldDays,    setColdDays]   = useState(180);
+  const [scales,      setScales]     = useState({ md:1.0, canvas:0.3, excalidraw:0.2 });
+  const [configOpen,  setConfigOpen] = useState(false);
+  const [stats,       setStats]      = useState({ files:0, folders:0, size:"—" });
+
+  return html`<${Fragment}>
+    <${Header}
+      colorMode=${colorMode} gradKey=${gradKey} field=${field}
+      stats=${stats}
+      onConfigToggle=${() => setConfigOpen(o => !o)}
+    />
+    <${ConfigPanel}
+      open=${configOpen}
+      colorMode=${colorMode}   setColorMode=${setColorMode}
+      gradKey=${gradKey}       setGradKey=${setGradKey}
+      field=${field}           setField=${setField}
+      hotDays=${hotDays}       setHotDays=${setHotDays}
+      coldDays=${coldDays}     setColdDays=${setColdDays}
+      scales=${scales}         setScales=${setScales}
+    />
+    <${TreemapView}
+      colorMode=${colorMode} gradKey=${gradKey} field=${field}
+      hotDays=${hotDays}     coldDays=${coldDays}
+      scales=${scales}
+      onStatsChange=${setStats}
+    />
+  <//>`;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// BOOT
+// PLUGIN: delete this line entirely.
+//   Mounting is handled by VaultTreemapView.onOpen():
+//     const root = createRoot(this.containerEl.children[1]);
+//     root.render(<App data={await buildVaultTree(this.app.vault)} />);
+//   Store the root ref for cleanup in onClose().
+// ─────────────────────────────────────────────────────────────────
+mount(html`<${App}/>`, document.getElementById("root"));
+</script>
+</body>
+</html>
