@@ -13,6 +13,8 @@ export class NoteFileUtilDefault implements NoteFileUtil {
    * Throws if a file already exists at that path.
    */
   async createNote(filePathInVault: string, initialContent = ""): Promise<TFile> {
+    console.log("[VHP] createNote", filePathInVault, initialContent.split("\n").filter(l => l.contains("VISIT_HISTORY_V1_FOR")));
+
     const normalizedPath = normalizePath(filePathInVault);
 
     if (this.app.vault.getAbstractFileByPath(normalizedPath)) {

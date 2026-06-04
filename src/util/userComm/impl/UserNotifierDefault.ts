@@ -7,10 +7,13 @@ export class UserNotifierDefault implements UserNotifier {
   }
 
   showError(msg: string) {
+    console.error(msg);
     new Notice(msg);
   }
 
   showInfo(msg: string) {
+    console.log(msg);
+
     new Notice(msg);
   }
 }

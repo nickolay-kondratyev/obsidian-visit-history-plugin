@@ -72,23 +72,23 @@ export class FocusTracker {
 
   private isTrackedView(view: View | null): boolean {
     if (view === null) {
-      console.log("[VHP] isTrackedView [view] is null skipping.");
+      console.log("[VHP][isTrackedView] [view] is null skipping.");
       return false;
     }
 
     const file = (view as any).file ?? null;
     if (file === null) {
-      console.log("[VHP] isTrackedView [file] is null skipping.");
+      console.log("[VHP][isTrackedView] [file] is null skipping.");
       return false;
     }
 
     if (file.path == null) {
-      console.log("[VHP] isTrackedView [path] is null skipping.");
+      console.log("[VHP][isTrackedView] [path] is null skipping.");
       return false;
     }
 
     if (file.path.startsWith("_visit_history")){
-      console.log("[VHP] isTrackedView skipping visit history file: " + file.path);
+      console.log("[VHP][isTrackedView] skipping visit history file: " + file.path);
       return false;
     }
 
