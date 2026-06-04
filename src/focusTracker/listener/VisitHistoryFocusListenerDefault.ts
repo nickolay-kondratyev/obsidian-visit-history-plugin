@@ -19,6 +19,7 @@ export class VisitHistoryFocusListenerDefault implements FocusListener {
     console.log("");
     console.log('[FocusTracker] FOCUS EVENT:', event);
 
+
     if (vhBacklinks.length > 0) {
       if (vhBacklinks.length > 1) {
         this.userNotifier.showError("More than one visit history backlink found for the file=" + event.file.path);
@@ -28,7 +29,7 @@ export class VisitHistoryFocusListenerDefault implements FocusListener {
 
     } else {
       this.noteFileUtil.createNote("_visit_history/v1/_visit_history_" + ulid() + ".md",
-        `VISIT_HISTORY_V1_FOR:[[${event.file.path}]]\n" ` +
+        `VISIT_HISTORY_V1_FOR:[[${event.file.path}]]\n` +
         "### VISIT_HISTORY_V1:\n")
 
       console.log("No VH backlinks found");
