@@ -11,6 +11,7 @@ import { NoteFileUtilDefault } from "./util/file/note/impl/NoteFileUtilDefault";
 import { VHFileProvider } from "./focusTracker/listener/VHFileProvider";
 import { DeviceNameProviderDefault } from "./util/env/DeviceNameProvider";
 import { VisitHistoryServiceDefault } from "./service/visitHistoryService/VisitHistoryService";
+import { VaultUtilDefault } from "./util/vault/VaultUtil";
 
 // ── VisitHistoryPlugin ────────────────────────────────────────────────────────
 export default class VisitHistoryPlugin extends Plugin {
@@ -31,10 +32,19 @@ export default class VisitHistoryPlugin extends Plugin {
     const visitHistoryService = new VisitHistoryServiceDefault(vhFileProvider, noteFileUtil);
     const focusListener = new VisitHistoryFocusListenerDefault(
       visitHistoryService);
+    const vaultUtil = new VaultUtilDefault(this.app, visitHistoryService);
 
     this.focusTracker.registerListener(focusListener);
 
     registerSampleCommands(this);
+
+    const before = Date.now();
+    const trackedFiles = await vaultUtil.getTrackedFiles();
+    const taken = Date.now() - before;
+    console.log(`[VHP] tracked files took [${taken}]ms`, trackedFiles);
+
+    console.log("[VHP] tracked files with visit meta1",
+      trackedFiles.filter(f => f.timeMetadata.visitedMs !== null));
   }
 
   onunload() {

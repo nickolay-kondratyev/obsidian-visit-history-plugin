@@ -1,6 +1,6 @@
 import { Plugin, TFile, View, WorkspaceLeaf } from 'obsidian';
+import { TRACKED_VIEW_TYPES, VISIT_HISTORY_TOP_DIR } from "../Constants";
 
-const TRACKED_VIEW_TYPES = new Set(['markdown', 'canvas', 'excalidraw']);
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -87,12 +87,13 @@ export class FocusTracker {
       return false;
     }
 
-    if (file.path.startsWith("_visit_history")){
+    if (file.path.startsWith(VISIT_HISTORY_TOP_DIR)) {
       console.log("[VHP][isTrackedView] skipping visit history file: " + file.path);
       return false;
     }
 
     let ofRightType = TRACKED_VIEW_TYPES.has(view?.getViewType() ?? '');
+
     return ofRightType && (view as any).file !== null;
   }
 }
