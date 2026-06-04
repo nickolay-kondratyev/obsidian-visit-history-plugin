@@ -1,10 +1,10 @@
 // ── registerSampleCommands ────────────────────────────────────────────────────
-// Registers all boilerplate sample functionality onto the given plugin instance.
+// Registers all boilerplate core.sample functionality onto the given plugin instance.
 // Call from onload() after settings are ready.
 import { MarkdownView, Notice, Plugin } from "obsidian";
 import { VisitHistorySampleModal } from "./visitHistorySampleModal";
-import { SampleSettingTab } from "../settings";
-import VisitHistoryPlugin from "../main";
+import { SampleSettingTab } from "../../settings";
+import VisitHistoryPlugin from "../../main";
 import { ulid } from 'ulid';
 import { NoteFileUtilDefault } from "../util/file/note/impl/NoteFileUtilDefault";
 
@@ -45,7 +45,7 @@ export function registerSampleCommands(plugin: VisitHistoryPlugin): void {
 
     const id = ulid();
 
-    plugin.userNotifier.showInfo("Click16");
+    plugin.userNotifier.showInfo("Click17");
 
     const util = new NoteFileUtilDefault(plugin.app);
   });

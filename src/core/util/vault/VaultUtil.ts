@@ -1,5 +1,5 @@
 import { App, TFile } from 'obsidian';
-import { TRACKED_EXTENSIONS } from "../../Constants";
+import { TRACKED_EXTENSIONS } from "../../../Constants";
 import { FileTimeMetadata } from "../../data/FileTimeMetadata";
 import { VisitHistoryService } from "../../service/visitHistoryService/VisitHistoryService";
 

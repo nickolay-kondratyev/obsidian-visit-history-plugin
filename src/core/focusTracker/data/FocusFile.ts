@@ -1,5 +1,5 @@
 import { TFile } from 'obsidian';
-import { NoteFileUtil } from "../../util/file/note/NoteFileUtil";
+import { NoteFileUtil } from "../../core/util/file/note/NoteFileUtil";
 
 /** File that contains the V1 focus visitation history. */
 export class FocusFile {

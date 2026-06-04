@@ -1,17 +1,16 @@
 import { Plugin } from 'obsidian';
 import { DEFAULT_SETTINGS, VisitHistoryPluginSettings } from './settings';
-import { registerSampleCommands } from './sample/registerSampleCommands';
-import { FocusTracker } from "./focusTracker/FocusTracker";
-import { VisitHistoryFocusListenerDefault } from "./focusTracker/listener/VisitHistoryFocusListenerDefault";
-import { LinkUtilDefault } from "./util";
-import { OutFactoryConsole } from "./util/out/impl/OutConsole";
-import { UserNotifier } from "./util/userComm/UserNotifier";
-import { UserNotifierDefault } from "./util/userComm/impl/UserNotifierDefault";
-import { NoteFileUtilDefault } from "./util/file/note/impl/NoteFileUtilDefault";
-import { VHFileProvider } from "./focusTracker/listener/VHFileProvider";
-import { DeviceNameProviderDefault } from "./util/env/DeviceNameProvider";
-import { VisitHistoryServiceDefault } from "./service/visitHistoryService/VisitHistoryService";
-import { VaultUtilDefault } from "./util/vault/VaultUtil";
+import { registerSampleCommands } from './core/sample/registerSampleCommands';
+import { FocusTracker } from "./core/focusTracker/FocusTracker";
+import { VisitHistoryFocusListenerDefault } from "./core/focusTracker/listener/VisitHistoryFocusListenerDefault";
+import { LinkUtilDefault } from "./core/util";
+import { UserNotifier } from "./core/util/userComm/UserNotifier";
+import { UserNotifierDefault } from "./core/util/userComm/impl/UserNotifierDefault";
+import { NoteFileUtilDefault } from "./core/util/file/note/impl/NoteFileUtilDefault";
+import { VHFileProvider } from "./core/focusTracker/listener/VHFileProvider";
+import { DeviceNameProviderDefault } from "./core/util/env/DeviceNameProvider";
+import { VisitHistoryServiceDefault } from "./core/service/visitHistoryService/VisitHistoryService";
+import { VaultUtilDefault } from "./core/util/vault/VaultUtil";
 
 // ── VisitHistoryPlugin ────────────────────────────────────────────────────────
 export default class VisitHistoryPlugin extends Plugin {

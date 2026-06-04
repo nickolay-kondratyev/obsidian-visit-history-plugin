@@ -1,5 +1,5 @@
 import { Plugin, TFile, View, WorkspaceLeaf } from 'obsidian';
-import { TRACKED_VIEW_TYPES, VISIT_HISTORY_TOP_DIR } from "../Constants";
+import { TRACKED_VIEW_TYPES, VISIT_HISTORY_TOP_DIR } from "../../Constants";
 
 
 // ── Types ─────────────────────────────────────────────────────────────────────

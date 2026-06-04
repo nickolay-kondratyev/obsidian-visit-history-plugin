@@ -1,10 +1,10 @@
-import { LinkUtil } from "../../util";
-import { UserNotifier } from "../../util/userComm/UserNotifier";
+import { LinkUtil } from "../../core/util";
+import { UserNotifier } from "../../core/util/userComm/UserNotifier";
 import { TFile } from 'obsidian';
 import { ulid } from 'ulid';
 import { LRUCache } from 'lru-cache';
-import { NoteFileUtil } from "../../util/file/note/NoteFileUtil";
-import { DeviceNameProvider } from "../../util/env/DeviceNameProvider";
+import { NoteFileUtil } from "../../core/util/file/note/NoteFileUtil";
+import { DeviceNameProvider } from "../../core/util/env/DeviceNameProvider";
 import { FocusFile } from "../data/FocusFile";
 
 // Only cache paths for VH files that THIS plugin created. We intentionally
