@@ -1,6 +1,7 @@
 import { VHFileProvider } from "../../focusTracker/listener/VHFileProvider";
 import { NoteFileUtil } from "../../util/file/note/NoteFileUtil";
 import { TFile } from 'obsidian';
+import { LRUCache } from 'lru-cache';
 
 export interface VisitHistoryService {
   /** Records the visit to this file NOW. */
@@ -8,6 +9,12 @@ export interface VisitHistoryService {
 
   getLastVisitStamp(file: TFile): Promise<number | null>;
 }
+
+// Cache to speed up retrieval of last visit metadata.
+const pathToLastVisit = new LRUCache<string, { value: number | null }>({
+  // Set to high value as it will be of most use in very high note count vaults.
+  max: 10000,
+});
 
 export class VisitHistoryServiceDefault implements VisitHistoryService {
   constructor(
@@ -19,10 +26,15 @@ export class VisitHistoryServiceDefault implements VisitHistoryService {
   private lastRecordedVhPath: string = "I_DONT_EXIST_PATH";
 
   async getLastVisitStamp(file: TFile): Promise<number | null> {
-    // TODO: add cache on recorded, and already read back (populate it when we read as well).
-    // Optimization candidate.
+    let path = file.path;
+    const cached = pathToLastVisit.get(path);
+    if (cached) {
+      return cached.value;
+    }
+
     const vhFiles = await this.vhFileProvider.getAllVHFocusFiles(file);
     if (vhFiles.length === 0) {
+      pathToLastVisit.set(path, {value: null});
       return null;
     }
 
@@ -30,7 +42,9 @@ export class VisitHistoryServiceDefault implements VisitHistoryService {
       vhFiles.map(focusFile => focusFile.getLastStamp(this.noteFileUtil))
     );
 
-    return Math.max(...stamps);
+    let lastVisit = Math.max(...stamps);
+    pathToLastVisit.set(path, {value: lastVisit});
+    return lastVisit;
   }
 
   async recordVisitNowOnFocus(file: TFile): Promise<void> {
@@ -47,14 +61,17 @@ export class VisitHistoryServiceDefault implements VisitHistoryService {
     if (this.lastRecordedVhPath === vhFilePath) {
       console.log("[VHP] Skip — last focus was already the same file.");
     } else {
-      const nowStampMillis = Date.now().toString();
+      const nowStamp = Date.now();
+      const nowStampMillisStr = nowStamp.toString();
 
-      console.log(`[VHP] Recording [${nowStampMillis}] as visit.`);
+      console.log(`[VHP] Recording [${nowStampMillisStr}] as visit.`);
 
       await this.noteFileUtil.appendLineToNote(
         vhFilePath,
-        nowStampMillis
+        nowStampMillisStr
       );
+
+      pathToLastVisit.set(file.path, {value: nowStamp});
     }
 
     this.lastRecordedVhPath = vhFilePath;
