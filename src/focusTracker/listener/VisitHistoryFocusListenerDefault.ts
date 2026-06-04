@@ -28,28 +28,59 @@ export class VisitHistoryFocusListenerDefault implements FocusListener {
 
   private lastRecordedVhPath: string = "I_DONT_EXIST_PATH";
 
-  // Tracks in-flight VH file creation promises keyed by note path.
+  // Tracks in-flight onFocus executions keyed by note path.
   //
-  // Problem this solves: JS is single-threaded but async functions yield at
-  // every `await`, allowing the event loop to run other callbacks. If two
-  // `onFocus` events fire in rapid succession for the same note, both calls
-  // can pass the cache-miss check before either has finished creating the VH
-  // file, resulting in two VH files for the same note.
+  // Problem this solves: focus events can fire rapidly (e.g. switching tabs,
+  // Obsidian internals triggering multiple events for one user action). Each
+  // onFocus call is async and yields at awaits, so without this guard a second
+  // call can interleave with the first — resulting in duplicate VH file
+  // creation or double-writes to the same VH file.
   //
-  // Fix: before spawning a creation, we register its promise here. Any
-  // concurrent call for the same key finds the existing promise and awaits it
-  // instead of starting a second creation. The entry is deleted once the
-  // promise settles, so future calls (after creation) fall through to the LRU
-  // cache hit as normal.
-  private readonly inFlight = new Map<string, Promise<string | null>>();
+  // We use DROP semantics: if an onFocus is already running for a given path,
+  // the new call exits immediately. We do NOT await the in-flight promise
+  // because that would still trigger a second write once the first finishes.
+  // A dropped focus event is acceptable — the first one already recorded the
+  // visit.
+  private readonly inFlightFocus = new Map<string, Promise<void>>();
 
   async onFocus(event: FocusEvent): Promise<void> {
+    // Guard against events with no file path — nothing meaningful we can do.
+    if (!event.file?.path) {
+      console.log("[VHP][onFocus] Dropping focus event with no file path");
+      return;
+    }
+
+    const noteFilePathInVault = event.file.path;
+
+    // Drop duplicate: an onFocus for this file is already running. Any work
+    // we would do here (VH file creation, appending a timestamp) would either
+    // race the in-flight call or double-write. Skip it.
+    if (this.inFlightFocus.has(noteFilePathInVault)) {
+      console.log("[VHP][onFocus] Dropping duplicate focus event for", noteFilePathInVault);
+      return;
+    }
+
+    // Register before the first await inside _doOnFocus so any concurrent
+    // call that reaches this point sees the in-flight entry immediately.
+    const promise = this._doOnFocus(event);
+    this.inFlightFocus.set(noteFilePathInVault, promise);
+    try {
+      await promise;
+    } finally {
+      // Always clean up so future focus events for this path are processed
+      // normally, regardless of whether _doOnFocus succeeded or threw.
+      this.inFlightFocus.delete(noteFilePathInVault);
+    }
+  }
+
+  private async _doOnFocus(event: FocusEvent): Promise<void> {
     const vhFilePath = await this.getOrCreateVHFilePath(event);
     if (vhFilePath === null) {
       return;
     }
+
     if (this.lastRecordedVhPath === vhFilePath) {
-      console.log("[VHP] Skip last focus was already the same file.");
+      console.log("[VHP] Skip — last focus was already the same file.");
     } else {
       await this.noteFileUtil.appendLineToNote(
         vhFilePath,
@@ -64,7 +95,7 @@ export class VisitHistoryFocusListenerDefault implements FocusListener {
     console.log('[FocusTracker] UNFOCUS', event);
   }
 
-  async getOrCreateVHFilePath(event: FocusEvent): Promise<string | null> {
+  private async getOrCreateVHFilePath(event: FocusEvent): Promise<string | null> {
     const noteFilePathInVault = event.file.path;
     console.log("[VHP][getOrCreateVHFilePath] AT_START createdVhPathCache=", Object.fromEntries(createdVhPathCache.entries()));
 
@@ -75,34 +106,6 @@ export class VisitHistoryFocusListenerDefault implements FocusListener {
       console.log("[VHP][getOrCreateVHFilePath] Found cached path", cachedVHPath);
       return cachedVHPath;
     }
-
-    // Dedup path: another onFocus call for the same note is already in the
-    // middle of creating a VH file (it's suspended at an `await` inside
-    // _doGetOrCreate). Attach to that promise instead of racing it.
-    const existingPromise = this.inFlight.get(noteFilePathInVault);
-    if (existingPromise) {
-      console.log("[VHP][getOrCreateVHFilePath] Awaiting in-flight promise for", noteFilePathInVault);
-      return existingPromise;
-    }
-
-    // Slow path: no cache hit, no in-flight work. Kick off resolution and
-    // register the promise synchronously BEFORE the first await inside
-    // _doGetOrCreate. This is the critical ordering — if we awaited first and
-    // registered after, the window between the two would still allow a race.
-    const promise = this._doGetOrCreate(event);
-    this.inFlight.set(noteFilePathInVault, promise);
-    try {
-      return await promise;
-    } finally {
-      // Always clean up regardless of success or error, so future calls
-      // go through the normal cache/backlink flow rather than re-attaching
-      // to a settled (and now stale) promise.
-      this.inFlight.delete(noteFilePathInVault);
-    }
-  }
-
-  private async _doGetOrCreate(event: FocusEvent): Promise<string | null> {
-    const noteFilePathInVault = event.file.path;
 
     // Always re-query backlinks rather than caching the result. The user may
     // rename or move notes, and a stale cached path would silently log visits
@@ -134,8 +137,8 @@ export class VisitHistoryFocusListenerDefault implements FocusListener {
       console.log("[VHP][getOrCreateVHFilePath] Found from backlinks", vhFilePath, noteFilePathInVault);
 
       // Intentionally NOT writing to createdVhPathCache here. This path was
-      // resolved via backlinks, which means the user or a refactor tool
-      // controls its location. We must re-derive it fresh each focus event.
+      // resolved via backlinks, meaning the user or a refactor tool controls
+      // its location. We must re-derive it fresh each focus event.
 
     } else {
       // No existing VH file found — create one. Use a ulid so the filename is
@@ -150,9 +153,9 @@ export class VisitHistoryFocusListenerDefault implements FocusListener {
         "### VISIT_HISTORY_V1:\n"
       )).path;
 
-      // Cache only the paths we created ourselves. We know these are stable
+      // Cache only paths we created ourselves. We know these are stable
       // because we named them with a ulid — they won't move unless the user
-      // manually intervenes, at which point the cache TTL will expire anyway.
+      // manually intervenes, at which point the TTL will expire anyway.
       createdVhPathCache.set(noteFilePathInVault, vhFilePath);
 
       console.log("[VHP][getOrCreateVHFilePath] CREATED for note", vhFilePath, noteFilePathInVault);
