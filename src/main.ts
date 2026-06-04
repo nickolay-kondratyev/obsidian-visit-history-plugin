@@ -8,6 +8,7 @@ import { OutFactoryConsole } from "./util/out/impl/OutConsole";
 import { UserNotifier } from "./util/userComm/UserNotifier";
 import { UserNotifierDefault } from "./util/userComm/impl/UserNotifierDefault";
 import { NoteFileUtilDefault } from "./util/file/note/impl/NoteFileUtilDefault";
+import { VHFileProvider } from "./focusTracker/listener/VHFileProvider";
 
 // ── VisitHistoryPlugin ────────────────────────────────────────────────────────
 export default class VisitHistoryPlugin extends Plugin {
@@ -20,10 +21,12 @@ export default class VisitHistoryPlugin extends Plugin {
 
     const linkUtil = new LinkUtilDefault(this.app);
     const outFactory = new OutFactoryConsole();
+
     const noteFileUtil = new NoteFileUtilDefault(this.app);
     this.focusTracker = new FocusTracker(this);
+    const vhFileProvider = new VHFileProvider(linkUtil, this.userNotifier, noteFileUtil);
     const focusListener = new VisitHistoryFocusListenerDefault(
-      linkUtil, this.userNotifier, noteFileUtil);
+      vhFileProvider, noteFileUtil);
 
     this.focusTracker.registerListener(focusListener);
 
