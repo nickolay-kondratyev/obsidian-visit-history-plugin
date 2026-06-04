@@ -59,7 +59,7 @@ export class VisitHistoryFocusListenerDefault implements FocusListener {
   }
 
   private async _doOnFocus(event: FocusEvent): Promise<void> {
-    const vhFilePath = await this.vhFileProvider.getOrCreateVHFilePath(event.file);
+    const vhFilePath = await this.vhFileProvider.getOrCreateVHFilePathForThisMachine(event.file);
     if (vhFilePath === null) {
       return;
     }

@@ -28,7 +28,7 @@ export class VHFileProvider {
   private static readonly V1_VH_FOCUS_DIR: string = "_visit_history/v1/focus";
 
   /** Gets or Creates the VH file for this machine. */
-  async getOrCreateVHFilePath(file: TFile): Promise<string | null> {
+  async getOrCreateVHFilePathForThisMachine(file: TFile): Promise<string | null> {
     const noteFilePathInVault = file.path;
 
     // Fast path: we previously created this VH file ourselves and cached the
