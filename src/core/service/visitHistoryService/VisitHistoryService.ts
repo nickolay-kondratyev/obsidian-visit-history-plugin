@@ -1,5 +1,5 @@
 import { VHFileProvider } from "../../focusTracker/listener/VHFileProvider";
-import { NoteFileUtil } from "../../util/file/note/NoteFileUtil";
+import { NoteFileUtil } from "../../core/util/file/note/NoteFileUtil";
 import { TFile } from 'obsidian';
 import { LRUCache } from 'lru-cache';
 
