@@ -2,7 +2,7 @@ import { Plugin } from 'obsidian';
 import { DEFAULT_SETTINGS, VisitHistoryPluginSettings } from './settings';
 import { registerSampleCommands } from './sample/registerSampleCommands';
 import { FocusTracker } from "./focusTracker/FocusTracker";
-import { ConsoleFocusListener } from "./focusTracker/listener/ConsoleFocusListener";
+import { VisitHistoryFocusListenerDefault } from "./focusTracker/listener/VisitHistoryFocusListenerDefault";
 import { LinkUtilDefault } from "./util";
 import { OutFactoryConsole } from "./util/out/impl/OutConsole";
 import { UserNotifier } from "./util/userComm/UserNotifier";
@@ -20,7 +20,7 @@ export default class VisitHistoryPlugin extends Plugin {
     const linkUtil = new LinkUtilDefault(this.app);
     const outFactory = new OutFactoryConsole();
     this.focusTracker = new FocusTracker(this);
-    const focusListener = new ConsoleFocusListener(linkUtil);
+    const focusListener = new VisitHistoryFocusListenerDefault(linkUtil);
 
     this.focusTracker.registerListener(focusListener);
 

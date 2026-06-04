@@ -1,8 +1,11 @@
 import { FocusEvent, FocusListener } from "../FocusTracker";
 import { LinkUtil } from "../../util";
+import { UserNotifier } from "../../util/userComm/UserNotifier";
 
-export class ConsoleFocusListener implements FocusListener {
-  constructor(private readonly linkUtil: LinkUtil) {
+export class VisitHistoryFocusListenerDefault implements FocusListener {
+  constructor(
+    private readonly linkUtil: LinkUtil,
+    private readonly userNotifier: UserNotifier) {
   }
 
   onFocus(event: FocusEvent) {
@@ -13,11 +16,14 @@ export class ConsoleFocusListener implements FocusListener {
     console.log("");
     console.log('[FocusTracker] FOCUS EVENT:', event);
 
-
     if (vhBacklinks.length > 0) {
-
+      if (vhBacklinks.length > 1) {
+        this.userNotifier.showError("More than one visit history backlink found for the file=" + event.file.path);
+      }
+      
       console.log('[FocusTracker] FOCUS VH-BACKLINKS:', vhBacklinks);
     } else {
+
       console.log("No VH backlinks found");
     }
   }
