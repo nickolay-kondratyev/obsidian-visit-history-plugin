@@ -25,6 +25,7 @@
 		"typescript-eslint": "^8.59.1"
 	},
 	"dependencies": {
+		"lru-cache": "^11.5.1",
 		"ulid": "^3.0.2"
 	}
 }
