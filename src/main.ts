@@ -7,6 +7,7 @@ import { LinkUtilDefault } from "./util";
 import { OutFactoryConsole } from "./util/out/impl/OutConsole";
 import { UserNotifier } from "./util/userComm/UserNotifier";
 import { UserNotifierDefault } from "./util/userComm/impl/UserNotifierDefault";
+import { NoteFileUtilDefault } from "./util/file/note/impl/NoteFileUtilDefault";
 
 // ── VisitHistoryPlugin ────────────────────────────────────────────────────────
 export default class VisitHistoryPlugin extends Plugin {
@@ -19,8 +20,10 @@ export default class VisitHistoryPlugin extends Plugin {
 
     const linkUtil = new LinkUtilDefault(this.app);
     const outFactory = new OutFactoryConsole();
+    const noteFileUtil = new NoteFileUtilDefault(this.app);
     this.focusTracker = new FocusTracker(this);
-    const focusListener = new VisitHistoryFocusListenerDefault(linkUtil);
+    const focusListener = new VisitHistoryFocusListenerDefault(
+      linkUtil, this.userNotifier, noteFileUtil);
 
     this.focusTracker.registerListener(focusListener);
 

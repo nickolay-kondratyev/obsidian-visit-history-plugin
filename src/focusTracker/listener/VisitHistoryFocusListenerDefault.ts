@@ -1,11 +1,14 @@
 import { FocusEvent, FocusListener } from "../FocusTracker";
 import { LinkUtil } from "../../util";
 import { UserNotifier } from "../../util/userComm/UserNotifier";
+import { NoteFileUtil } from "../../util/file/note/NoteFileUtil";
+import { ulid } from 'ulid';
 
 export class VisitHistoryFocusListenerDefault implements FocusListener {
   constructor(
     private readonly linkUtil: LinkUtil,
-    private readonly userNotifier: UserNotifier) {
+    private readonly userNotifier: UserNotifier,
+    private readonly noteFileUtil: NoteFileUtil) {
   }
 
   onFocus(event: FocusEvent) {
@@ -22,7 +25,11 @@ export class VisitHistoryFocusListenerDefault implements FocusListener {
       }
 
       console.log('[FocusTracker] FOCUS VH-BACKLINKS:', vhBacklinks);
+
     } else {
+      this.noteFileUtil.createNote("_visit_history/v1/_visit_history_" + ulid() + ".md",
+        `VISIT_HISTORY_V1_FOR:[[${event.file.path}]]\n" ` +
+        "### VISIT_HISTORY_V1:\n")
 
       console.log("No VH backlinks found");
     }

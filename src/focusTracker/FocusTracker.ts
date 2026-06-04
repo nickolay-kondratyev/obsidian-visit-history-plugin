@@ -18,11 +18,6 @@ export interface FocusListener {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function isTrackedView(view: View | null): boolean {
-  let ofRightType = TRACKED_VIEW_TYPES.has(view?.getViewType() ?? '');
-
-  return ofRightType && (view as any).file !== null;
-}
 
 function viewToFocusEvent(view: View): FocusEvent {
   return {
@@ -57,17 +52,23 @@ export class FocusTracker {
   private handleLeafChange(leaf: WorkspaceLeaf | null): void {
     if (this.previousLeaf && this.previousLeaf !== leaf) {
       const prev = this.previousLeaf.view;
-      if (isTrackedView(prev)) {
+      if (this.isTrackedView(prev)) {
         const event = viewToFocusEvent(prev);
         this.listeners.forEach((l) => l.onUnfocus(event));
       }
     }
 
-    if (leaf && isTrackedView(leaf.view)) {
+    if (leaf && this.isTrackedView(leaf.view)) {
       const event = viewToFocusEvent(leaf.view);
       this.listeners.forEach((l) => l.onFocus(event));
     }
 
     this.previousLeaf = leaf;
+  }
+
+  private isTrackedView(view: View | null): boolean {
+    let ofRightType = TRACKED_VIEW_TYPES.has(view?.getViewType() ?? '');
+
+    return ofRightType && (view as any).file !== null;
   }
 }

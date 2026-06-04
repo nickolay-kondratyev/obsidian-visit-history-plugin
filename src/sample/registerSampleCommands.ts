@@ -6,6 +6,7 @@ import { VisitHistorySampleModal } from "./visitHistorySampleModal";
 import { SampleSettingTab } from "../settings";
 import VisitHistoryPlugin from "../main";
 import { ulid } from 'ulid';
+import { NoteFileUtilDefault } from "../util/file/note/impl/NoteFileUtilDefault";
 
 export function registerSampleCommands(plugin: VisitHistoryPlugin): void {
   plugin.addRibbonIcon('dice', 'Sample', (_evt: MouseEvent) => {
@@ -45,6 +46,9 @@ export function registerSampleCommands(plugin: VisitHistoryPlugin): void {
     const id = ulid();
 
     plugin.userNotifier.showInfo("Click13");
+
+    const util = new NoteFileUtilDefault(plugin.app);
+
   });
 
 }
