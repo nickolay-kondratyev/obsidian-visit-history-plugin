@@ -45,7 +45,7 @@ export function registerSampleCommands(plugin: VisitHistoryPlugin): void {
 
     const id = ulid();
 
-    plugin.userNotifier.showInfo("Click17");
+    plugin.userNotifier.showInfo("Click18");
 
     const util = new NoteFileUtilDefault(plugin.app);
   });

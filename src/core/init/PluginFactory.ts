@@ -1,0 +1,46 @@
+import { App } from 'obsidian';
+import VisitHistoryPlugin from '../../main';
+import { FocusTracker } from '../focusTracker/FocusTracker';
+import { VisitHistoryFocusListenerDefault } from '../focusTracker/listener/VisitHistoryFocusListenerDefault';
+import { LinkUtilDefault } from '../util';
+import { UserNotifier } from '../util/userComm/UserNotifier';
+import { UserNotifierDefault } from '../util/userComm/impl/UserNotifierDefault';
+import { NoteFileUtilDefault } from '../util/file/note/impl/NoteFileUtilDefault';
+import { VHFileProvider } from '../focusTracker/listener/VHFileProvider';
+import { DeviceNameProviderDefault } from '../util/env/DeviceNameProvider';
+import { VisitHistoryServiceDefault } from '../service/visitHistoryService/VisitHistoryService';
+import { VaultUtilDefault } from '../util/vault/VaultUtil';
+
+// ── PluginFactory ─────────────────────────────────────────────────────────────
+// Constructs and wires all plugin dependencies.
+// The plugin's onload() calls this once and reads from the resulting instance.
+export class PluginFactory {
+  readonly userNotifier: UserNotifier;
+  readonly focusTracker: FocusTracker;
+  readonly vaultUtil: VaultUtilDefault;
+
+  constructor(plugin: VisitHistoryPlugin) {
+    const app: App = plugin.app;
+
+    this.userNotifier = new UserNotifierDefault(plugin);
+
+    const linkUtil = new LinkUtilDefault(app);
+    const noteFileUtil = new NoteFileUtilDefault(app);
+    const deviceNameProvider = new DeviceNameProviderDefault();
+
+    const vhFileProvider = new VHFileProvider(
+      linkUtil,
+      this.userNotifier,
+      noteFileUtil,
+      deviceNameProvider,
+    );
+    const visitHistoryService = new VisitHistoryServiceDefault(vhFileProvider, noteFileUtil);
+
+    this.focusTracker = new FocusTracker(plugin);
+    this.focusTracker.registerListener(
+      new VisitHistoryFocusListenerDefault(visitHistoryService),
+    );
+
+    this.vaultUtil = new VaultUtilDefault(app, visitHistoryService);
+  }
+}
