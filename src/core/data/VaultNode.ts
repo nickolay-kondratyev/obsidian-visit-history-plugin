@@ -19,6 +19,12 @@ export interface VaultNode {
   /** Display name — file name (leaf) or folder name (branch). */
   name: string;
 
+  /**
+   * Full vault path (e.g. "Projects/Alpha/overview.md").
+   * Only set on leaf (file) nodes; `undefined` on folder nodes.
+   */
+  path?: string;
+
   /** Present only on folder nodes. Absent on leaf nodes. */
   children?: VaultNode[];
 

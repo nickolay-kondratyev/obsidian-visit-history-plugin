@@ -3,9 +3,11 @@ import { Header } from './Header';
 import { ConfigPanel } from './ConfigPanel';
 import { TreemapViz } from './TreemapViz';
 import type { VaultNode } from '../../core/data/VaultNode';
+import type { IFileOpener } from '../../viewModel/FileOpener';
 
 interface AppProps {
   data: VaultNode;
+  fileOpener: IFileOpener;
 }
 
 /**
@@ -15,7 +17,7 @@ interface AppProps {
  * All config state lives here and threads down to children.
  * Stats bubble up from TreemapViz via onStatsChange.
  */
-export function App({ data }: AppProps) {
+export function App({ data, fileOpener }: AppProps) {
   const [colorMode, setColorMode] = useState<'type' | 'heatmap'>('heatmap');
   const [gradKey, setGradKey] = useState('nature');
   const [field, setField] = useState('lastModifiedAt');
@@ -62,6 +64,7 @@ export function App({ data }: AppProps) {
         coldDays={coldDays}
         scales={scales}
         onStatsChange={setStats}
+        fileOpener={fileOpener}
       />
     </>
   );
