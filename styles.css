@@ -381,13 +381,14 @@
 
 /* ── Tooltip ────────────────────────────────────────────── */
 .vault-treemap-view #tooltip {
-  position: fixed;
+  position: absolute;
   background: var(--vt-surface);
   border: 1px solid var(--vt-border2);
   padding: 10px 13px;
   pointer-events: none;
   z-index: 200;
   min-width: 210px;
+  max-width: 280px;
 }
 
 .vault-treemap-view .tt-name {

@@ -57,6 +57,9 @@ export function TreemapViz({
   const svgRef = useRef<SVGSVGElement | null>(null);
   // Capture the @visx/zoom instance from the render prop for the reset button.
   const zoomRef = useRef<ProvidedZoom<SVGSVGElement> | null>(null);
+  // Store last-measured tooltip DOM dimensions for accurate edge-flip decisions.
+  // Initial fallback: 230×140 (reasonable estimate before first measurement).
+  const tooltipSizeRef = useRef<{ width: number; height: number }>({ width: 230, height: 140 });
 
   const [dims, setDims] = useState({ w: 800, h: 600 });
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
@@ -75,6 +78,23 @@ export function TreemapViz({
     obs.observe(el);
     return () => obs.disconnect();
   }, []);
+
+  // ── Measure tooltip DOM after paint to keep edge-flip accurate ────────
+
+  useEffect(() => {
+    if (!tooltip) return;
+    // rAF ensures the DOM has painted before we measure.
+    const raf = requestAnimationFrame(() => {
+      const el = document.getElementById('tooltip');
+      if (el) {
+        const r = el.getBoundingClientRect();
+        if (r.width > 0 && r.height > 0) {
+          tooltipSizeRef.current = { width: r.width, height: r.height };
+        }
+      }
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [tooltip?.node]); // only re-measure when content (node) changes, not on every pixel move
 
   // ── D3 treemap layout — pure math in useMemo ──────────────────────────
 
@@ -113,24 +133,58 @@ export function TreemapViz({
   }, [leaves, folders, onStatsChange]);
 
   // ── Hover / tooltip handlers ──────────────────────────────────────────
+  //
+  // The tooltip is position:absolute inside #viz (which itself is
+  // position:absolute).  We compute coordinates relative to the #viz
+  // container so that ancestor CSS transforms (common in Obsidian's
+  // workspace layout) cannot shift the containing block away from the
+  // viewport — a known failure mode of position:fixed.
+  //
+  // We read actual tooltip dimensions from the DOM (via tooltipSizeRef)
+  // so edge-flip decisions are accurate even with variable-width content.
+  // Default placement: right + below the cursor (8 px gap).
+  // Flips left when near the right edge, flips above when near the bottom,
+  // and clamps to the viz container bounds to prevent off-screen overflow.
+
+  const TOOLTIP_GAP = 8;
 
   const handleLeafMove = useCallback(
     (e: React.MouseEvent, d: HierarchyRectangularNode<VaultNode>, i: number) => {
       if (hoveredIdx !== i) setHoveredIdx(i);
-      const TW = 230,
-        TH = 140,
-        cx = e.clientX,
-        cy = e.clientY;
-      // Use viz container bounds so tooltip stays inside the treemap pane
-      // even when the Obsidian window is not maximized.
       const vizRect = containerRef.current?.getBoundingClientRect();
-      const vwMax = vizRect ? vizRect.right : window.innerWidth;
-      const vhMax = vizRect ? vizRect.bottom : window.innerHeight;
-      setTooltip({
-        x: cx + 16 + TW > vwMax ? cx - TW - 8 : cx + 16,
-        y: cy - 12 + TH > vhMax ? cy - TH - 4 : cy - 12,
-        node: d,
-      });
+      if (!vizRect) {
+        setTooltip({ x: e.clientX + TOOLTIP_GAP, y: e.clientY + TOOLTIP_GAP, node: d });
+        return;
+      }
+      const { width: tw, height: th } = tooltipSizeRef.current;
+
+      // Cursor position relative to #viz container
+      const rx = e.clientX - vizRect.left;
+      const ry = e.clientY - vizRect.top;
+
+      // Default: right of cursor, below cursor
+      let tx = rx + TOOLTIP_GAP;
+      let ty = ry + TOOLTIP_GAP;
+
+      // Flip horizontally if tooltip would overflow the right edge of #viz
+      if (tx + tw > vizRect.width) {
+        tx = rx - tw - TOOLTIP_GAP;
+      }
+      // Clamp if flipped position would overflow the left edge
+      if (tx < 0) {
+        tx = 4;
+      }
+
+      // Flip vertically if tooltip would overflow the bottom edge of #viz
+      if (ty + th > vizRect.height) {
+        ty = ry - th - TOOLTIP_GAP;
+      }
+      // Clamp if flipped position would overflow the top edge
+      if (ty < 0) {
+        ty = 4;
+      }
+
+      setTooltip({ x: tx, y: ty, node: d });
     },
     [hoveredIdx],
   );
