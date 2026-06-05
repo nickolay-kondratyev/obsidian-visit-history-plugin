@@ -118,12 +118,17 @@ export function TreemapViz({
     (e: React.MouseEvent, d: HierarchyRectangularNode<VaultNode>, i: number) => {
       if (hoveredIdx !== i) setHoveredIdx(i);
       const TW = 230,
-        TH = 165,
+        TH = 140,
         cx = e.clientX,
         cy = e.clientY;
+      // Use viz container bounds so tooltip stays inside the treemap pane
+      // even when the Obsidian window is not maximized.
+      const vizRect = containerRef.current?.getBoundingClientRect();
+      const vwMax = vizRect ? vizRect.right : window.innerWidth;
+      const vhMax = vizRect ? vizRect.bottom : window.innerHeight;
       setTooltip({
-        x: cx + 16 + TW > window.innerWidth ? cx - TW - 8 : cx + 16,
-        y: cy - 12 + TH > window.innerHeight ? cy - TH - 4 : cy - 12,
+        x: cx + 16 + TW > vwMax ? cx - TW - 8 : cx + 16,
+        y: cy - 12 + TH > vhMax ? cy - TH - 4 : cy - 12,
         node: d,
       });
     },

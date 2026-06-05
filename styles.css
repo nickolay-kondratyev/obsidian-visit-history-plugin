@@ -382,7 +382,7 @@
 
 /* ── Tooltip ────────────────────────────────────────────── */
 .vault-treemap-view #tooltip {
-  position: absolute;
+  position: fixed;
   background: var(--vt-surface);
   border: 1px solid var(--vt-border2);
   padding: 10px 13px;
