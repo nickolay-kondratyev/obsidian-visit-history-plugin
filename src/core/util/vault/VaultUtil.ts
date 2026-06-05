@@ -2,6 +2,7 @@ import { App, TFile } from 'obsidian';
 import { TRACKED_EXTENSIONS } from "../../../Constants";
 import { FileTimeMetadata } from "../../data/FileTimeMetadata";
 import { VisitHistoryService } from "../../service/visitHistoryService/VisitHistoryService";
+import { IsTrackedProvider, IsTrackerProviderDefault } from "./IsTrackedProvider";
 
 export interface VaultUtil {
   getTrackedFiles(): Promise<TrackedFile[]>;
@@ -20,11 +21,12 @@ export class VaultUtilDefault implements VaultUtil {
   constructor(
     private readonly app: App,
     private readonly visitHistoryService: VisitHistoryService,
+    private readonly isTrackedProvider: IsTrackedProvider
   ) {
   }
 
   getRawTrackedFiles(): TFile[] {
-    return this.app.vault.getFiles().filter(f => TRACKED_EXTENSIONS.has(f.extension));
+    return this.app.vault.getFiles().filter(f => this.isTrackedProvider.isTrackedFile(f));
   }
 
   async getTrackedFiles(): Promise<TrackedFile[]> {
