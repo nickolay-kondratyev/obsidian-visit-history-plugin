@@ -33,6 +33,8 @@ export const VIEW_TYPE_TREEMAP = 'vault-treemap';
 export class VaultTreemapView extends ItemView {
   private root: Root | null = null;
   private readonly pluginFactory: PluginFactory;
+  private refreshTimer: number | null = null;
+  private readonly REFRESH_DEBOUNCE_MS = 500;
 
   constructor(leaf: WorkspaceLeaf, pluginFactory: PluginFactory) {
     super(leaf);
@@ -60,10 +62,11 @@ export class VaultTreemapView extends ItemView {
     this.root = createRoot(container);
     await this.refresh();
 
-    // Re-render on vault file changes
-    this.registerEvent(this.app.vault.on('create', () => this.refresh()));
-    this.registerEvent(this.app.vault.on('delete', () => this.refresh()));
-    this.registerEvent(this.app.vault.on('rename', () => this.refresh()));
+    // Re-render on vault file changes (debounced to avoid excessive rebuilds
+    // during batch operations like template expansion or bulk renames).
+    this.registerEvent(this.app.vault.on('create', () => this.scheduleRefresh()));
+    this.registerEvent(this.app.vault.on('delete', () => this.scheduleRefresh()));
+    this.registerEvent(this.app.vault.on('rename', () => this.scheduleRefresh()));
   }
 
   async onClose(): Promise<void> {
@@ -72,6 +75,21 @@ export class VaultTreemapView extends ItemView {
   }
 
   // ── Private helpers ───────────────────────────────────────────────────
+
+  /**
+   * Schedules a debounced refresh. Multiple rapid vault events (e.g. batch
+   * rename, template expansion) are coalesced into a single refresh that
+   * fires after {@link REFRESH_DEBOUNCE_MS} ms of inactivity.
+   */
+  private scheduleRefresh(): void {
+    if (this.refreshTimer !== null) {
+      window.clearTimeout(this.refreshTimer);
+    }
+    this.refreshTimer = window.setTimeout(() => {
+      this.refreshTimer = null;
+      this.refresh().catch(console.error);
+    }, this.REFRESH_DEBOUNCE_MS);
+  }
 
   private async refresh(): Promise<void> {
     const visitedMsMap = await this.getVisitedTimestamps();
