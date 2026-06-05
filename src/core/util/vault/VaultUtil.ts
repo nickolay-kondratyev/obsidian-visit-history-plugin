@@ -5,7 +5,11 @@ import { VisitHistoryService } from "../../service/visitHistoryService/VisitHist
 import { IsTrackedProvider, IsTrackerProviderDefault } from "./IsTrackedProvider";
 
 export interface VaultUtil {
+  getName(): string;
+
   getTrackedFiles(): Promise<TrackedFile[]>;
+
+  getRawTrackedFiles(): TFile[];
 }
 
 /** File in vault that is part of
@@ -23,6 +27,10 @@ export class VaultUtilDefault implements VaultUtil {
     private readonly visitHistoryService: VisitHistoryService,
     private readonly isTrackedProvider: IsTrackedProvider
   ) {
+  }
+
+  getName(): string {
+    return this.app.vault.getName();
   }
 
   getRawTrackedFiles(): TFile[] {

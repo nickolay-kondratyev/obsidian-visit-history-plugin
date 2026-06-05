@@ -1,5 +1,8 @@
 import { Vault, TFile } from 'obsidian';
 import type { VaultNode } from '../core/data/VaultNode';
+import { VisitHistoryService } from "../core/service/visitHistoryService/VisitHistoryService";
+import { IsTrackedProvider } from "../core/util/vault/IsTrackedProvider";
+import { VaultUtil } from "../core/util/vault/VaultUtil";
 
 // ── File classification ────────────────────────────────────────────────────
 
@@ -28,11 +31,11 @@ function classifyFile(file: TFile): FileType | null {
  *                        Files not in this map get `lastVisitedAt: null`.
  */
 export async function buildVaultTree(
-  vault: Vault,
+  vaultUtil: VaultUtil,
   visitedMsMap: Record<string, number> = {},
 ): Promise<VaultNode> {
-  const files = vault.getFiles();
-  const root: VaultNode = { name: vault.getName(), children: [] };
+  const files = vaultUtil.getRawTrackedFiles();
+  const root: VaultNode = {name: vaultUtil.getName(), children: []};
 
   for (const file of files) {
     const type = classifyFile(file);
@@ -47,7 +50,7 @@ export async function buildVaultTree(
         c => c.name === parts[i] && c.children,
       );
       if (!child) {
-        child = { name: parts[i]!, children: [] };
+        child = {name: parts[i]!, children: []};
         node.children!.push(child);
       }
       node = child;

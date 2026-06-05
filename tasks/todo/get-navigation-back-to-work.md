@@ -1,0 +1,1 @@
+Navigation back does not work when we navigate to the note and want to navigate back to the vault map view.

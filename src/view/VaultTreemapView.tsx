@@ -93,7 +93,7 @@ export class VaultTreemapView extends ItemView {
 
   private async refresh(): Promise<void> {
     const visitedMsMap = await this.getVisitedTimestamps();
-    const data: VaultNode = await buildVaultTree(this.app.vault, visitedMsMap);
+    const data: VaultNode = await buildVaultTree(this.pluginFactory.vaultUtil, visitedMsMap);
 
     const fileOpener = new ObsidianFileOpener(this.app);
 

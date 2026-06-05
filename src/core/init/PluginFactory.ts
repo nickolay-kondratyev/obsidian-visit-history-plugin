@@ -10,7 +10,7 @@ import { VHFileProvider } from '../focusTracker/listener/VHFileProvider';
 import { DeviceNameProviderDefault } from '../util/env/DeviceNameProvider';
 import { VisitHistoryService, VisitHistoryServiceDefault } from '../service/visitHistoryService/VisitHistoryService';
 import { VaultUtil, VaultUtilDefault } from '../util/vault/VaultUtil';
-import { IsTrackerProviderDefault } from "../util/vault/IsTrackedProvider";
+import { IsTrackedProvider, IsTrackerProviderDefault } from "../util/vault/IsTrackedProvider";
 
 // ── PluginFactory ─────────────────────────────────────────────────────────────
 // Constructs and wires all plugin dependencies.
@@ -20,6 +20,7 @@ export class PluginFactory {
   readonly focusTracker: FocusTracker;
   readonly vaultUtil: VaultUtil;
   readonly visitHistoryService: VisitHistoryService;
+  readonly isTrackedProvider: IsTrackedProvider;
 
   constructor(plugin: VisitHistoryPlugin) {
     const app: App = plugin.app;
@@ -29,7 +30,7 @@ export class PluginFactory {
     const linkUtil = new LinkUtilDefault(app);
     const noteFileUtil = new NoteFileUtilDefault(app);
     const deviceNameProvider = new DeviceNameProviderDefault();
-    const isTrackedProvider = new IsTrackerProviderDefault();
+    this.isTrackedProvider = new IsTrackerProviderDefault();
 
     const vhFileProvider = new VHFileProvider(
       linkUtil,
@@ -39,11 +40,11 @@ export class PluginFactory {
     );
     this.visitHistoryService = new VisitHistoryServiceDefault(vhFileProvider, noteFileUtil);
 
-    this.focusTracker = new FocusTracker(plugin, isTrackedProvider);
+    this.focusTracker = new FocusTracker(plugin, this.isTrackedProvider);
     this.focusTracker.registerListener(
       new VisitHistoryFocusListenerDefault(this.visitHistoryService),
     );
 
-    this.vaultUtil = new VaultUtilDefault(app, this.visitHistoryService, isTrackedProvider);
+    this.vaultUtil = new VaultUtilDefault(app, this.visitHistoryService, this.isTrackedProvider);
   }
 }
