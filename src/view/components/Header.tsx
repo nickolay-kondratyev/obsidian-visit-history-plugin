@@ -22,7 +22,7 @@ export function Header({
 }: HeaderProps) {
   return (
     <div id="header">
-      <span id="title">Vault Treemap</span>
+      <span id="title">vault heatmap</span>
       <div className="stats">
         <span className="stat">
           <strong>{stats.files}</strong> files

@@ -22,15 +22,15 @@ export default class VisitHistoryPlugin extends Plugin {
   }
 
   private initVaultTreeMapView(pluginFactory: PluginFactory) {
-    // ── Vault Treemap view ─────────────────────────────────────────────
+    // ── vault heatmap view ─────────────────────────────────────────────
     this.registerView(
       VIEW_TYPE_TREEMAP,
       (leaf) => new VaultTreemapView(leaf, pluginFactory),
     );
 
     this.addCommand({
-      id: 'open-vault-treemap',
-      name: 'Open vault treemap',
+      id: 'open-vault-heatmap',
+      name: 'Open vault heatmap',
       callback: () => {
         this.app.workspace.getLeaf(true).setViewState({
           type: VIEW_TYPE_TREEMAP,
@@ -39,7 +39,7 @@ export default class VisitHistoryPlugin extends Plugin {
       },
     });
 
-    this.addRibbonIcon('layout-grid', 'Open vault treemap', () => {
+    this.addRibbonIcon('layout-grid', 'Open vault heatmap', () => {
       this.app.workspace.getLeaf(true).setViewState({
         type: VIEW_TYPE_TREEMAP,
         active: true,

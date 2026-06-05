@@ -1,5 +1,5 @@
 /**
- * Tree node for the vault treemap visualization.
+ * Tree node for the vault heatmap visualization.
  *
  * Dual-purpose type:
  * - Folder nodes have `children`, no file-specific fields.

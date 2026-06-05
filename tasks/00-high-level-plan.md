@@ -1,8 +1,8 @@
-# Vault Treemap — High-Level Integration Plan
+# vault heatmap — High-Level Integration Plan
 
 > **Status:** PLANNING
-> **Reference prototype:** `raw_proto/visit_visualization/vault-treemap.html`
-> **Reference plan:** `raw_proto/visit_visualization/vault-treemap-integration-plan.md`
+> **Reference prototype:** `raw_proto/visit_visualization/vault-heatmap.html`
+> **Reference plan:** `raw_proto/visit_visualization/vault-heatmap-integration-plan.md`
 
 ## Architecture: Three-Layer DIP
 
@@ -25,7 +25,7 @@ src/view/            ← React components. Knows Core types. Minimal Obsidian (I
 | D2 | `lastVisitedAt` wiring | Wire from existing `VaultUtilDefault.getTrackedFiles()` → `FileTimeMetadata.visitedMs` |
 | D3 | D3/React library | `react-d3-library` evaluated & rejected (no treemap, unmaintained since 2016). Use `d3-hierarchy` (layout math in `useMemo`) + `@visx/zoom` (zoom in React state). |
 | D4 | Font | `var(--font-monospace)` — Obsidian's built-in monospace |
-| D5 | CSS | `styles.css` at plugin root, scoped under `.vault-treemap-view` |
+| D5 | CSS | `styles.css` at plugin root, scoped under `.vault-heatmap-view` |
 
 ## Directory Layout (post-migration)
 
@@ -55,7 +55,7 @@ src/
             ├── index.tsx
             ├── HeatmapOptions.tsx
             └── GradientPicker.tsx
-styles.css                           ← scoped under .vault-treemap-view
+styles.css                           ← scoped under .vault-heatmap-view
 ```
 
 ## Phased Task Breakdown
@@ -86,7 +86,7 @@ styles.css                           ← scoped under .vault-treemap-view
 - **6.2** — `src/view/VaultTreemapView.ts` (ItemView host)
 
 ### Phase 7: CSS
-- **7.1** — `styles.css` scoped under `.vault-treemap-view`, theme var mapping
+- **7.1** — `styles.css` scoped under `.vault-heatmap-view`, theme var mapping
 
 ### Phase 8: Wire into plugin
 - **8.1** — Register view + command in `main.ts`

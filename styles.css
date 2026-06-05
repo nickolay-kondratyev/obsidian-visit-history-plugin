@@ -1,8 +1,8 @@
-/* Vault Treemap — scoped styles
-   All rules scoped under .vault-treemap-view to avoid leaking into Obsidian UI.
+/* vault heatmap — scoped styles
+   All rules scoped under .vault-heatmap-view to avoid leaking into Obsidian UI.
    CSS variable mapping: prototype vars → Obsidian theme vars for automatic light/dark support. */
 
-.vault-treemap-view {
+.vault-heatmap-view {
   /* ── Theme variable mapping ─────────────────────────────── */
   --vt-bg:       var(--background-primary);
   --vt-surface:  var(--background-secondary);
@@ -37,7 +37,7 @@
 }
 
 /* ── Header ─────────────────────────────────────────────── */
-.vault-treemap-view #header {
+.vault-heatmap-view #header {
   position: absolute;
   top: 0;
   left: 0;
@@ -53,7 +53,7 @@
   overflow: hidden;
 }
 
-.vault-treemap-view #title {
+.vault-heatmap-view #title {
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.14em;
@@ -61,7 +61,7 @@
   white-space: nowrap;
 }
 
-.vault-treemap-view .stats {
+.vault-heatmap-view .stats {
   display: flex;
   gap: 16px;
   font-size: 10px;
@@ -71,11 +71,11 @@
   flex-shrink: 0;
 }
 
-.vault-treemap-view .stat strong {
+.vault-heatmap-view .stat strong {
   color: var(--vt-text);
 }
 
-.vault-treemap-view .ts-indicator {
+.vault-heatmap-view .ts-indicator {
   font-size: 10px;
   color: var(--vt-text-dim);
   border-left: 1px solid var(--vt-border);
@@ -84,16 +84,16 @@
   flex-shrink: 0;
 }
 
-.vault-treemap-view .ts-indicator strong {
+.vault-heatmap-view .ts-indicator strong {
   color: var(--vt-text);
 }
 
-.vault-treemap-view .spacer {
+.vault-heatmap-view .spacer {
   flex: 1;
   min-width: 4px;
 }
 
-.vault-treemap-view .legend {
+.vault-heatmap-view .legend {
   display: flex;
   gap: 10px;
   font-size: 10px;
@@ -102,27 +102,27 @@
   flex-shrink: 0;
 }
 
-.vault-treemap-view .legend-item {
+.vault-heatmap-view .legend-item {
   display: flex;
   align-items: center;
   gap: 5px;
   white-space: nowrap;
 }
 
-.vault-treemap-view .pip {
+.vault-heatmap-view .pip {
   width: 8px;
   height: 8px;
   border-radius: 2px;
   flex-shrink: 0;
 }
 
-.vault-treemap-view .legend-grad {
+.vault-heatmap-view .legend-grad {
   height: 8px;
   width: 88px;
   border-radius: 3px;
 }
 
-.vault-treemap-view .header-btn {
+.vault-heatmap-view .header-btn {
   font-family: inherit;
   font-size: 10px;
   background: none;
@@ -136,13 +136,13 @@
   flex-shrink: 0;
 }
 
-.vault-treemap-view .header-btn:hover {
+.vault-heatmap-view .header-btn:hover {
   color: var(--vt-text);
   border-color: var(--vt-border2);
 }
 
 /* ── Config panel ───────────────────────────────────────── */
-.vault-treemap-view #config {
+.vault-heatmap-view #config {
   position: absolute;
   top: 42px;
   right: 0;
@@ -157,11 +157,11 @@
   display: none;
 }
 
-.vault-treemap-view #config.open {
+.vault-heatmap-view #config.open {
   display: block;
 }
 
-.vault-treemap-view .cfg-h {
+.vault-heatmap-view .cfg-h {
   font-size: 9px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -169,14 +169,14 @@
   margin-bottom: 10px;
 }
 
-.vault-treemap-view .cfg-row {
+.vault-heatmap-view .cfg-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 9px;
 }
 
-.vault-treemap-view .cfg-label {
+.vault-heatmap-view .cfg-label {
   font-size: 10px;
   color: var(--vt-text-dim);
   display: flex;
@@ -184,13 +184,13 @@
   gap: 6px;
 }
 
-.vault-treemap-view .cfg-pip {
+.vault-heatmap-view .cfg-pip {
   width: 6px;
   height: 6px;
   border-radius: 1px;
 }
 
-.vault-treemap-view .cfg-input {
+.vault-heatmap-view .cfg-input {
   width: 60px;
   background: var(--vt-bg);
   border: 1px solid var(--vt-border);
@@ -201,18 +201,18 @@
   text-align: right;
 }
 
-.vault-treemap-view .cfg-input:focus {
+.vault-heatmap-view .cfg-input:focus {
   outline: none;
   border-color: var(--vt-border2);
 }
 
-.vault-treemap-view .cfg-sep {
+.vault-heatmap-view .cfg-sep {
   border: none;
   border-top: 1px solid var(--vt-border);
   margin: 12px 0;
 }
 
-.vault-treemap-view .cfg-select {
+.vault-heatmap-view .cfg-select {
   width: 100%;
   background: var(--vt-bg);
   border: 1px solid var(--vt-border);
@@ -223,21 +223,21 @@
   margin-bottom: 10px;
 }
 
-.vault-treemap-view .cfg-select:focus {
+.vault-heatmap-view .cfg-select:focus {
   outline: none;
   border-color: var(--vt-border2);
 }
 
 /* ── Mode + gradient buttons ────────────────────────────── */
-.vault-treemap-view .mode-row,
-.vault-treemap-view .grad-row {
+.vault-heatmap-view .mode-row,
+.vault-heatmap-view .grad-row {
   display: flex;
   gap: 5px;
   margin-bottom: 12px;
 }
 
-.vault-treemap-view .mode-btn,
-.vault-treemap-view .grad-btn {
+.vault-heatmap-view .mode-btn,
+.vault-heatmap-view .grad-btn {
   flex: 1;
   font-family: inherit;
   font-size: 10px;
@@ -252,36 +252,36 @@
   text-transform: uppercase;
 }
 
-.vault-treemap-view .grad-btn {
+.vault-heatmap-view .grad-btn {
   text-transform: none;
   line-height: 1.3;
   padding: 6px 4px 5px;
 }
 
-.vault-treemap-view .mode-btn:hover,
-.vault-treemap-view .grad-btn:hover {
+.vault-heatmap-view .mode-btn:hover,
+.vault-heatmap-view .grad-btn:hover {
   border-color: var(--vt-border2);
   color: var(--vt-text);
 }
 
-.vault-treemap-view .mode-btn.active,
-.vault-treemap-view .grad-btn.active {
+.vault-heatmap-view .mode-btn.active,
+.vault-heatmap-view .grad-btn.active {
   border-color: var(--vt-border2);
   color: var(--vt-text);
 }
 
-.vault-treemap-view .grad-swatch {
+.vault-heatmap-view .grad-swatch {
   height: 5px;
   border-radius: 2px;
   margin-bottom: 5px;
 }
 
 /* ── Sliders ────────────────────────────────────────────── */
-.vault-treemap-view .slider-wrap {
+.vault-heatmap-view .slider-wrap {
   margin-bottom: 10px;
 }
 
-.vault-treemap-view .slider-label-row {
+.vault-heatmap-view .slider-label-row {
   display: flex;
   justify-content: space-between;
   font-size: 10px;
@@ -289,30 +289,30 @@
   margin-bottom: 4px;
 }
 
-.vault-treemap-view .slider-label-row span {
+.vault-heatmap-view .slider-label-row span {
   color: var(--vt-text);
 }
 
-.vault-treemap-view input[type="range"] {
+.vault-heatmap-view input[type="range"] {
   width: 100%;
   accent-color: var(--vt-border2);
   cursor: pointer;
 }
 
-.vault-treemap-view .grad-preview {
+.vault-heatmap-view .grad-preview {
   height: 8px;
   border-radius: 3px;
   margin: 10px 0 4px;
 }
 
-.vault-treemap-view .grad-ends {
+.vault-heatmap-view .grad-ends {
   display: flex;
   justify-content: space-between;
   font-size: 9px;
   color: var(--vt-text-dim);
 }
 
-.vault-treemap-view .null-row {
+.vault-heatmap-view .null-row {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -321,7 +321,7 @@
   margin-top: 8px;
 }
 
-.vault-treemap-view .null-pip {
+.vault-heatmap-view .null-pip {
   width: 10px;
   height: 10px;
   border-radius: 2px;
@@ -330,7 +330,7 @@
 }
 
 /* ── Viz + overlay chrome ───────────────────────────────── */
-.vault-treemap-view #viz {
+.vault-heatmap-view #viz {
   position: absolute;
   top: 42px;
   left: 0;
@@ -338,18 +338,18 @@
   bottom: 0;
 }
 
-.vault-treemap-view #viz svg {
+.vault-heatmap-view #viz svg {
   width: 100%;
   height: 100%;
   cursor: grab;
   display: block;
 }
 
-.vault-treemap-view #viz svg.drag {
+.vault-heatmap-view #viz svg.drag {
   cursor: grabbing;
 }
 
-.vault-treemap-view #hint {
+.vault-heatmap-view #hint {
   position: absolute;
   bottom: 10px;
   left: 12px;
@@ -360,7 +360,7 @@
   pointer-events: none;
 }
 
-.vault-treemap-view .zoom-reset {
+.vault-heatmap-view .zoom-reset {
   position: absolute;
   bottom: 10px;
   right: 12px;
@@ -375,12 +375,12 @@
   cursor: pointer;
 }
 
-.vault-treemap-view .zoom-reset:hover {
+.vault-heatmap-view .zoom-reset:hover {
   color: var(--vt-text);
 }
 
 /* ── Tooltip ────────────────────────────────────────────── */
-.vault-treemap-view #tooltip {
+.vault-heatmap-view #tooltip {
   position: absolute;
   background: var(--vt-surface);
   border: 1px solid var(--vt-border2);
@@ -391,7 +391,7 @@
   max-width: 280px;
 }
 
-.vault-treemap-view .tt-name {
+.vault-heatmap-view .tt-name {
   font-size: 11px;
   font-weight: 500;
   color: var(--vt-text);
@@ -399,7 +399,7 @@
   word-break: break-all;
 }
 
-.vault-treemap-view .tt-row {
+.vault-heatmap-view .tt-row {
   font-size: 10px;
   color: var(--vt-text-dim);
   margin-bottom: 2px;
@@ -408,12 +408,12 @@
   justify-content: space-between;
 }
 
-.vault-treemap-view .tt-val {
+.vault-heatmap-view .tt-val {
   color: var(--vt-text);
   text-align: right;
 }
 
-.vault-treemap-view .tt-badge {
+.vault-heatmap-view .tt-badge {
   display: inline-block;
   font-size: 9px;
   letter-spacing: 0.06em;
@@ -422,13 +422,13 @@
   font-weight: 500;
 }
 
-.vault-treemap-view .tt-sep {
+.vault-heatmap-view .tt-sep {
   border: none;
   border-top: 1px solid var(--vt-border);
   margin: 5px 0;
 }
 
-.vault-treemap-view .tt-null {
+.vault-heatmap-view .tt-null {
   color: var(--vt-text-dim) !important;
   font-style: italic;
 }

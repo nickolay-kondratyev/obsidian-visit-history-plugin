@@ -15,12 +15,12 @@ import { ObsidianFileOpener } from '../viewModel/FileOpener';
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
-export const VIEW_TYPE_TREEMAP = 'vault-treemap';
+export const VIEW_TYPE_TREEMAP = 'vault-heatmap';
 
 // ── ItemView ────────────────────────────────────────────────────────────────
 
 /**
- * Obsidian ItemView host for the vault treemap visualization.
+ * Obsidian ItemView host for the vault heatmap visualization.
  *
  * This is the **only file in src/view/ that imports from 'obsidian'**.
  *
@@ -46,7 +46,7 @@ export class VaultTreemapView extends ItemView {
   }
 
   getDisplayText(): string {
-    return 'Vault Treemap';
+    return 'vault heatmap';
   }
 
   getIcon(): string {
@@ -58,7 +58,7 @@ export class VaultTreemapView extends ItemView {
     if (!container) {
       throw new Error('VaultTreemapView: container element not found');
     }
-    container.addClass('vault-treemap-view');
+    container.addClass('vault-heatmap-view');
     this.root = createRoot(container);
     await this.refresh();
 
