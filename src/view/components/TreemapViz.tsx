@@ -8,6 +8,7 @@ import { LeafNode } from './LeafNode';
 import { Tooltip } from './Tooltip';
 import { fmtBytes } from '../utils';
 import type { VaultNode } from '../../core/data/VaultNode';
+import type { IFileOpener } from '../../viewModel/FileOpener';
 
 // ── Props ───────────────────────────────────────────────────────────────────
 
@@ -20,6 +21,7 @@ interface TreemapVizProps {
   coldDays: number;
   scales: Record<string, number>;
   onStatsChange: (stats: { files: number; folders: number; size: string }) => void;
+  fileOpener: IFileOpener;
 }
 
 // ── Tooltip state ───────────────────────────────────────────────────────────
@@ -49,6 +51,7 @@ export function TreemapViz({
   coldDays,
   scales,
   onStatsChange,
+  fileOpener,
 }: TreemapVizProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
@@ -174,6 +177,11 @@ export function TreemapViz({
                   coldDays={coldDays}
                   onMouseMove={e => handleLeafMove(e, d, i)}
                   onMouseLeave={handleLeafLeave}
+                  onClick={
+                    d.data.path
+                      ? () => fileOpener.openFile(d.data.path!)
+                      : undefined
+                  }
                 />
               ))}
             </g>

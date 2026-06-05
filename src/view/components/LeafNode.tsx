@@ -12,15 +12,14 @@ interface LeafNodeProps {
   coldDays: number;
   onMouseMove: (e: React.MouseEvent) => void;
   onMouseLeave: () => void;
+  /** Pre-wired by TreemapViz to open the file via IFileOpener. */
+  onClick?: () => void;
 }
 
 /**
  * Pure SVG leaf rect — color-coded by type or heatmap.
  * Hover state owned by parent (TreemapViz).
  * No internal state.
- *
- * Future: add onClick to open file in Obsidian:
- *   onClick={() => app.workspace.openLinkText(d.data.path, '')}
  */
 export function LeafNode({
   d,
@@ -32,6 +31,7 @@ export function LeafNode({
   coldDays,
   onMouseMove,
   onMouseLeave,
+  onClick,
 }: LeafNodeProps) {
   const lw = Math.max(0, d.x1 - d.x0);
   const lh = Math.max(0, d.y1 - d.y0);
@@ -47,6 +47,7 @@ export function LeafNode({
       overflow="hidden"
       onMouseMove={onMouseMove}
       onMouseLeave={onMouseLeave}
+      onClick={onClick}
       style={{ cursor: 'pointer' }}
     >
       <rect

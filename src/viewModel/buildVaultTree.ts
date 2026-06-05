@@ -57,6 +57,7 @@ export async function buildVaultTree(
 
     node.children!.push({
       name: file.name,
+      path: file.path,
       type,
       size: file.stat.size,
       createdAt: file.stat.ctime,

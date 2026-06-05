@@ -11,6 +11,7 @@ import { LinkUtilDefault } from '../core/util';
 import { NoteFileUtilDefault } from '../core/util/file/note/impl/NoteFileUtilDefault';
 import { DeviceNameProviderDefault } from '../core/util/env/DeviceNameProvider';
 import { PluginFactory } from "../core/init/PluginFactory";
+import { ObsidianFileOpener } from '../viewModel/FileOpener';
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
@@ -75,7 +76,10 @@ export class VaultTreemapView extends ItemView {
   private async refresh(): Promise<void> {
     const visitedMsMap = await this.getVisitedTimestamps();
     const data: VaultNode = await buildVaultTree(this.app.vault, visitedMsMap);
-    this.root?.render(<TreemapApp data={data}/>);
+
+    const fileOpener = new ObsidianFileOpener(this.app);
+
+    this.root?.render(<TreemapApp data={data} fileOpener={fileOpener}/>);
   }
 
   /**
