@@ -22,6 +22,7 @@ export function GradientPicker({ active, onChange }: GradientPickerProps) {
             className="grad-swatch"
             style={{
               background: `linear-gradient(to right, ${g.hot}, ${g.cold})`,
+              display: 'block',
             }}
           />
           <span style={{ display: 'block' }}>{g.label}</span>

@@ -274,10 +274,9 @@
 
 .vault-heatmap-view .grad-swatch {
   display: block;
-  height: 14px;
-  border-radius: 3px;
-  margin-bottom: 6px;
-  flex-shrink: 0;
+  height: 5px;
+  border-radius: 2px;
+  margin-bottom: 5px;
 }
 
 /* ── Sliders ────────────────────────────────────────────── */
