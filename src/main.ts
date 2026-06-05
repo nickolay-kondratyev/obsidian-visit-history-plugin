@@ -11,6 +11,7 @@ import { VHFileProvider } from "./core/focusTracker/listener/VHFileProvider";
 import { DeviceNameProviderDefault } from "./core/util/env/DeviceNameProvider";
 import { VisitHistoryServiceDefault } from "./core/service/visitHistoryService/VisitHistoryService";
 import { VaultUtilDefault } from "./core/util/vault/VaultUtil";
+import { VaultTreemapView, VIEW_TYPE_TREEMAP } from "./view/VaultTreemapView";
 
 // ── VisitHistoryPlugin ────────────────────────────────────────────────────────
 export default class VisitHistoryPlugin extends Plugin {
@@ -35,6 +36,30 @@ export default class VisitHistoryPlugin extends Plugin {
     this.focusTracker.registerListener(focusListener);
 
     registerSampleCommands(this);
+
+    // ── Vault Treemap view ─────────────────────────────────────────────
+    this.registerView(
+      VIEW_TYPE_TREEMAP,
+      (leaf) => new VaultTreemapView(leaf, this),
+    );
+
+    this.addCommand({
+      id: 'open-vault-treemap',
+      name: 'Open vault treemap',
+      callback: () => {
+        this.app.workspace.getLeaf(true).setViewState({
+          type: VIEW_TYPE_TREEMAP,
+          active: true,
+        });
+      },
+    });
+
+    this.addRibbonIcon('layout-grid', 'Open vault treemap', () => {
+      this.app.workspace.getLeaf(true).setViewState({
+        type: VIEW_TYPE_TREEMAP,
+        active: true,
+      });
+    });
 
     const before = Date.now();
     const trackedFiles = await vaultUtil.getTrackedFiles();
