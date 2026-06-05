@@ -271,6 +271,7 @@
 }
 
 .vault-heatmap-view .grad-swatch {
+  display: block;
   height: 5px;
   border-radius: 2px;
   margin-bottom: 5px;

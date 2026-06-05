@@ -18,15 +18,15 @@ export function GradientPicker({ active, onChange }: GradientPickerProps) {
           className={'grad-btn' + (key === active ? ' active' : '')}
           onClick={() => onChange(key)}
         >
-          <div
+          <span
             className="grad-swatch"
             style={{
               background: `linear-gradient(to right, ${g.hot}, ${g.cold})`,
+              display: 'block',
             }}
           />
-          {g.label}
-          <br />
-          <span style={{ fontSize: '8px', opacity: 0.55 }}>{g.sub}</span>
+          <span style={{ display: 'block' }}>{g.label}</span>
+          <span style={{ display: 'block', fontSize: '8px', opacity: 0.55 }}>{g.sub}</span>
         </button>
       ))}
     </div>
