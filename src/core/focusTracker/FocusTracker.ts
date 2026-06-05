@@ -1,5 +1,6 @@
 import { Plugin, TFile, View, WorkspaceLeaf } from 'obsidian';
 import { TRACKED_VIEW_TYPES, VISIT_HISTORY_TOP_DIR } from "../../Constants";
+import { IsTrackedProvider } from "../util/vault/IsTrackedProvider";
 
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -35,6 +36,7 @@ export class FocusTracker {
 
   constructor(
     private readonly plugin: Plugin,
+    private readonly isTrackedProvider: IsTrackedProvider
   ) {
     this.plugin.registerEvent(
       this.plugin.app.workspace.on('active-leaf-change', (leaf) => {
@@ -52,7 +54,7 @@ export class FocusTracker {
   private async handleLeafChange(leaf: WorkspaceLeaf | null): Promise<void> {
     if (this.previousLeaf && this.previousLeaf !== leaf) {
       const prev = this.previousLeaf.view;
-      if (this.isTrackedView(prev)) {
+      if (this.isTrackedProvider.isTrackedView(prev)) {
         const event = viewToFocusEvent(prev);
         for (const l of this.listeners) {
           await l.onUnfocus(event);
@@ -60,7 +62,7 @@ export class FocusTracker {
       }
     }
 
-    if (leaf && this.isTrackedView(leaf.view)) {
+    if (leaf && this.isTrackedProvider.isTrackedView(leaf.view)) {
       const event = viewToFocusEvent(leaf.view);
       for (const l of this.listeners) {
         await l.onFocus(event);
@@ -68,32 +70,5 @@ export class FocusTracker {
     }
 
     this.previousLeaf = leaf;
-  }
-
-  private isTrackedView(view: View | null): boolean {
-    if (view === null) {
-      console.log("[VHP][isTrackedView] [view] is null skipping.");
-      return false;
-    }
-
-    const file = (view as any).file ?? null;
-    if (file === null) {
-      console.log("[VHP][isTrackedView] [file] is null skipping.");
-      return false;
-    }
-
-    if (file.path == null) {
-      console.log("[VHP][isTrackedView] [path] is null skipping.");
-      return false;
-    }
-
-    if (file.path.startsWith(VISIT_HISTORY_TOP_DIR)) {
-      console.log("[VHP][isTrackedView] skipping visit history file: " + file.path);
-      return false;
-    }
-
-    let ofRightType = TRACKED_VIEW_TYPES.has(view?.getViewType() ?? '');
-
-    return ofRightType && (view as any).file !== null;
   }
 }
