@@ -20,7 +20,7 @@ interface ConfigPanelProps {
 /**
  * Config panel with scale factors, color mode toggle, and heatmap options.
  * Fully controlled — all state owned by App.
- * Slides in/out via CSS transform.
+ * Toggles visibility via CSS display.
  */
 export function ConfigPanel({
   open,

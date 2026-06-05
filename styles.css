@@ -154,12 +154,11 @@
   z-index: 99;
   overflow-y: auto;
   max-height: calc(100% - 42px);
-  transform: translateX(100%);
-  transition: transform 0.2s ease;
+  display: none;
 }
 
 .vault-treemap-view #config.open {
-  transform: translateX(0);
+  display: block;
 }
 
 .vault-treemap-view .cfg-h {

@@ -10,7 +10,7 @@ import { NoteFileUtilDefault } from "../util/file/note/impl/NoteFileUtilDefault"
 
 
 export function registerSampleCommands(plugin: VisitHistoryPlugin): void {
-  
+
 
   // if (plugin.app.vault.getName().contains("test-vault")) {
   //   registerSampleCommandsImpl(plugin);
