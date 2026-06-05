@@ -39,7 +39,7 @@ export class PluginFactory {
     );
     this.visitHistoryService = new VisitHistoryServiceDefault(vhFileProvider, noteFileUtil);
 
-    this.focusTracker = new FocusTracker(plugin);
+    this.focusTracker = new FocusTracker(plugin, isTrackedProvider);
     this.focusTracker.registerListener(
       new VisitHistoryFocusListenerDefault(this.visitHistoryService),
     );

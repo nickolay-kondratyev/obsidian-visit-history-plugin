@@ -32,6 +32,8 @@ export class VaultUtilDefault implements VaultUtil {
   async getTrackedFiles(): Promise<TrackedFile[]> {
     const rawFiles = this.getRawTrackedFiles();
 
+    console.log("[VHP] filtered files", rawFiles);
+
     const promises = rawFiles.map(f =>
       this.visitHistoryService.getLastVisitStamp(f).then(visitedMs => ({
         file: f,
