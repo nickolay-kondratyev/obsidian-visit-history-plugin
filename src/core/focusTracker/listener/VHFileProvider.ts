@@ -1,10 +1,10 @@
-import { LinkUtil } from "../../core/util";
-import { UserNotifier } from "../../core/util/userComm/UserNotifier";
+import { LinkUtil } from "../../util";
+import { UserNotifier } from "../../util/userComm/UserNotifier";
 import { TFile } from 'obsidian';
 import { ulid } from 'ulid';
 import { LRUCache } from 'lru-cache';
-import { NoteFileUtil } from "../../core/util/file/note/NoteFileUtil";
-import { DeviceNameProvider } from "../../core/util/env/DeviceNameProvider";
+import { NoteFileUtil } from "../../util/file/note/NoteFileUtil";
+import { DeviceNameProvider } from "../../util/env/DeviceNameProvider";
 import { FocusFile } from "../data/FocusFile";
 
 // Only cache paths for VH files that THIS plugin created. We intentionally
@@ -34,13 +34,13 @@ export class VHFileProvider {
 
     const vhBacklinks =
       allBacklinks
-        .filter(bl =>
+        .filter((bl: { path: string }) =>
           bl.path.startsWith(VHFileProvider.V1_VH_FOCUS_DIR)
         );
 
     if (vhBacklinks.length === 0) return [];
 
-    return vhBacklinks.map((bl) => {
+    return vhBacklinks.map((bl: { file: import('obsidian').TFile }) => {
       return new FocusFile(bl.file)
     });
   }
@@ -63,7 +63,7 @@ export class VHFileProvider {
     const allBacklinks = this.linkUtil.getBacklinks(file);
     const vhBacklinks =
       allBacklinks
-        .filter(bl =>
+        .filter((bl: { path: string }) =>
           bl.path.startsWith(VHFileProvider.V1_VH_FOCUS_DIR)
           && bl.path.contains(this.deviceNameProvider.getDeviceName())
         );

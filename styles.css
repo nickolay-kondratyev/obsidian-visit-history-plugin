@@ -1,8 +1,434 @@
-/*
+/* Vault Treemap — scoped styles
+   All rules scoped under .vault-treemap-view to avoid leaking into Obsidian UI.
+   CSS variable mapping: prototype vars → Obsidian theme vars for automatic light/dark support. */
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
+.vault-treemap-view {
+  /* ── Theme variable mapping ─────────────────────────────── */
+  --vt-bg:       var(--background-primary);
+  --vt-surface:  var(--background-secondary);
+  --vt-border:   var(--background-modifier-border);
+  --vt-border2:  var(--background-modifier-border-hover);
+  --vt-text:     var(--text-normal);
+  --vt-text-dim: var(--text-muted);
+  --vt-text-mut: var(--text-faint);
 
-If your plugin does not need CSS, delete this file.
+  /* File-type colors — no Obsidian equivalent, keep as plugin-specific */
+  --vt-md:       #4a5ed4;
+  --vt-md-h:     #6070e8;
+  --vt-md-b:     #3248b0;
+  --vt-md-fg:    #a0b0ff;
+  --vt-canvas:   #be7220;
+  --vt-cn-h:     #d48832;
+  --vt-cn-b:     #9a5a10;
+  --vt-cn-fg:    #f0c070;
+  --vt-exd:      #1e9e8e;
+  --vt-ex-h:     #2cb4a2;
+  --vt-ex-b:     #14786c;
+  --vt-ex-fg:    #70d4c8;
 
-*/
+  /* ── Reset ──────────────────────────────────────────────── */
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+  font-family: var(--font-monospace);
+  color: var(--vt-text);
+  background: var(--vt-bg);
+}
+
+/* ── Header ─────────────────────────────────────────────── */
+.vault-treemap-view #header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 42px;
+  background: var(--vt-surface);
+  border-bottom: 1px solid var(--vt-border);
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  gap: 14px;
+  z-index: 100;
+  overflow: hidden;
+}
+
+.vault-treemap-view #title {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.vault-treemap-view .stats {
+  display: flex;
+  gap: 16px;
+  font-size: 10px;
+  color: var(--vt-text-dim);
+  border-left: 1px solid var(--vt-border);
+  padding-left: 14px;
+  flex-shrink: 0;
+}
+
+.vault-treemap-view .stat strong {
+  color: var(--vt-text);
+}
+
+.vault-treemap-view .ts-indicator {
+  font-size: 10px;
+  color: var(--vt-text-dim);
+  border-left: 1px solid var(--vt-border);
+  padding-left: 14px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.vault-treemap-view .ts-indicator strong {
+  color: var(--vt-text);
+}
+
+.vault-treemap-view .spacer {
+  flex: 1;
+  min-width: 4px;
+}
+
+.vault-treemap-view .legend {
+  display: flex;
+  gap: 10px;
+  font-size: 10px;
+  color: var(--vt-text-dim);
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.vault-treemap-view .legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.vault-treemap-view .pip {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.vault-treemap-view .legend-grad {
+  height: 8px;
+  width: 88px;
+  border-radius: 3px;
+}
+
+.vault-treemap-view .header-btn {
+  font-family: inherit;
+  font-size: 10px;
+  background: none;
+  border: 1px solid var(--vt-border);
+  color: var(--vt-text-dim);
+  padding: 4px 10px;
+  cursor: pointer;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  transition: color 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+}
+
+.vault-treemap-view .header-btn:hover {
+  color: var(--vt-text);
+  border-color: var(--vt-border2);
+}
+
+/* ── Config panel ───────────────────────────────────────── */
+.vault-treemap-view #config {
+  position: absolute;
+  top: 42px;
+  right: 0;
+  width: 236px;
+  background: var(--vt-surface);
+  border-left: 1px solid var(--vt-border);
+  border-bottom: 1px solid var(--vt-border);
+  padding: 14px;
+  z-index: 99;
+  overflow-y: auto;
+  max-height: calc(100% - 42px);
+  transform: translateX(100%);
+  transition: transform 0.2s ease;
+}
+
+.vault-treemap-view #config.open {
+  transform: translateX(0);
+}
+
+.vault-treemap-view .cfg-h {
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--vt-text-dim);
+  margin-bottom: 10px;
+}
+
+.vault-treemap-view .cfg-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 9px;
+}
+
+.vault-treemap-view .cfg-label {
+  font-size: 10px;
+  color: var(--vt-text-dim);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.vault-treemap-view .cfg-pip {
+  width: 6px;
+  height: 6px;
+  border-radius: 1px;
+}
+
+.vault-treemap-view .cfg-input {
+  width: 60px;
+  background: var(--vt-bg);
+  border: 1px solid var(--vt-border);
+  color: var(--vt-text);
+  font-family: inherit;
+  font-size: 10px;
+  padding: 3px 6px;
+  text-align: right;
+}
+
+.vault-treemap-view .cfg-input:focus {
+  outline: none;
+  border-color: var(--vt-border2);
+}
+
+.vault-treemap-view .cfg-sep {
+  border: none;
+  border-top: 1px solid var(--vt-border);
+  margin: 12px 0;
+}
+
+.vault-treemap-view .cfg-select {
+  width: 100%;
+  background: var(--vt-bg);
+  border: 1px solid var(--vt-border);
+  color: var(--vt-text);
+  font-family: inherit;
+  font-size: 10px;
+  padding: 4px 6px;
+  margin-bottom: 10px;
+}
+
+.vault-treemap-view .cfg-select:focus {
+  outline: none;
+  border-color: var(--vt-border2);
+}
+
+/* ── Mode + gradient buttons ────────────────────────────── */
+.vault-treemap-view .mode-row,
+.vault-treemap-view .grad-row {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 12px;
+}
+
+.vault-treemap-view .mode-btn,
+.vault-treemap-view .grad-btn {
+  flex: 1;
+  font-family: inherit;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  background: none;
+  border: 1px solid var(--vt-border);
+  color: var(--vt-text-dim);
+  padding: 6px 4px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s;
+  text-transform: uppercase;
+}
+
+.vault-treemap-view .grad-btn {
+  text-transform: none;
+  line-height: 1.3;
+  padding: 6px 4px 5px;
+}
+
+.vault-treemap-view .mode-btn:hover,
+.vault-treemap-view .grad-btn:hover {
+  border-color: var(--vt-border2);
+  color: var(--vt-text);
+}
+
+.vault-treemap-view .mode-btn.active,
+.vault-treemap-view .grad-btn.active {
+  border-color: var(--vt-border2);
+  color: var(--vt-text);
+}
+
+.vault-treemap-view .grad-swatch {
+  height: 5px;
+  border-radius: 2px;
+  margin-bottom: 5px;
+}
+
+/* ── Sliders ────────────────────────────────────────────── */
+.vault-treemap-view .slider-wrap {
+  margin-bottom: 10px;
+}
+
+.vault-treemap-view .slider-label-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--vt-text-dim);
+  margin-bottom: 4px;
+}
+
+.vault-treemap-view .slider-label-row span {
+  color: var(--vt-text);
+}
+
+.vault-treemap-view input[type="range"] {
+  width: 100%;
+  accent-color: var(--vt-border2);
+  cursor: pointer;
+}
+
+.vault-treemap-view .grad-preview {
+  height: 8px;
+  border-radius: 3px;
+  margin: 10px 0 4px;
+}
+
+.vault-treemap-view .grad-ends {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  color: var(--vt-text-dim);
+}
+
+.vault-treemap-view .null-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: var(--vt-text-dim);
+  margin-top: 8px;
+}
+
+.vault-treemap-view .null-pip {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  border: 1px solid var(--vt-border2);
+  flex-shrink: 0;
+}
+
+/* ── Viz + overlay chrome ───────────────────────────────── */
+.vault-treemap-view #viz {
+  position: absolute;
+  top: 42px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.vault-treemap-view #viz svg {
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  display: block;
+}
+
+.vault-treemap-view #viz svg.drag {
+  cursor: grabbing;
+}
+
+.vault-treemap-view #hint {
+  position: absolute;
+  bottom: 10px;
+  left: 12px;
+  font-size: 9px;
+  color: var(--vt-text-mut);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+.vault-treemap-view .zoom-reset {
+  position: absolute;
+  bottom: 10px;
+  right: 12px;
+  font-family: inherit;
+  font-size: 9px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  background: none;
+  border: 1px solid var(--vt-border);
+  color: var(--vt-text-dim);
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+.vault-treemap-view .zoom-reset:hover {
+  color: var(--vt-text);
+}
+
+/* ── Tooltip ────────────────────────────────────────────── */
+.vault-treemap-view #tooltip {
+  position: absolute;
+  background: var(--vt-surface);
+  border: 1px solid var(--vt-border2);
+  padding: 10px 13px;
+  pointer-events: none;
+  z-index: 200;
+  min-width: 210px;
+}
+
+.vault-treemap-view .tt-name {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--vt-text);
+  margin-bottom: 6px;
+  word-break: break-all;
+}
+
+.vault-treemap-view .tt-row {
+  font-size: 10px;
+  color: var(--vt-text-dim);
+  margin-bottom: 2px;
+  display: flex;
+  gap: 6px;
+  justify-content: space-between;
+}
+
+.vault-treemap-view .tt-val {
+  color: var(--vt-text);
+  text-align: right;
+}
+
+.vault-treemap-view .tt-badge {
+  display: inline-block;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  padding: 1px 5px;
+  border-radius: 2px;
+  font-weight: 500;
+}
+
+.vault-treemap-view .tt-sep {
+  border: none;
+  border-top: 1px solid var(--vt-border);
+  margin: 5px 0;
+}
+
+.vault-treemap-view .tt-null {
+  color: var(--vt-text-dim) !important;
+  font-style: italic;
+}
