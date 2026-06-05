@@ -253,6 +253,8 @@
 }
 
 .vault-heatmap-view .grad-btn {
+  display: flex;
+  flex-direction: column;
   text-transform: none;
   line-height: 1.3;
   padding: 6px 4px 5px;

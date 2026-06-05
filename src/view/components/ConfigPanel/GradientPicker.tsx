@@ -26,7 +26,7 @@ export function GradientPicker({ active, onChange }: GradientPickerProps) {
             }}
           />
           <span style={{ display: 'block' }}>{g.label}</span>
-          <span style={{ display: 'block', fontSize: '8px', opacity: 0.55 }}>{g.sub}</span>
+          <span style={{ fontSize: '8px', opacity: 0.55 }}>{g.sub}</span>
         </button>
       ))}
     </div>
