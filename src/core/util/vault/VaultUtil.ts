@@ -3,7 +3,7 @@ import { TRACKED_EXTENSIONS } from "../../../Constants";
 import { FileTimeMetadata } from "../../data/FileTimeMetadata";
 import { VisitHistoryService } from "../../service/visitHistoryService/VisitHistoryService";
 
-interface VaultUtil {
+export interface VaultUtil {
   getTrackedFiles(): Promise<TrackedFile[]>;
 }
 

@@ -10,6 +10,7 @@ import { VHFileProvider } from '../core/focusTracker/listener/VHFileProvider';
 import { LinkUtilDefault } from '../core/util';
 import { NoteFileUtilDefault } from '../core/util/file/note/impl/NoteFileUtilDefault';
 import { DeviceNameProviderDefault } from '../core/util/env/DeviceNameProvider';
+import { PluginFactory } from "../core/init/PluginFactory";
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
@@ -30,11 +31,11 @@ export const VIEW_TYPE_TREEMAP = 'vault-treemap';
  */
 export class VaultTreemapView extends ItemView {
   private root: Root | null = null;
-  private plugin: VisitHistoryPlugin;
+  private readonly pluginFactory: PluginFactory;
 
-  constructor(leaf: WorkspaceLeaf, plugin: VisitHistoryPlugin) {
+  constructor(leaf: WorkspaceLeaf, pluginFactory: PluginFactory) {
     super(leaf);
-    this.plugin = plugin;
+    this.pluginFactory = pluginFactory;
   }
 
   getViewType(): string {
@@ -74,7 +75,7 @@ export class VaultTreemapView extends ItemView {
   private async refresh(): Promise<void> {
     const visitedMsMap = await this.getVisitedTimestamps();
     const data: VaultNode = await buildVaultTree(this.app.vault, visitedMsMap);
-    this.root?.render(<TreemapApp data={data} />);
+    this.root?.render(<TreemapApp data={data}/>);
   }
 
   /**
@@ -83,34 +84,17 @@ export class VaultTreemapView extends ItemView {
    * Uses VaultUtilDefault.getTrackedFiles() which calls
    * VisitHistoryService.getLastVisitStamp() per file (with LRU caching).
    * Files with no visit history are excluded from the map → VaultNode.lastVisitedAt = null.
-   *
-   * TODO: refactor to use a single service instance from the plugin rather than
-   * constructing the dependency chain inline. The plugin already creates these
-   * in onload() — they should be stored as instance properties.
    */
   private async getVisitedTimestamps(): Promise<Record<string, number>> {
-    const linkUtil = new LinkUtilDefault(this.app);
-    const noteFileUtil = new NoteFileUtilDefault(this.app);
-    const deviceNameProvider = new DeviceNameProviderDefault();
-    const vhFileProvider = new VHFileProvider(
-      linkUtil,
-      this.plugin.userNotifier,
-      noteFileUtil,
-      deviceNameProvider,
-    );
-    const visitHistoryService = new VisitHistoryServiceDefault(
-      vhFileProvider,
-      noteFileUtil,
-    );
-    const vaultUtil = new VaultUtilDefault(this.app, visitHistoryService);
+    const trackedFiles = await this.pluginFactory.vaultUtil.getTrackedFiles();
 
-    const trackedFiles = await vaultUtil.getTrackedFiles();
     const result: Record<string, number> = {};
     for (const tf of trackedFiles) {
       if (tf.timeMetadata.visitedMs !== null) {
         result[tf.file.path] = tf.timeMetadata.visitedMs.valueOf();
       }
     }
+
     return result;
   }
 }

@@ -8,8 +8,8 @@ import { UserNotifierDefault } from '../util/userComm/impl/UserNotifierDefault';
 import { NoteFileUtilDefault } from '../util/file/note/impl/NoteFileUtilDefault';
 import { VHFileProvider } from '../focusTracker/listener/VHFileProvider';
 import { DeviceNameProviderDefault } from '../util/env/DeviceNameProvider';
-import { VisitHistoryServiceDefault } from '../service/visitHistoryService/VisitHistoryService';
-import { VaultUtilDefault } from '../util/vault/VaultUtil';
+import { VisitHistoryService, VisitHistoryServiceDefault } from '../service/visitHistoryService/VisitHistoryService';
+import { VaultUtil, VaultUtilDefault } from '../util/vault/VaultUtil';
 
 // ── PluginFactory ─────────────────────────────────────────────────────────────
 // Constructs and wires all plugin dependencies.
@@ -17,7 +17,8 @@ import { VaultUtilDefault } from '../util/vault/VaultUtil';
 export class PluginFactory {
   readonly userNotifier: UserNotifier;
   readonly focusTracker: FocusTracker;
-  readonly vaultUtil: VaultUtilDefault;
+  readonly vaultUtil: VaultUtil;
+  readonly visitHistoryService: VisitHistoryService;
 
   constructor(plugin: VisitHistoryPlugin) {
     const app: App = plugin.app;
@@ -34,13 +35,13 @@ export class PluginFactory {
       noteFileUtil,
       deviceNameProvider,
     );
-    const visitHistoryService = new VisitHistoryServiceDefault(vhFileProvider, noteFileUtil);
+    this.visitHistoryService = new VisitHistoryServiceDefault(vhFileProvider, noteFileUtil);
 
     this.focusTracker = new FocusTracker(plugin);
     this.focusTracker.registerListener(
-      new VisitHistoryFocusListenerDefault(visitHistoryService),
+      new VisitHistoryFocusListenerDefault(this.visitHistoryService),
     );
 
-    this.vaultUtil = new VaultUtilDefault(app, visitHistoryService);
+    this.vaultUtil = new VaultUtilDefault(app, this.visitHistoryService);
   }
 }
