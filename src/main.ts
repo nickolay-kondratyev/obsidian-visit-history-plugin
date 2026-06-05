@@ -18,14 +18,14 @@ export default class VisitHistoryPlugin extends Plugin {
 
     registerSampleCommands(this);
 
-    this.initVaultTreeMapView();
+    this.initVaultTreeMapView(factory);
   }
 
-  private initVaultTreeMapView() {
+  private initVaultTreeMapView(pluginFactory: PluginFactory) {
     // ── Vault Treemap view ─────────────────────────────────────────────
     this.registerView(
       VIEW_TYPE_TREEMAP,
-      (leaf) => new VaultTreemapView(leaf, this),
+      (leaf) => new VaultTreemapView(leaf, pluginFactory),
     );
 
     this.addCommand({
