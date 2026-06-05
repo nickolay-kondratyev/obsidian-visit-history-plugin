@@ -10,12 +10,13 @@ import { NoteFileUtilDefault } from "../util/file/note/impl/NoteFileUtilDefault"
 
 
 export function registerSampleCommands(plugin: VisitHistoryPlugin): void {
+  
 
-  if (plugin.app.vault.getName().contains("test-vault")) {
-    registerSampleCommandsImpl(plugin);
-  } else {
-    console.log("[VHP] skipping sample commands registration as we are outside the test vault.");
-  }
+  // if (plugin.app.vault.getName().contains("test-vault")) {
+  //   registerSampleCommandsImpl(plugin);
+  // } else {
+  //   console.log("[VHP] skipping sample commands registration as we are outside the test vault.");
+  // }
 }
 
 function registerSampleCommandsImpl(plugin: VisitHistoryPlugin) {
