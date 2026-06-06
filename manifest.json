@@ -1,7 +1,7 @@
 {
 	"id": "vintrin-visit-history-plugin",
 	"name": "Visit History Plugin",
-	"version": "1.0.0",
+	"version": "0.0.10",
 	"minAppVersion": "1.0.0",
 	"description": "Records the visit history of notes and canvases.",
 	"author": "Nickolay Kondratyev",
