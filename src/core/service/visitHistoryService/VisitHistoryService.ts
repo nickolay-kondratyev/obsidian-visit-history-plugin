@@ -62,13 +62,14 @@ export class VisitHistoryServiceDefault implements VisitHistoryService {
       console.log("[VHP] Skip — last focus was already the same file.");
     } else {
       const nowStamp = Date.now();
-      const nowStampMillisStr = nowStamp.toString();
+      // Store as ISO 8601 UTC with milliseconds, e.g. "2026-06-23T12:34:56.789Z"
+      const isoStamp = new Date(nowStamp).toISOString();
 
-      console.log(`[VHP] Recording [${nowStampMillisStr}] as visit.`);
+      console.log(`[VHP] Recording [${isoStamp}] as visit.`);
 
       await this.noteFileUtil.appendLineToNote(
         vhFilePath,
-        nowStampMillisStr
+        isoStamp
       );
 
       pathToLastVisit.set(file.path, {value: nowStamp});
