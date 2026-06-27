@@ -10,13 +10,16 @@ export class FocusFile {
     const contents = await noteFileUtil.cachedRead(this.file);
     const lastLine = contents.split("\n").filter((line: string) => line.trim() !== "").at(-1);
 
-    // Parse ISO 8601 UTC timestamp (e.g. "2026-06-23T12:34:56.789Z") or
-    // legacy epoch-ms values (e.g. "1722234567890").
     if (!lastLine) {
       throw new Error(`No valid stamp found in ${this.file.path}`);
     }
 
-    const parsed = Date.parse(lastLine);
+    // Parse legacy epoch-ms numeric values (e.g. "1781639192842") or
+    // ISO 8601 UTC timestamps (e.g. "2026-06-23T12:34:56.789Z").
+    const parsed = /^\d+$/.test(lastLine)
+      ? Number(lastLine)
+      : Date.parse(lastLine);
+
     if (Number.isNaN(parsed)) {
       throw new Error(`No valid stamp found in ${this.file.path}`);
     }
