@@ -141,6 +141,41 @@
   border-color: var(--vt-border2);
 }
 
+/* ── Breadcrumb navigation ─────────────────────────────── */
+.vault-heatmap-view .breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  border-left: 1px solid var(--vt-border);
+  padding-left: 14px;
+  flex-shrink: 0;
+}
+
+.vault-heatmap-view .breadcrumb-back {
+  font-family: inherit;
+  font-size: 10px;
+  background: none;
+  border: 1px solid var(--vt-border);
+  color: var(--vt-text-dim);
+  padding: 3px 8px;
+  cursor: pointer;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.vault-heatmap-view .breadcrumb-back:hover {
+  color: var(--vt-text);
+  border-color: var(--vt-border2);
+}
+
+.vault-heatmap-view .breadcrumb-path {
+  color: var(--vt-text-dim);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
 /* ── Config panel ───────────────────────────────────────── */
 .vault-heatmap-view #config {
   position: absolute;
@@ -380,6 +415,12 @@
 
 .vault-heatmap-view .zoom-reset:hover {
   color: var(--vt-text);
+}
+
+/* ── Folder node interactivity ──────────────────────────── */
+.vault-heatmap-view .folder-node--interactive:hover .folder-node__bg {
+  fill: #3a3a50;
+  transition: fill 0.12s;
 }
 
 /* ── Tooltip ────────────────────────────────────────────── */

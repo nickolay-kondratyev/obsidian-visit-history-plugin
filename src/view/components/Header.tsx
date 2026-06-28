@@ -7,10 +7,15 @@ interface HeaderProps {
   field: string;
   stats: { files: number; folders: number; size: string };
   onConfigToggle: () => void;
+  /** The folder path segments currently being viewed, or empty array at root. */
+  breadcrumb: string[];
+  /** Called when the user clicks "back" to navigate up one level. */
+  onBack?: () => void;
 }
 
 /**
- * Top bar: title, file/folder/size stats, active field indicator, legend, config toggle.
+ * Top bar: breadcrumb navigation, title, file/folder/size stats,
+ * active field indicator, legend, config toggle.
  * Pure presentational — no state.
  */
 export function Header({
@@ -19,10 +24,22 @@ export function Header({
   field,
   stats,
   onConfigToggle,
+  breadcrumb,
+  onBack,
 }: HeaderProps) {
   return (
     <div id="header">
       <span id="title">vault heatmap</span>
+      {breadcrumb.length > 0 && onBack && (
+        <div className="breadcrumb">
+          <button className="breadcrumb-back" onClick={onBack} title="Go back up one level">
+            ← back
+          </button>
+          <span className="breadcrumb-path">
+            /{breadcrumb.join('/')}
+          </span>
+        </div>
+      )}
       <div className="stats">
         <span className="stat">
           <strong>{stats.files}</strong> files
