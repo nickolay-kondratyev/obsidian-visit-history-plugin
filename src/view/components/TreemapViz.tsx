@@ -13,7 +13,13 @@ import type { IFileOpener } from '../../viewModel/FileOpener';
 // ── Props ───────────────────────────────────────────────────────────────────
 
 interface TreemapVizProps {
+  /** Full vault tree — always available, used as fallback when currentRoot is null. */
   data: VaultNode;
+  /**
+   * Subtree to show as the treemap root.
+   * null = show full vault. Non-null = drilled into a specific folder.
+   */
+  currentRoot: VaultNode | null;
   colorMode: 'type' | 'heatmap';
   gradKey: string;
   field: string;
@@ -21,6 +27,8 @@ interface TreemapVizProps {
   coldDays: number;
   scales: Record<string, number>;
   onStatsChange: (stats: { files: number; folders: number; size: string }) => void;
+  /** Called when the user clicks a folder to drill into its subtree. */
+  onFolderClick: (folder: VaultNode) => void;
   fileOpener: IFileOpener;
 }
 
@@ -44,6 +52,7 @@ interface TooltipState {
  */
 export function TreemapViz({
   data,
+  currentRoot,
   colorMode,
   gradKey,
   field,
@@ -51,6 +60,7 @@ export function TreemapViz({
   coldDays,
   scales,
   onStatsChange,
+  onFolderClick,
   fileOpener,
 }: TreemapVizProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -102,7 +112,9 @@ export function TreemapViz({
     const { w, h } = dims;
     if (!w || !h) return { folders: [], leaves: [] };
 
-    const root = hierarchy(data)
+    const treeRoot = currentRoot ?? data;
+
+    const root = hierarchy(treeRoot)
       .sum(d => (d.children ? 0 : Math.max(1, Math.round((d.size ?? 0) * (scales[d.type ?? ''] ?? 1)))))
       .sort((a, b) => b.value! - a.value!);
 
@@ -120,7 +132,7 @@ export function TreemapViz({
       ) as HierarchyRectangularNode<VaultNode>[],
       leaves: root.leaves() as HierarchyRectangularNode<VaultNode>[],
     };
-  }, [data, scales, dims]);
+  }, [data, currentRoot, scales, dims]);
 
   // ── Bubble stats up to Header ─────────────────────────────────────────
 
@@ -222,7 +234,7 @@ export function TreemapViz({
           >
             <g transform={zoom.toString()}>
               {folders.map((d, i) => (
-                <FolderNode key={'f' + i} d={d} />
+                <FolderNode key={'f' + i} d={d} onClick={onFolderClick} />
               ))}
               {leaves.map((d, i) => (
                 <LeafNode
