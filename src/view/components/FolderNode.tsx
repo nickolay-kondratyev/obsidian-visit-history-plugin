@@ -4,15 +4,23 @@ import type { VaultNode } from '../../core/data/VaultNode';
 
 interface FolderNodeProps {
   d: HierarchyRectangularNode<VaultNode>;
+  /** Called when the user clicks the folder rect. Receives the VaultNode subtree. */
+  onClick?: (folder: VaultNode) => void;
 }
 
 /**
- * Pure SVG folder rect — depth-based fill, optional label.
- * No state, no event handlers.
+ * Clickable SVG folder rect — depth-based fill, optional label.
+ *
+ * Folders with children are interactive: clicking drills into that folder's subtree.
+ * Hover provides visual feedback (lighter fill, pointer cursor).
  */
-export function FolderNode({ d }: FolderNodeProps) {
+export function FolderNode({ d, onClick }: FolderNodeProps) {
   const w = Math.max(0, d.x1 - d.x0);
   const h = Math.max(0, d.y1 - d.y0);
+  const hasChildren = d.children && d.children.length > 0;
+  const interactive = hasChildren && !!onClick;
+
+  const depthFill = interpolateRgb('#0c0c0f', '#28283a')(d.depth * 0.18);
 
   return (
     <svg
@@ -21,13 +29,17 @@ export function FolderNode({ d }: FolderNodeProps) {
       width={w}
       height={h}
       overflow="hidden"
+      className={interactive ? 'folder-node--interactive' : undefined}
+      style={interactive ? { cursor: 'pointer' } : undefined}
+      onClick={interactive ? () => onClick(d.data) : undefined}
     >
       <rect
         width={w}
         height={h}
-        fill={interpolateRgb('#0c0c0f', '#28283a')(d.depth * 0.18)}
+        fill={depthFill}
         stroke={d.depth === 1 ? '#2e2e3e' : '#222230'}
         strokeWidth={d.depth === 1 ? 1.5 : 0.75}
+        className="folder-node__bg"
       />
       {h > 14 && (
         <text
