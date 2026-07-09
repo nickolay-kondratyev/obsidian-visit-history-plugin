@@ -26,6 +26,29 @@ function setup(): Setup {
 }
 
 describe('FrontmatterDocIdStore', () => {
+  describe('getId', () => {
+    it('should return the existing frontmatter id without any write', async () => {
+      // GIVEN a note that already has an id in frontmatter
+      const { store, noteFileUtil } = setup();
+      const file = noteFileUtil.seedNote('notes/a.md', '---\nid: existing-id-123\n---\nbody');
+      // WHEN
+      const id = await store.getId(file);
+      // THEN the id is returned and process() was never called
+      expect({ id, writes: noteFileUtil.processCallCount })
+        .toEqual({ id: 'existing-id-123', writes: 0 });
+    });
+
+    it('should return null (and NOT generate an id) when the note has none', async () => {
+      // GIVEN a note without an id
+      const { store, noteFileUtil } = setup();
+      const file = noteFileUtil.seedNote('notes/a.md', '---\ntitle: t\n---\nbody');
+      // WHEN
+      const id = await store.getId(file);
+      // THEN null, read-only (no write happened)
+      expect({ id, writes: noteFileUtil.processCallCount }).toEqual({ id: null, writes: 0 });
+    });
+  });
+
   describe('ensureId', () => {
     it('should return the existing frontmatter id without any write', async () => {
       // GIVEN a note that already has an id in frontmatter

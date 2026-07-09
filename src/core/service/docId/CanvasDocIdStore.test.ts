@@ -30,6 +30,42 @@ function parseContent(noteFileUtil: FakeNoteFileUtil, path: string): unknown {
 }
 
 describe('CanvasDocIdStore', () => {
+  describe('getId', () => {
+    it('should return the existing metadata.frontmatter.id without modifying the file', async () => {
+      // GIVEN a canvas that already carries an id
+      const { store, noteFileUtil } = setup();
+      const original = JSON.stringify({ nodes: [], metadata: { frontmatter: { id: 'canvas-id-1' } } });
+      const file = noteFileUtil.seedNote('boards/a.canvas', original);
+      // WHEN
+      const id = await store.getId(file);
+      // THEN id returned and content byte-identical
+      expect({ id, content: noteFileUtil.getContent('boards/a.canvas') })
+        .toEqual({ id: 'canvas-id-1', content: original });
+    });
+
+    it('should return null (and NOT generate an id) when the canvas has none', async () => {
+      // GIVEN a canvas without an id
+      const { store, noteFileUtil } = setup();
+      const original = JSON.stringify({ nodes: [], edges: [] });
+      const file = noteFileUtil.seedNote('boards/a.canvas', original);
+      // WHEN
+      const id = await store.getId(file);
+      // THEN null, read-only (content untouched)
+      expect({ id, content: noteFileUtil.getContent('boards/a.canvas') })
+        .toEqual({ id: null, content: original });
+    });
+
+    it('should return null for malformed canvas JSON without throwing', async () => {
+      // GIVEN malformed JSON
+      const { store, noteFileUtil } = setup();
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      const file = noteFileUtil.seedNote('boards/bad.canvas', '{not json');
+      // WHEN / THEN
+      expect(await store.getId(file)).toBeNull();
+      errorSpy.mockRestore();
+    });
+  });
+
   describe('ensureId', () => {
     it('should return the existing metadata.frontmatter.id without modifying the file', async () => {
       // GIVEN a canvas that already carries an id

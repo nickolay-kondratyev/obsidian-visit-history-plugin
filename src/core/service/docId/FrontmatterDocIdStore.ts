@@ -58,6 +58,10 @@ export class FrontmatterDocIdStore implements DocIdStore {
     return resultId;
   }
 
+  async getId(file: TFile): Promise<string | null> {
+    return this.readIdFromRawContent(await this.noteFileUtil.cachedRead(file));
+  }
+
   /** Extracts a top-level frontmatter `id` value from raw note text, or null. */
   private readIdFromRawContent(content: string): string | null {
     const block = FRONTMATTER_BLOCK_REGEX.exec(content);

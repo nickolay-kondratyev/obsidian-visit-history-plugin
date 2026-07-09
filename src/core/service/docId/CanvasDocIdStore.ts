@@ -45,6 +45,15 @@ export class CanvasDocIdStore implements DocIdStore {
     return newId;
   }
 
+  async getId(file: TFile): Promise<string | null> {
+    const canvas = this.parseCanvas(await this.noteFileUtil.cachedRead(file), file.path);
+    if (canvas === null) {
+      return null;
+    }
+    const existing = this.readIdState(canvas);
+    return existing.kind === 'present' ? existing.id : null;
+  }
+
   // ── private ─────────────────────────────────────────────────────────────────
 
   private parseCanvas(content: string, path: string): Record<string, unknown> | null {

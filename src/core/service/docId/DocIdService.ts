@@ -16,6 +16,12 @@ export interface DocIdService {
   ensureDocId(file: TFile): Promise<string | null>;
 
   /**
+   * READ-ONLY doc id lookup: existing id or null. NEVER writes — safe for
+   * bulk read paths (e.g. resolving visit history for every vault file).
+   */
+  getDocId(file: TFile): Promise<string | null>;
+
+  /**
    * True when the file's format can carry a doc id (md incl. .excalidraw.md,
    * canvas). False for formats ensureDocId would skip (e.g. raw .excalidraw).
    */
@@ -42,6 +48,14 @@ export class DocIdServiceDefault implements DocIdService {
       return null;
     }
     return store.ensureId(file);
+  }
+
+  async getDocId(file: TFile): Promise<string | null> {
+    const store = this.storeByExtension.get(file.extension);
+    if (!store) {
+      return null;
+    }
+    return store.getId(file);
   }
 
   isEligible(file: TFile): boolean {

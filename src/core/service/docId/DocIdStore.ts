@@ -13,6 +13,13 @@ export interface DocIdStore {
    * JSON) — never throws for content problems.
    */
   ensureId(file: TFile): Promise<string | null>;
+
+  /**
+   * READ-ONLY id lookup: returns the existing usable id, or null when the
+   * id is absent, unusable (occupied slot), or the content cannot be handled.
+   * NEVER writes — safe for bulk read paths (e.g. heatmap aggregation).
+   */
+  getId(file: TFile): Promise<string | null>;
 }
 
 /**
