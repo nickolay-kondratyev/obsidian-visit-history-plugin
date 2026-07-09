@@ -1,5 +1,5 @@
 import { TFile } from 'obsidian';
-import { Backlink, LinkUtil } from '../core/util/linkUtil/LinkUtil';
+import { LinkUtil } from '../core/util/linkUtil/LinkUtil';
 import { UserNotifier } from '../core/util/userComm/UserNotifier';
 import { DeviceNameProvider } from '../core/util/env/DeviceNameProvider';
 import { TrackedFile, VaultUtil } from '../core/util/vault/VaultUtil';
@@ -7,24 +7,13 @@ import { DocIdService } from '../core/service/docId/DocIdService';
 import { makeTFile } from './fileFactory';
 
 export class FakeLinkUtil implements LinkUtil {
-  private readonly backlinks: Backlink[] = [];
   private readonly targetByLinkText = new Map<string, TFile>();
-
-  addBacklinkFromPath(sourcePath: string): TFile {
-    const file = makeTFile({ path: sourcePath });
-    this.backlinks.push({ file, path: file.path, title: file.basename });
-    return file;
-  }
 
   /** Registers a resolvable link target (returned file has path === linkText). */
   seedLinkTarget(linkText: string): TFile {
     const file = makeTFile({ path: linkText });
     this.targetByLinkText.set(linkText, file);
     return file;
-  }
-
-  getBacklinks(_file: TFile): Backlink[] {
-    return this.backlinks;
   }
 
   resolveLinkTarget(linkText: string, _sourcePath: string): TFile | null {

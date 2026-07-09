@@ -8,21 +8,30 @@ main.ts (Plugin lifecycle)
    ▼
 core/init/PluginFactory ──── DI container: constructs & wires everything once
    │
+   ├── core/init ─────────── VhV2StartupTasks: deferred load work (README write,
+   │                         V1→V2 migration) run via onLayoutReady
+   │
    ├── core/focusTracker ─── FocusTracker listens to active-leaf-change,
    │      │                  dispatches FocusEvents to FocusListeners
    │      └── listener/ ──── DocIdFocusListener → ensures doc id (runs first)
    │                         VisitHistoryFocusListenerDefault → records visits
-   │                         VHFileProvider → finds/creates VH files
    │
-   ├── core/service ──────── VisitHistoryService: record visit / last-visit stamp
+   ├── core/service ──────── VisitHistoryServiceV2: record visit / last-visit stamp
+   │                         (VhV2FocusStore owns the .vh_v2 format;
+   │                          VhV2ReadmeWriter generates the in-vault format doc)
    │                         DocIdService: ensure per-document id on focus
    │                         DocIdBackfillService: vault-wide doc id backfill
+   │                         migration/: VhV1ToV2MigrationService + V1FocusFileRepo
+   │                         + V1FocusFileParser (legacy V1 → V2, then V1 deleted)
    │
    ├── settingsTab/ ───────── VisitHistorySettingTab (Settings → Visit History):
    │                         "File modifying actions" → doc id backfill button
    │                         (ConfirmModal gate); actions only, nothing persisted
    │
-   ├── core/util ─────────── LinkUtil (backlinks), NoteFileUtil (vault file I/O),
+   ├── core/util ─────────── LinkUtil (wiki-link target resolution),
+   │                         NoteFileUtil (vault file I/O),
+   │                         HiddenFileUtil (DataAdapter I/O for dot-folders —
+   │                         the Vault API cannot see `.visit_history/`),
    │                         VaultUtil (tracked files), IsTrackedProvider,
    │                         DeviceNameProvider, UserNotifier
    │
@@ -50,11 +59,12 @@ core/init/PluginFactory ──── DI container: constructs & wires everything
 active-leaf-change
   → FocusTracker (filters via IsTrackedProvider, isolates listener errors)
   → VisitHistoryFocusListenerDefault (in-flight DROP guard per note path)
-  → VisitHistoryService.recordVisitNowOnFocus
-       (dedup: skip if last record went to the same VH file — keeps full
+  → VisitHistoryServiceV2.recordVisitNowOnFocus
+       (ensureDocId → skip filename-unsafe ids;
+        dedup: skip if last record went to the same doc id — keeps full
         A→B→A navigation pathways, drops same-note event bursts)
-  → VHFileProvider.getOrCreateVHFilePathForThisMachine
-  → NoteFileUtil.appendLineToNote (atomic vault.process)
+  → VhV2FocusStore.appendVisit
+  → HiddenFileUtil.append (.visit_history/v2/focus_per_device/<device>/<id>.vh_v2)
 ```
 
 ## Doc id flow
@@ -92,19 +102,31 @@ The settings tab button "Add ids to all eligible files" runs
 I/O), per-file errors collected without aborting the run, concurrent calls
 JOIN the in-flight run.
 
+## Startup flow (V1 → V2 migration)
+
+`main.ts` schedules `VhV2StartupTasks.run()` via `onLayoutReady` (vault index
+must be complete before backlink resolution): rewrite the generated V2 format
+README, then run `VhV1ToV2MigrationService.migrateIfV1Present()` — see
+[visit-history-format.md](visit-history-format.md) for the exact steps and the
+validation-gated permanent deletion of `_visit_history/`. After a migration,
+the last-visit cache is invalidated (values cached mid-migration would be
+stale).
+
 ## Caching (all LRU, instance-scoped)
 
 | Cache | Where | Why safe |
 |-------|-------|----------|
-| note path → created VH path (500, 1 min TTL) | VHFileProvider | Only self-created ulid paths — backlink-resolved paths are never cached (user may move them) |
-| note path → last visit stamp (10k) | VisitHistoryService | Write-through on record; refreshed on plugin reload |
+| note path → last visit stamp (10k) | VisitHistoryServiceV2 | Write-through on record; invalidated after migration; refreshed on plugin reload |
 
 Known limitation: visits synced in from another device are not seen until the
 stamp cache entry is evicted or the plugin reloads.
 
 ## Error philosophy
 
-- One bad VH file must never break aggregation: `FocusFile.getLastStamp`
-  returns `null` for unparseable content instead of throwing.
+- One bad VH file must never break aggregation: stamp parsing
+  (`StampLineParser`, `VhV2FocusStore`, `V1FocusFileParser`) skips unparseable
+  lines instead of throwing.
 - One throwing FocusListener must not block others: FocusTracker catches per
   listener and logs via `console.error`.
+- Startup tasks are error-isolated: a failed migration notifies the user and
+  never crashes plugin load; the V1 tree is only deleted after validation.

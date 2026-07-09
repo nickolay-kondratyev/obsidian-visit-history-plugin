@@ -1,6 +1,6 @@
 # Visit History Plugin
 
-Records visit history of notes, canvases, and Excalidraw drawings. When you focus a file, a timestamp is appended to a per-file visit history log under `_visit_history/`, and the file is assigned a persistent doc id if it lacks one. Also provides a treemap heatmap visualization of vault file activity.
+Records visit history of notes, canvases, and Excalidraw drawings. When you focus a file, a timestamp is appended to a per-document, per-device visit history log under `.visit_history/` (keyed by the file's persistent doc id, assigned on focus if missing). Legacy `_visit_history/` (V1) data is auto-migrated to V2 on load. Also provides a treemap heatmap visualization of vault file activity.
 
 ## Project overview
 
@@ -37,25 +37,33 @@ src/
   core/
     init/
       PluginFactory.ts     # DI container — constructs and wires all dependencies
+      VhV2StartupTasks.ts  # Deferred load work (onLayoutReady): README write + V1→V2 migration
     focusTracker/
       FocusTracker.ts      # Listens to Obsidian active-leaf-change; dispatches to FocusListeners
       listener/
         DocIdFocusListener.ts                # On focus → ensures doc id (registered first)
         VisitHistoryFocusListenerDefault.ts  # On focus → records visit
-        VHFileProvider.ts   # Manages VH files: backlink discovery, ulid-based creation, per-device
-      data/FocusFile.ts     # Represents a single VH focus file
     service/
-      visitHistoryService/  # VisitHistoryService: record visits, last-visit stamps
-      docId/                # DocIdService (dispatch by extension), DocIdGenerator
+      visitHistoryService/  # VisitHistoryService interface
+        v2/                 # VisitHistoryServiceV2 (record/last-visit via doc id),
+                            # VhV2FocusStore (owns .vh_v2 format), VhV2Paths
+                            # (layout + filename-safe id check), VhV2ReadmeWriter
+      docId/                # DocIdService (dispatch by extension; ensureDocId +
+                            # read-only getDocId), DocIdGenerator
                             # (docid_{21 base62}_E), FrontmatterDocIdStore (md),
                             # CanvasDocIdStore (canvas JSON), DocIdBackfillService
                             # (vault-wide backfill; concurrent calls JOIN)
+      migration/            # VhV1ToV2MigrationService, V1FocusFileRepo (legacy
+                            # _visit_history tree), V1FocusFileParser (V1 content)
     data/                   # FileTimeMetadata, VaultNode (heatmap tree node)
     util/                   # vault/ (VaultUtil, IsTrackedProvider),
                             # file/note/ (NoteFileUtil — vault file I/O),
+                            # file/hidden/ (HiddenFileUtil — DataAdapter I/O for
+                            # dot-folders the Vault API can't see),
+                            # time/ (StampLineParser — strict stamp-line parsing),
                             # async/ (InFlightDropGuard — per-key dedup, DROP semantics),
                             # env/ (DeviceNameProvider), userComm/ (UserNotifier),
-                            # linkUtil/ (backlink resolution)
+                            # linkUtil/ (wiki-link target resolution)
 
   settingsTab/              # VisitHistorySettingTab (Settings → Visit History):
                             # "File modifying actions" (doc id backfill) behind a
@@ -79,11 +87,12 @@ src/
 
 - **PluginFactory** is the DI container. `main.ts` calls it once. All dependencies are constructor-injected — no service locators, no global state.
 - **VaultTreemapView** is the **only file** in `view/` that imports from `obsidian`. All React components are Obsidian-agnostic and receive data/callbacks as props.
-- **VH files** live under `_visit_history/v1/focus/<device>/` with ulid-based filenames. The backlink to the source note is embedded in the file content — the filename is never derived from the note title (which can change).
-- **Visit deduplication**: focus listeners use `InFlightDropGuard` (`core/util/async/`) — in-flight promise tracking with DROP semantics — to avoid duplicate writes on rapid focus events. `VisitHistoryService` additionally skips consecutive records to the same VH file — intentionally NOT time-window based, so A→B→A navigation pathways stay fully recorded (owner decision).
+- **VH V2 files** live under `.visit_history/v2/focus_per_device/<device>/<doc-id>.vh_v2` — one ISO 8601 UTC ms stamp per line, sorted, deduped, newline-terminated. The doc id IS the filename (survives renames; no backlink indirection). `.visit_history` is a dot-folder — invisible to the Vault API/metadata cache — so ALL access goes through `HiddenFileUtil` (DataAdapter). Ids that are not filename-safe (`VhV2Paths.isFilenameSafeId`) are skipped with `console.error`.
+- **V1 → V2 auto migration** (`VhV1ToV2MigrationService`, from `VhV2StartupTasks` on layout-ready): doc id backfill → parse V1 files → merge per (device, doc id) into V2 → validate readback → only then PERMANENTLY delete `_visit_history/` (unmigratable files included — owner decision); any validation failure deletes nothing.
+- **Visit deduplication**: focus listeners use `InFlightDropGuard` (`core/util/async/`) — in-flight promise tracking with DROP semantics — to avoid duplicate writes on rapid focus events. `VisitHistoryServiceV2` additionally skips consecutive records to the same doc id — intentionally NOT time-window based, so A→B→A navigation pathways stay fully recorded (owner decision).
 - **Doc ids**: every focused document gets a persistent id `docid_{21 base62}_E`. md (incl. `.excalidraw.md`) → frontmatter `id`; canvas → `metadata.frontmatter.id`; raw `.excalidraw` skipped (no id location — owner decision). An existing id — any format — is used as-is and the file is NOT modified; an unusable occupied id slot (e.g. nested mapping) is never overwritten. Writes are atomic raw-text edits via `Vault.process` that only add/fill the id line — Obsidian's `FileManager.processFrontMatter` is deliberately NOT used (it re-serializes the whole frontmatter block, mangling formatting of keys we don't own, e.g. stripping quotes). Vault-wide backfill (settings tab) reuses the same `ensureDocId` path per file.
-- **LRU caching** (instance fields, never module-level): `VisitHistoryServiceDefault` caches last-visit stamps (10k entries); `VHFileProvider` caches self-created VH file paths (500 entries, 1min TTL). Cached only for paths we control — never for backlink-resolved paths.
-- **Malformed files never throw**: `FocusFile.getLastStamp` and `CanvasDocIdStore` return `null` for unparseable content so one bad file can't break aggregation or focus handling.
+- **LRU caching** (instance fields, never module-level): `VisitHistoryServiceV2` caches last-visit stamps (10k entries); write-through on record, invalidated after migration. Heatmap reads resolve ids via the READ-ONLY `DocIdService.getDocId` — bulk read paths must never write into user files.
+- **Malformed files never throw**: stamp parsing (`StampLineParser` / `VhV2FocusStore` / `V1FocusFileParser`) skips bad lines and `CanvasDocIdStore` returns `null` for unparseable content, so one bad file can't break aggregation, migration, or focus handling.
 - **Console logging**: only `console.error` for real failures (obsidianmd no-console rule); no debug logs.
 
 ## Code rules
