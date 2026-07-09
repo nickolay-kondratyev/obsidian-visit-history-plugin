@@ -17,6 +17,7 @@ import { DocIdService, DocIdServiceDefault } from '../service/docId/DocIdService
 import { FrontmatterDocIdStore } from '../service/docId/FrontmatterDocIdStore';
 import { CanvasDocIdStore } from '../service/docId/CanvasDocIdStore';
 import { DocIdFocusListener } from '../focusTracker/listener/DocIdFocusListener';
+import { DocIdBackfillService, DocIdBackfillServiceDefault } from '../service/docId/DocIdBackfillService';
 
 // ── PluginFactory ─────────────────────────────────────────────────────────────
 // Constructs and wires all plugin dependencies.
@@ -27,6 +28,7 @@ export class PluginFactory {
   readonly vaultUtil: VaultUtil;
   readonly visitHistoryService: VisitHistoryService;
   readonly docIdService: DocIdService;
+  readonly docIdBackfillService: DocIdBackfillService;
   readonly isTrackedProvider: IsTrackedProvider;
 
   constructor(plugin: VisitHistoryPlugin) {
@@ -63,5 +65,6 @@ export class PluginFactory {
     );
 
     this.vaultUtil = new VaultUtilDefault(app, this.visitHistoryService, this.isTrackedProvider);
+    this.docIdBackfillService = new DocIdBackfillServiceDefault(this.vaultUtil, this.docIdService);
   }
 }

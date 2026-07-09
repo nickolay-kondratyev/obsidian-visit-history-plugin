@@ -3,6 +3,7 @@ import { DEFAULT_SETTINGS, VisitHistoryPluginSettings } from './settings';
 import { PluginFactory } from './core/init/PluginFactory';
 import { UserNotifier } from './core/util/userComm/UserNotifier';
 import { VaultTreemapView, VIEW_TYPE_TREEMAP } from './view/VaultTreemapView';
+import { VisitHistorySettingTab } from './settingsTab/VisitHistorySettingTab';
 
 // ── VisitHistoryPlugin ────────────────────────────────────────────────────────
 export default class VisitHistoryPlugin extends Plugin {
@@ -16,6 +17,13 @@ export default class VisitHistoryPlugin extends Plugin {
     this.userNotifier = factory.userNotifier;
 
     this.initVaultTreeMapView(factory);
+
+    this.addSettingTab(new VisitHistorySettingTab(
+      this.app,
+      this,
+      factory.docIdBackfillService,
+      this.userNotifier,
+    ));
   }
 
   private initVaultTreeMapView(pluginFactory: PluginFactory) {

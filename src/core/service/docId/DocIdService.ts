@@ -14,6 +14,12 @@ export interface DocIdService {
    * unreadable content.
    */
   ensureDocId(file: TFile): Promise<string | null>;
+
+  /**
+   * True when the file's format can carry a doc id (md incl. .excalidraw.md,
+   * canvas). False for formats ensureDocId would skip (e.g. raw .excalidraw).
+   */
+  isEligible(file: TFile): boolean;
 }
 
 export class DocIdServiceDefault implements DocIdService {
@@ -36,5 +42,9 @@ export class DocIdServiceDefault implements DocIdService {
       return null;
     }
     return store.ensureId(file);
+  }
+
+  isEligible(file: TFile): boolean {
+    return this.storeByExtension.has(file.extension);
   }
 }

@@ -68,4 +68,26 @@ describe('DocIdServiceDefault', () => {
       expect(await service.ensureDocId(makeTFile({ path: 'img/pic.png' }))).toBeNull();
     });
   });
+
+  describe('isEligible', () => {
+    it('should be true for .md files', () => {
+      expect(setup().service.isEligible(makeTFile({ path: 'notes/a.md' }))).toBe(true);
+    });
+
+    it('should be true for .excalidraw.md files (extension is md)', () => {
+      expect(setup().service.isEligible(makeTFile({ path: 'draw/a.excalidraw.md' }))).toBe(true);
+    });
+
+    it('should be true for .canvas files', () => {
+      expect(setup().service.isEligible(makeTFile({ path: 'boards/a.canvas' }))).toBe(true);
+    });
+
+    it('should be false for raw .excalidraw files', () => {
+      expect(setup().service.isEligible(makeTFile({ path: 'draw/raw.excalidraw' }))).toBe(false);
+    });
+
+    it('should be false for untracked extensions', () => {
+      expect(setup().service.isEligible(makeTFile({ path: 'img/pic.png' }))).toBe(false);
+    });
+  });
 });

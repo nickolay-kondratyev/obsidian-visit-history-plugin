@@ -16,6 +16,11 @@ core/init/PluginFactory ──── DI container: constructs & wires everything
    │
    ├── core/service ──────── VisitHistoryService: record visit / last-visit stamp
    │                         DocIdService: ensure per-document id on focus
+   │                         DocIdBackfillService: vault-wide doc id backfill
+   │
+   ├── settingsTab/ ───────── VisitHistorySettingTab (Settings → Visit History):
+   │                         "File modifying actions" → doc id backfill button
+   │                         (ConfirmModal gate); actions only, nothing persisted
    │
    ├── core/util ─────────── LinkUtil (backlinks), NoteFileUtil (vault file I/O),
    │                         VaultUtil (tracked files), IsTrackedProvider,
@@ -74,6 +79,14 @@ Rules:
   overwritten; ensure returns null.
 - Writes are atomic: `FileManager.processFrontMatter` for md,
   `Vault.process` for canvas (id re-checked inside the transform).
+
+### Vault-wide backfill
+
+The settings tab button "Add ids to all eligible files" runs
+`DocIdBackfillService`: all tracked files → filter `DocIdService.isEligible`
+(md/canvas) → the SAME `ensureDocId` path as focus. Sequential (gentle vault
+I/O), per-file errors collected without aborting the run, concurrent calls
+JOIN the in-flight run.
 
 ## Caching (all LRU, instance-scoped)
 

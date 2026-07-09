@@ -19,6 +19,10 @@ class ControlledDocIdService implements DocIdService {
     this.pendingResolvers.forEach(resolve => resolve(null));
     this.pendingResolvers = [];
   }
+
+  isEligible(_file: TFile): boolean {
+    return true;
+  }
 }
 
 function focusEvent(path: string): FocusEvent {
