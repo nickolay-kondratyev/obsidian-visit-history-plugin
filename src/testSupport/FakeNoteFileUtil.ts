@@ -8,6 +8,8 @@ import { makeTFile } from './fileFactory';
  */
 export class FakeNoteFileUtil implements NoteFileUtil {
   private readonly contentByPath = new Map<string, string>();
+  /** Number of process() calls — lets tests assert the no-write fast path. */
+  processCallCount = 0;
 
   /** Seeds a note directly, bypassing createNote's duplicate check. */
   seedNote(path: string, content: string): TFile {
@@ -56,6 +58,7 @@ export class FakeNoteFileUtil implements NoteFileUtil {
   }
 
   async process(file: TFile, transform: (content: string) => string): Promise<void> {
+    this.processCallCount++;
     const content = this.contentByPath.get(file.path);
     if (content === undefined) {
       throw new Error(`File not found: ${file.path}`);

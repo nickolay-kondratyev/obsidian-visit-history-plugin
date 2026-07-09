@@ -6,69 +6,83 @@ import { FrontmatterDocIdStore } from './FrontmatterDocIdStore';
 import { CanvasDocIdStore } from './CanvasDocIdStore';
 import { DocIdGeneratorDefault } from './DocIdGenerator';
 import { FakeNoteFileUtil } from '../../../testSupport/FakeNoteFileUtil';
-import { FakeFrontmatterUtil } from '../../../testSupport/FakeFrontmatterUtil';
 import { FakeVaultUtil } from '../../../testSupport/fakes';
 
 const DOC_ID_REGEX = /^docid_[0-9a-zA-Z]{21}_E$/;
+// Frontmatter block whose only entry is a generated doc id.
+const FRONTMATTER_WITH_DOC_ID_REGEX = /^---\nid: (docid_[0-9a-zA-Z]{21}_E)\n/;
 
 /**
  * Integration: real DocIdBackfillServiceDefault → DocIdServiceDefault →
  * Frontmatter/CanvasDocIdStore → DocIdGeneratorDefault. Faked only at the
- * Obsidian boundary (NoteFileUtil, FrontmatterUtil, VaultUtil) — proves the
- * backfill actually mutates file content the same way focus does.
+ * Obsidian boundary (NoteFileUtil, VaultUtil) — proves the backfill actually
+ * mutates file content the same way focus does.
  */
 interface Setup {
   service: DocIdBackfillServiceDefault;
   noteFileUtil: FakeNoteFileUtil;
-  frontmatterUtil: FakeFrontmatterUtil;
 }
 
 /** Seeds the given path→content vault and wires the real production graph. */
 function setup(vaultContent: Record<string, string>): Setup {
   const noteFileUtil = new FakeNoteFileUtil();
-  const frontmatterUtil = new FakeFrontmatterUtil();
   const files: TFile[] = Object.entries(vaultContent)
     .map(([path, content]) => noteFileUtil.seedNote(path, content));
 
   const docIdGenerator = new DocIdGeneratorDefault();
   const docIdService = new DocIdServiceDefault(
-    new FrontmatterDocIdStore(frontmatterUtil, noteFileUtil, docIdGenerator),
+    new FrontmatterDocIdStore(noteFileUtil, docIdGenerator),
     new CanvasDocIdStore(noteFileUtil, docIdGenerator),
   );
   const service = new DocIdBackfillServiceDefault(new FakeVaultUtil(files), docIdService);
-  return { service, noteFileUtil, frontmatterUtil };
+  return { service, noteFileUtil };
 }
 
 describe('DocIdBackfillServiceDefault (integration)', () => {
   describe('backfillAll', () => {
     it('should write a docid-format id into the frontmatter of a plain md note', async () => {
       // GIVEN
-      const { service, frontmatterUtil } = setup({ 'notes/plain.md': '# Heading only' });
+      const { service, noteFileUtil } = setup({ 'notes/plain.md': '# Heading only' });
       // WHEN
       await service.backfillAll();
       // THEN
-      expect(frontmatterUtil.frontmatterByPath.get('notes/plain.md')?.['id']).toMatch(DOC_ID_REGEX);
+      expect(noteFileUtil.getContent('notes/plain.md')).toMatch(FRONTMATTER_WITH_DOC_ID_REGEX);
     });
 
     it('should write a docid-format id into the frontmatter of an .excalidraw.md file', async () => {
       // GIVEN
-      const { service, frontmatterUtil } = setup({ 'draw/sketch.excalidraw.md': 'excalidraw body' });
+      const { service, noteFileUtil } = setup({ 'draw/sketch.excalidraw.md': 'excalidraw body' });
       // WHEN
       await service.backfillAll();
       // THEN
-      expect(frontmatterUtil.frontmatterByPath.get('draw/sketch.excalidraw.md')?.['id'])
-        .toMatch(DOC_ID_REGEX);
+      expect(noteFileUtil.getContent('draw/sketch.excalidraw.md'))
+        .toMatch(FRONTMATTER_WITH_DOC_ID_REGEX);
     });
 
     it('should leave an md note with an existing id completely untouched', async () => {
       // GIVEN
-      const { service, frontmatterUtil } = setup({
+      const { service, noteFileUtil } = setup({
         'notes/has-id.md': '---\nid: existing-id-123\n---\nbody',
       });
       // WHEN
       await service.backfillAll();
-      // THEN no frontmatter write happened at all (raw-content fast path)
-      expect(frontmatterUtil.processFrontMatterCallCount).toBe(0);
+      // THEN no write happened at all (raw-content fast path)
+      expect({
+        writes: noteFileUtil.processCallCount,
+        content: noteFileUtil.getContent('notes/has-id.md'),
+      }).toEqual({ writes: 0, content: '---\nid: existing-id-123\n---\nbody' });
+    });
+
+    it('should preserve unrelated frontmatter fields byte-for-byte when adding an id', async () => {
+      // GIVEN quoted keys that Obsidian's own serializer would normalize
+      const { service, noteFileUtil } = setup({
+        'notes/quoted.md': '---\n"someother field 3": v3\n---\nbody',
+      });
+      // WHEN
+      await service.backfillAll();
+      // THEN quotes survive; only the id line is new
+      expect(noteFileUtil.getContent('notes/quoted.md'))
+        .toMatch(/^---\nid: docid_[0-9a-zA-Z]{21}_E\n"someother field 3": v3\n---\nbody$/);
     });
 
     it('should write metadata.frontmatter.id into a canvas without an id', async () => {

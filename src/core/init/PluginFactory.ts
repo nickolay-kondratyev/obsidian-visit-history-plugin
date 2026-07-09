@@ -11,7 +11,6 @@ import { DeviceNameProviderDefault } from '../util/env/DeviceNameProvider';
 import { VisitHistoryService, VisitHistoryServiceDefault } from '../service/visitHistoryService/VisitHistoryService';
 import { VaultUtil, VaultUtilDefault } from '../util/vault/VaultUtil';
 import { IsTrackedProvider, IsTrackedProviderDefault } from "../util/vault/IsTrackedProvider";
-import { FrontmatterUtilDefault } from '../util/file/frontmatter/impl/FrontmatterUtilDefault';
 import { DocIdGeneratorDefault } from '../service/docId/DocIdGenerator';
 import { DocIdService, DocIdServiceDefault } from '../service/docId/DocIdService';
 import { FrontmatterDocIdStore } from '../service/docId/FrontmatterDocIdStore';
@@ -49,10 +48,9 @@ export class PluginFactory {
     );
     this.visitHistoryService = new VisitHistoryServiceDefault(vhFileProvider, noteFileUtil);
 
-    const frontmatterUtil = new FrontmatterUtilDefault(app);
     const docIdGenerator = new DocIdGeneratorDefault();
     this.docIdService = new DocIdServiceDefault(
-      new FrontmatterDocIdStore(frontmatterUtil, noteFileUtil, docIdGenerator),
+      new FrontmatterDocIdStore(noteFileUtil, docIdGenerator),
       new CanvasDocIdStore(noteFileUtil, docIdGenerator),
     );
 

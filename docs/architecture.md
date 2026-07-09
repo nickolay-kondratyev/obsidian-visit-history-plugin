@@ -75,10 +75,14 @@ active-leaf-change
 Rules:
 - An existing id is used as-is even if it does not follow the docid_ format —
   the file is then NOT modified (no mtime churn, no sync noise).
-- An id slot occupied by an unusable value (e.g. an object) is never
+- An id slot occupied by an unusable value (e.g. a nested mapping) is never
   overwritten; ensure returns null.
-- Writes are atomic: `FileManager.processFrontMatter` for md,
-  `Vault.process` for canvas (id re-checked inside the transform).
+- Writes are atomic `Vault.process` transforms for both md and canvas (id
+  re-checked inside the transform).
+- md writes are targeted raw-text edits that only add/fill the single id
+  line. WHY-NOT `FileManager.processFrontMatter`: Obsidian re-serializes the
+  WHOLE frontmatter block, normalizing formatting of keys we do not own
+  (e.g. `"some key": v` loses its quotes).
 
 ### Vault-wide backfill
 
