@@ -49,6 +49,44 @@ describe('FrontmatterDocIdStore', () => {
       expect(await store.ensureId(file)).toBe('some-legacy-uuid');
     });
 
+    it('should detect an existing id in CRLF (Windows) frontmatter without any write', async () => {
+      // GIVEN a note with CRLF line endings
+      const { store, noteFileUtil, frontmatterUtil } = setup();
+      const file = noteFileUtil.seedNote('notes/a.md', '---\r\nid: crlf-id\r\n---\r\nbody');
+      // WHEN
+      const id = await store.ensureId(file);
+      // THEN
+      expect({ id, writes: frontmatterUtil.processFrontMatterCallCount })
+        .toEqual({ id: 'crlf-id', writes: 0 });
+    });
+
+    it('should strip a trailing YAML comment from an existing id value', async () => {
+      // GIVEN an id line carrying a YAML comment
+      const { store, noteFileUtil, frontmatterUtil } = setup();
+      const file = noteFileUtil.seedNote('notes/a.md', '---\nid: abc # assigned manually\n---\n');
+      // WHEN
+      const id = await store.ensureId(file);
+      // THEN the comment is not part of the id and no write happens
+      expect({ id, writes: frontmatterUtil.processFrontMatterCallCount })
+        .toEqual({ id: 'abc', writes: 0 });
+    });
+
+    it('should strip a trailing YAML comment after a quoted id value', async () => {
+      // GIVEN a quoted id followed by a comment
+      const { store, noteFileUtil } = setup();
+      const file = noteFileUtil.seedNote('notes/a.md', '---\nid: "abc" # assigned manually\n---\n');
+      // WHEN / THEN
+      expect(await store.ensureId(file)).toBe('abc');
+    });
+
+    it('should keep a # without preceding whitespace as part of the id', async () => {
+      // GIVEN an id containing '#' with no space before it (YAML: not a comment)
+      const { store, noteFileUtil } = setup();
+      const file = noteFileUtil.seedNote('notes/a.md', '---\nid: a#b\n---\n');
+      // WHEN / THEN
+      expect(await store.ensureId(file)).toBe('a#b');
+    });
+
     it('should strip YAML quotes around an existing id', async () => {
       // GIVEN a quoted id value
       const { store, noteFileUtil } = setup();

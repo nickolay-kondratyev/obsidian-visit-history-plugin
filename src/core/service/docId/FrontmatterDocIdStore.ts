@@ -58,8 +58,22 @@ export class FrontmatterDocIdStore implements DocIdStore {
     if (!idLine?.[1]) {
       return null;
     }
-    // Strip surrounding YAML quotes ("..." or '...') if present.
-    const value = idLine[1].trim().replace(/^(["'])(.*)\1$/, '$2');
+    const value = this.parseYamlScalar(idLine[1].trim());
     return value.length > 0 ? value : null;
+  }
+
+  /**
+   * Minimal YAML scalar handling for the fast path:
+   * - quoted value → content of the first "..." / '...' token
+   * - unquoted value → everything before a ` #` comment (YAML requires
+   *   whitespace before '#', so `a#b` stays intact)
+   */
+  private parseYamlScalar(raw: string): string {
+    // Backreference \1 closes with the same quote that opened.
+    const quoted = /^(["'])((?:(?!\1).)*)\1/.exec(raw);
+    if (quoted?.[2] !== undefined) {
+      return quoted[2];
+    }
+    return raw.replace(/\s#.*$/, '').trim();
   }
 }

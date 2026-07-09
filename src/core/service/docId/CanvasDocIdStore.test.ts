@@ -125,6 +125,19 @@ describe('CanvasDocIdStore', () => {
       consoleError.mockRestore();
     });
 
+    it('should return null for an empty canvas file without throwing or writing', async () => {
+      // GIVEN an empty file (e.g. canvas just being created)
+      const { store, noteFileUtil } = setup();
+      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      const file = noteFileUtil.seedNote('boards/new.canvas', '');
+      // WHEN
+      const id = await store.ensureId(file);
+      // THEN
+      expect({ id, content: noteFileUtil.getContent('boards/new.canvas') })
+        .toEqual({ id: null, content: '' });
+      consoleError.mockRestore();
+    });
+
     it('should return null when the canvas root is not an object', async () => {
       // GIVEN a JSON array as canvas root
       const { store, noteFileUtil } = setup();
