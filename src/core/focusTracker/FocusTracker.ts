@@ -1,5 +1,4 @@
 import { Plugin, TFile, View, WorkspaceLeaf } from 'obsidian';
-import { TRACKED_VIEW_TYPES, VISIT_HISTORY_TOP_DIR } from "../../Constants";
 import { IsTrackedProvider } from "../util/vault/IsTrackedProvider";
 
 
@@ -24,7 +23,10 @@ function viewToFocusEvent(view: View): FocusEvent {
   return {
     type: view.getViewType(),
     title: view.getDisplayText(),
-    file: (view as any).file,
+    // System boundary: Obsidian's View type does not declare `file`, but
+    // tracked view types (markdown/canvas/excalidraw) carry it at runtime.
+    // IsTrackedProvider.isTrackedView() has already verified it is present.
+    file: (view as View & { file: TFile }).file,
   };
 }
 
@@ -55,20 +57,29 @@ export class FocusTracker {
     if (this.previousLeaf && this.previousLeaf !== leaf) {
       const prev = this.previousLeaf.view;
       if (this.isTrackedProvider.isTrackedView(prev)) {
-        const event = viewToFocusEvent(prev);
-        for (const l of this.listeners) {
-          await l.onUnfocus(event);
-        }
+        await this.dispatch(viewToFocusEvent(prev), 'onUnfocus');
       }
     }
 
     if (leaf && this.isTrackedProvider.isTrackedView(leaf.view)) {
-      const event = viewToFocusEvent(leaf.view);
-      for (const l of this.listeners) {
-        await l.onFocus(event);
-      }
+      await this.dispatch(viewToFocusEvent(leaf.view), 'onFocus');
     }
 
     this.previousLeaf = leaf;
+  }
+
+  /**
+   * Dispatches to all listeners, isolating failures: one throwing listener
+   * must not block the others nor surface as an unhandled promise rejection
+   * (handleLeafChange is fired-and-forgotten from the workspace event).
+   */
+  private async dispatch(event: FocusEvent, method: 'onFocus' | 'onUnfocus'): Promise<void> {
+    for (const listener of this.listeners) {
+      try {
+        await listener[method](event);
+      } catch (error) {
+        console.error(`[VHP][FocusTracker] listener ${method} failed for path=[${event.file?.path}]`, error);
+      }
+    }
   }
 }

@@ -7,14 +7,9 @@ export interface VisitHistoryService {
   /** Records the visit to this file NOW. */
   recordVisitNowOnFocus(file: TFile): Promise<void>;
 
+  /** Last visit stamp (epoch ms) across all devices, or null if never visited. */
   getLastVisitStamp(file: TFile): Promise<number | null>;
 }
-
-// Cache to speed up retrieval of last visit metadata.
-const pathToLastVisit = new LRUCache<string, { value: number | null }>({
-  // Set to high value as it will be of most use in very high note count vaults.
-  max: 10000,
-});
 
 export class VisitHistoryServiceDefault implements VisitHistoryService {
   constructor(
@@ -22,37 +17,43 @@ export class VisitHistoryServiceDefault implements VisitHistoryService {
     private readonly noteFileUtil: NoteFileUtil) {
   }
 
-  // Last recorded path of visit.
-  private lastRecordedVhPath: string = "I_DONT_EXIST_PATH";
+  // Cache to speed up retrieval of last visit metadata.
+  // Values are wrapped in {value} so a cached "never visited" (null) result
+  // stays distinguishable from a cache miss (LRUCache rejects nullish values).
+  private readonly pathToLastVisit = new LRUCache<string, { value: number | null }>({
+    // Set to high value as it will be of most use in very high note count vaults.
+    max: 10000,
+  });
+
+  // VH file path of the most recently recorded visit.
+  //
+  // Dedup rule: skip recording only when the previous recorded visit went to
+  // the SAME VH file (Obsidian can fire several leaf-change events for one
+  // user action). Intentionally NOT time-window based — navigation pathways
+  // between notes (A → B → A) are interesting data and must stay fully
+  // recorded; a time window would silently drop the second A.
+  private lastRecordedVhPath: string | null = null;
 
   async getLastVisitStamp(file: TFile): Promise<number | null> {
-    let path = file.path;
-    const cached = pathToLastVisit.get(path);
+    const path = file.path;
+    const cached = this.pathToLastVisit.get(path);
     if (cached) {
       return cached.value;
     }
 
     const vhFiles = await this.vhFileProvider.getAllVHFocusFiles(file);
-    if (vhFiles.length === 0) {
-      pathToLastVisit.set(path, {value: null});
-      return null;
-    }
 
     const stamps = await Promise.all(
       vhFiles.map(focusFile => focusFile.getLastStamp(this.noteFileUtil))
     );
+    const validStamps = stamps.filter((stamp): stamp is number => stamp !== null);
 
-    let lastVisit = Math.max(...stamps);
-    pathToLastVisit.set(path, {value: lastVisit});
+    const lastVisit = validStamps.length > 0 ? Math.max(...validStamps) : null;
+    this.pathToLastVisit.set(path, {value: lastVisit});
     return lastVisit;
   }
 
   async recordVisitNowOnFocus(file: TFile): Promise<void> {
-    if (file === null) {
-      console.log("[VHP] null file. skipping record");
-      return;
-    }
-
     const vhFilePath = await this.vhFileProvider.getOrCreateVHFilePathForThisMachine(file);
     if (vhFilePath === null) {
       return;
@@ -72,7 +73,7 @@ export class VisitHistoryServiceDefault implements VisitHistoryService {
         isoStamp
       );
 
-      pathToLastVisit.set(file.path, {value: nowStamp});
+      this.pathToLastVisit.set(file.path, {value: nowStamp});
     }
 
     this.lastRecordedVhPath = vhFilePath;

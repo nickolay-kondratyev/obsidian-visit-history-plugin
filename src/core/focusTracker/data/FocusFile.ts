@@ -1,29 +1,41 @@
 import { TFile } from 'obsidian';
 import { NoteFileUtil } from "../../util/file/note/NoteFileUtil";
 
+// Strict stamp formats. Intentionally NOT a bare Date.parse — it accepts loose
+// strings ("March 2026") and would misread header/comment lines as stamps.
+const LEGACY_EPOCH_MS_PATTERN = /^\d+$/;
+const ISO_8601_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/;
+
 /** File that contains the V1 focus visitation history. */
 export class FocusFile {
   constructor(readonly file: TFile) {
   }
 
-  async getLastStamp(noteFileUtil: NoteFileUtil): Promise<number> {
+  /**
+   * Returns the most recent visit stamp (epoch ms), or null when the file
+   * contains no stamp yet (e.g. freshly created header-only file).
+   *
+   * Never throws on malformed content: one bad VH file must not break
+   * aggregation across all VH files (callers Promise.all over these).
+   */
+  async getLastStamp(noteFileUtil: NoteFileUtil): Promise<number | null> {
     const contents = await noteFileUtil.cachedRead(this.file);
-    const lastLine = contents.split("\n").filter((line: string) => line.trim() !== "").at(-1);
+    const lines = contents.split("\n");
 
-    if (!lastLine) {
-      throw new Error(`No valid stamp found in ${this.file.path}`);
+    // Scan from the end: stamps are append-only, so the last parseable line
+    // is the most recent visit. Header/comment lines are skipped.
+    for (let i = lines.length - 1; i >= 0; i--) {
+      const stamp = FocusFile.parseStampLine(lines[i]!);
+      if (stamp !== null) return stamp;
     }
 
-    // Parse legacy epoch-ms numeric values (e.g. "1781639192842") or
-    // ISO 8601 UTC timestamps (e.g. "2026-06-23T12:34:56.789Z").
-    const parsed = /^\d+$/.test(lastLine)
-      ? Number(lastLine)
-      : Date.parse(lastLine);
+    return null;
+  }
 
-    if (Number.isNaN(parsed)) {
-      throw new Error(`No valid stamp found in ${this.file.path}`);
-    }
-
-    return parsed;
+  private static parseStampLine(rawLine: string): number | null {
+    const line = rawLine.trim();
+    if (LEGACY_EPOCH_MS_PATTERN.test(line)) return Number(line);
+    if (ISO_8601_PATTERN.test(line)) return Date.parse(line);
+    return null;
   }
 }

@@ -1,0 +1,49 @@
+import { TFile } from 'obsidian';
+import { NoteFileUtil } from '../core/util/file/note/NoteFileUtil';
+import { makeTFile } from './fileFactory';
+
+/**
+ * In-memory NoteFileUtil for unit tests. Mirrors the contract of
+ * NoteFileUtilDefault (throws on duplicate create / missing append target).
+ */
+export class FakeNoteFileUtil implements NoteFileUtil {
+  private readonly contentByPath = new Map<string, string>();
+
+  /** Seeds a note directly, bypassing createNote's duplicate check. */
+  seedNote(path: string, content: string): TFile {
+    this.contentByPath.set(path, content);
+    return makeTFile({ path });
+  }
+
+  getContent(path: string): string | undefined {
+    return this.contentByPath.get(path);
+  }
+
+  async createNote(filePathInVault: string, initialContent = ''): Promise<TFile> {
+    if (this.contentByPath.has(filePathInVault)) {
+      throw new Error(`File already exists at path: ${filePathInVault}`);
+    }
+    return this.seedNote(filePathInVault, initialContent);
+  }
+
+  async appendLineToNote(existingFilePathInVault: string, contentToAppend: string): Promise<void> {
+    const current = this.contentByPath.get(existingFilePathInVault);
+    if (current === undefined) {
+      throw new Error(`File not found: ${existingFilePathInVault}`);
+    }
+    const leadingSeparator = current.length > 0 && !current.endsWith('\n') ? '\n' : '';
+    const trailingSeparator = contentToAppend.endsWith('\n') ? '' : '\n';
+    this.contentByPath.set(
+      existingFilePathInVault,
+      current + leadingSeparator + contentToAppend + trailingSeparator,
+    );
+  }
+
+  async cachedRead(file: TFile): Promise<string> {
+    const content = this.contentByPath.get(file.path);
+    if (content === undefined) {
+      throw new Error(`File not found: ${file.path}`);
+    }
+    return content;
+  }
+}
