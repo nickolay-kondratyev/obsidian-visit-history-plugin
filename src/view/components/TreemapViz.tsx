@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import type { MouseEvent, RefObject } from 'react';
 import { hierarchy, treemap, treemapSquarify } from 'd3-hierarchy';
 import type { HierarchyRectangularNode } from 'd3-hierarchy';
 import { Zoom } from '@visx/zoom';
@@ -7,6 +8,7 @@ import { FolderNode } from './FolderNode';
 import { LeafNode } from './LeafNode';
 import { Tooltip } from './Tooltip';
 import { fmtBytes } from '../utils';
+import type { GradientKey, HeatField } from '../constants';
 import type { VaultNode } from '../../core/data/VaultNode';
 import type { IFileOpener } from '../../viewModel/FileOpener';
 
@@ -21,8 +23,8 @@ interface TreemapVizProps {
    */
   currentRoot: VaultNode | null;
   colorMode: 'type' | 'heatmap';
-  gradKey: string;
-  field: string;
+  gradKey: GradientKey;
+  field: HeatField;
   hotDays: number;
   coldDays: number;
   scales: Record<string, number>;
@@ -93,9 +95,12 @@ export function TreemapViz({
 
   useEffect(() => {
     if (!tooltip) return;
-    // rAF ensures the DOM has painted before we measure.
-    const raf = requestAnimationFrame(() => {
-      const el = document.getElementById('tooltip');
+    // rAF ensures the DOM has painted before we measure. window-prefixed for
+    // Obsidian popout-window compatibility.
+    const raf = window.requestAnimationFrame(() => {
+      // Query scoped to our own container (not the global document) — works
+      // in popout windows and cannot collide with other views' elements.
+      const el = containerRef.current?.querySelector('#tooltip');
       if (el) {
         const r = el.getBoundingClientRect();
         if (r.width > 0 && r.height > 0) {
@@ -103,7 +108,7 @@ export function TreemapViz({
         }
       }
     });
-    return () => cancelAnimationFrame(raf);
+    return () => window.cancelAnimationFrame(raf);
   }, [tooltip?.node]); // only re-measure when content (node) changes, not on every pixel move
 
   // ── D3 treemap layout — pure math in useMemo ──────────────────────────
@@ -161,7 +166,7 @@ export function TreemapViz({
   const TOOLTIP_GAP = 8;
 
   const handleLeafMove = useCallback(
-    (e: React.MouseEvent, d: HierarchyRectangularNode<VaultNode>, i: number) => {
+    (e: MouseEvent, d: HierarchyRectangularNode<VaultNode>, i: number) => {
       if (hoveredIdx !== i) setHoveredIdx(i);
       const vizRect = containerRef.current?.getBoundingClientRect();
       if (!vizRect) {
@@ -226,7 +231,7 @@ export function TreemapViz({
           <svg
             ref={(el: SVGSVGElement | null) => {
               svgRef.current = el;
-              (zoom.containerRef as React.MutableRefObject<SVGSVGElement | null>).current = el;
+              (zoom.containerRef as RefObject<SVGSVGElement | null>).current = el;
             }}
             width={dims.w}
             height={dims.h}

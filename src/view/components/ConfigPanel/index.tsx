@@ -1,14 +1,14 @@
-import { TYPE_C } from '../../constants';
+import { TYPE_C, type GradientKey, type HeatField } from '../../constants';
 import { HeatmapOptions } from './HeatmapOptions';
 
 interface ConfigPanelProps {
   open: boolean;
   colorMode: 'type' | 'heatmap';
   setColorMode: (m: 'type' | 'heatmap') => void;
-  gradKey: string;
-  setGradKey: (k: string) => void;
-  field: string;
-  setField: (f: string) => void;
+  gradKey: GradientKey;
+  setGradKey: (k: GradientKey) => void;
+  field: HeatField;
+  setField: (f: HeatField) => void;
   hotDays: number;
   setHotDays: (d: number) => void;
   coldDays: number;

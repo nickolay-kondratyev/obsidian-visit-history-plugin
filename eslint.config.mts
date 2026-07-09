@@ -14,6 +14,9 @@ export default tseslint.config(
 		'package.json',
 		'package-lock.json',
 		'tsconfig.json',
+		// Build/test tooling (like esbuild.config.mjs above) — runs in Node,
+		// not inside Obsidian, so Obsidian plugin rules don't apply.
+		'vitest.config.ts',
 	]),
 	{
 		languageOptions: {
@@ -22,7 +25,7 @@ export default tseslint.config(
 			},
 			parserOptions: {
 				projectService: {
-					allowDefaultProject: ['eslint.config.mts', 'manifest.json', 'vitest.config.ts'],
+					allowDefaultProject: ['eslint.config.mts', 'manifest.json'],
 				},
 				tsconfigRootDir: import.meta.dirname,
 				extraFileExtensions: ['.json'],

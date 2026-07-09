@@ -1,8 +1,8 @@
-import { GRADIENTS } from '../../constants';
+import { GRADIENTS, GRADIENT_KEYS, type GradientKey } from '../../constants';
 
 interface GradientPickerProps {
-  active: string;
-  onChange: (key: string) => void;
+  active: GradientKey;
+  onChange: (key: GradientKey) => void;
 }
 
 /**
@@ -12,7 +12,9 @@ interface GradientPickerProps {
 export function GradientPicker({ active, onChange }: GradientPickerProps) {
   return (
     <div className="grad-row">
-      {Object.entries(GRADIENTS).map(([key, g]) => (
+      {GRADIENT_KEYS.map(key => {
+        const g = GRADIENTS[key];
+        return (
         <button
           key={key}
           className={'grad-btn' + (key === active ? ' active' : '')}
@@ -28,7 +30,8 @@ export function GradientPicker({ active, onChange }: GradientPickerProps) {
           <span style={{ display: 'block' }}>{g.label}</span>
           <span style={{ fontSize: '8px', opacity: 0.55 }}>{g.sub}</span>
         </button>
-      ))}
+        );
+      })}
     </div>
   );
 }

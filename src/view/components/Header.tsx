@@ -1,10 +1,10 @@
-import { FIELD_LABELS } from '../constants';
+import { FIELD_LABELS, type GradientKey, type HeatField } from '../constants';
 import { Legend } from './Legend';
 
 interface HeaderProps {
   colorMode: 'type' | 'heatmap';
-  gradKey: string;
-  field: string;
+  gradKey: GradientKey;
+  field: HeatField;
   stats: { files: number; folders: number; size: string };
   onConfigToggle: () => void;
   /** The folder path segments currently being viewed, or empty array at root. */
@@ -53,7 +53,7 @@ export function Header({
       </div>
       {colorMode === 'heatmap' && (
         <div className="ts-indicator">
-          field: <strong>{FIELD_LABELS[field] || field}</strong>
+          field: <strong>{FIELD_LABELS[field]}</strong>
         </div>
       )}
       <div className="spacer" />

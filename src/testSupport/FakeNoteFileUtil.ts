@@ -19,6 +19,14 @@ export class FakeNoteFileUtil implements NoteFileUtil {
     return this.contentByPath.get(path);
   }
 
+  /** Path of the first note whose content contains the fragment, or null. */
+  findPathContaining(fragment: string): string | null {
+    for (const [path, content] of this.contentByPath) {
+      if (content.includes(fragment)) return path;
+    }
+    return null;
+  }
+
   async createNote(filePathInVault: string, initialContent = ''): Promise<TFile> {
     if (this.contentByPath.has(filePathInVault)) {
       throw new Error(`File already exists at path: ${filePathInVault}`);

@@ -1,8 +1,8 @@
-import { TYPE_C, GRADIENTS, type GradientDef } from '../constants';
+import { TYPE_C, GRADIENTS, type GradientDef, type GradientKey } from '../constants';
 
 interface LegendProps {
   colorMode: 'type' | 'heatmap';
-  gradKey: string;
+  gradKey: GradientKey;
 }
 
 export function Legend({ colorMode, gradKey }: LegendProps) {
@@ -19,7 +19,7 @@ export function Legend({ colorMode, gradKey }: LegendProps) {
     );
   }
 
-  const g: GradientDef = GRADIENTS[gradKey]!;
+  const g: GradientDef = GRADIENTS[gradKey];
   return (
     <div className="legend">
       <span style={{ fontSize: '9px', color: 'var(--text-dim)' }}>new</span>

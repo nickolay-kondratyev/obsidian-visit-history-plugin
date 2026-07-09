@@ -1,11 +1,12 @@
-import { GRADIENTS, FIELD_LABELS } from '../../constants';
+import type { ChangeEvent } from 'react';
+import { FIELD_LABELS, GRADIENTS, HEAT_FIELDS, type GradientKey, type HeatField } from '../../constants';
 import { GradientPicker } from './GradientPicker';
 
 interface HeatmapOptionsProps {
-  field: string;
-  setField: (f: string) => void;
-  gradKey: string;
-  setGradKey: (k: string) => void;
+  field: HeatField;
+  setField: (f: HeatField) => void;
+  gradKey: GradientKey;
+  setGradKey: (k: GradientKey) => void;
   hotDays: number;
   setHotDays: (d: number) => void;
   coldDays: number;
@@ -26,18 +27,18 @@ export function HeatmapOptions({
   coldDays,
   setColdDays,
 }: HeatmapOptionsProps) {
-  const g = GRADIENTS[gradKey]!;
+  const g = GRADIENTS[gradKey];
   // Mono gradient has near-white/near-black endpoints; dim for dark-bg legibility.
-  const hotColor = g.hot === '#d8d8d8' ? '#888888' : g.hot;
-  const coldColor = g.cold === '#1c1c1c' ? '#666666' : g.cold;
+  const hotColor = gradKey === 'mono' ? '#888888' : g.hot;
+  const coldColor = gradKey === 'mono' ? '#666666' : g.cold;
 
-  function onHotInput(e: React.ChangeEvent<HTMLInputElement>) {
-    const v = Math.min(parseInt(e.target.value), coldDays - 1);
+  function onHotInput(e: ChangeEvent<HTMLInputElement>) {
+    const v = Math.min(parseInt(e.target.value, 10), coldDays - 1);
     setHotDays(v);
   }
 
-  function onColdInput(e: React.ChangeEvent<HTMLInputElement>) {
-    const v = Math.max(parseInt(e.target.value), hotDays + 1);
+  function onColdInput(e: ChangeEvent<HTMLInputElement>) {
+    const v = Math.max(parseInt(e.target.value, 10), hotDays + 1);
     setColdDays(v);
   }
 
@@ -49,11 +50,12 @@ export function HeatmapOptions({
       <select
         className="cfg-select"
         value={field}
-        onChange={e => setField(e.target.value)}
+        // DOM boundary: <option> values are exactly HEAT_FIELDS entries.
+        onChange={e => setField(e.target.value as HeatField)}
       >
-        {Object.entries(FIELD_LABELS).map(([val, label]) => (
+        {HEAT_FIELDS.map(val => (
           <option key={val} value={val}>
-            {label}
+            {FIELD_LABELS[val]}
           </option>
         ))}
       </select>
@@ -74,7 +76,7 @@ export function HeatmapOptions({
           max="365"
           step="1"
           value={hotDays}
-          onInput={onHotInput as unknown as React.FormEventHandler<HTMLInputElement>}
+          onChange={onHotInput}
         />
       </div>
 
@@ -89,7 +91,7 @@ export function HeatmapOptions({
           max="730"
           step="1"
           value={coldDays}
-          onInput={onColdInput as unknown as React.FormEventHandler<HTMLInputElement>}
+          onChange={onColdInput}
         />
       </div>
 

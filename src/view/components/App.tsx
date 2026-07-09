@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { Header } from './Header';
 import { ConfigPanel } from './ConfigPanel';
 import { TreemapViz } from './TreemapViz';
+import type { GradientKey, HeatField } from '../constants';
 import type { VaultNode } from '../../core/data/VaultNode';
 import type { IFileOpener } from '../../viewModel/FileOpener';
 
@@ -25,8 +26,8 @@ interface AppProps {
  */
 export function App({ data, fileOpener }: AppProps) {
   const [colorMode, setColorMode] = useState<'type' | 'heatmap'>('heatmap');
-  const [gradKey, setGradKey] = useState('nature');
-  const [field, setField] = useState('lastModifiedAt');
+  const [gradKey, setGradKey] = useState<GradientKey>('nature');
+  const [field, setField] = useState<HeatField>('lastModifiedAt');
   const [hotDays, setHotDays] = useState(7);
   const [coldDays, setColdDays] = useState(180);
   const [scales, setScales] = useState<Record<string, number>>({

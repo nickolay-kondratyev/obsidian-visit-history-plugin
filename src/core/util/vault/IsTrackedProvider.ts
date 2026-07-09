@@ -7,7 +7,7 @@ export interface IsTrackedProvider {
   isTrackedView(view: View | null): boolean;
 }
 
-export class IsTrackerProviderDefault implements IsTrackedProvider {
+export class IsTrackedProviderDefault implements IsTrackedProvider {
   isTrackedFile(file: TFile): boolean {
     const notVisitHistoryFile = !file.path.startsWith(VISIT_HISTORY_TOP_DIR);
     const hasTrackedExtension = TRACKED_EXTENSIONS.has(file.extension);
@@ -17,28 +17,20 @@ export class IsTrackerProviderDefault implements IsTrackedProvider {
 
   isTrackedView(view: View | null): boolean {
     if (view === null) {
-      console.log("[VHP][isTrackedView] [view] is null skipping.");
       return false;
     }
 
-    const file = (view as any).file ?? null;
-    if (file === null) {
-      console.log("[VHP][isTrackedView] [file] is null skipping.");
+    if (!TRACKED_VIEW_TYPES.has(view.getViewType())) {
       return false;
     }
 
-    if (file.path == null) {
-      console.log("[VHP][isTrackedView] [path] is null skipping.");
+    // System boundary: Obsidian's View type does not declare `file`, but the
+    // tracked view types (markdown/canvas/excalidraw) carry it at runtime.
+    const file = (view as View & { file?: TFile | null }).file ?? null;
+    if (file === null || file.path == null) {
       return false;
     }
 
-    if (file.path.startsWith(VISIT_HISTORY_TOP_DIR)) {
-      console.log("[VHP][isTrackedView] skipping visit history file: " + file.path);
-      return false;
-    }
-
-    let ofRightType = TRACKED_VIEW_TYPES.has(view?.getViewType() ?? '');
-
-    return ofRightType && (view as any).file !== null;
+    return !file.path.startsWith(VISIT_HISTORY_TOP_DIR);
   }
 }

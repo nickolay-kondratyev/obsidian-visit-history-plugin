@@ -1,4 +1,4 @@
-import { LinkUtil } from "../../util";
+import { LinkUtil } from "../../util/linkUtil/LinkUtil";
 import { UserNotifier } from "../../util/userComm/UserNotifier";
 import { TFile } from 'obsidian';
 import { ulid } from 'ulid';
@@ -43,7 +43,6 @@ export class VHFileProvider {
     // result. Skip backlink querying and file creation entirely.
     const cachedVHPath = this.createdVhPathCache.get(noteFilePathInVault);
     if (cachedVHPath) {
-      console.log("[VHP][getOrCreateVHFilePath] Found cached path", cachedVHPath);
       return cachedVHPath;
     }
 
@@ -68,7 +67,6 @@ export class VHFileProvider {
     }
 
     const vhFilePath = vhBacklinks[0]!.file.path;
-    console.log("[VHP][getOrCreateVHFilePath] Found from backlinks", vhFilePath, noteFilePathInVault);
 
     // Intentionally NOT writing to createdVhPathCache here. This path was
     // resolved via backlinks, meaning the user or a refactor tool controls
@@ -97,7 +95,6 @@ export class VHFileProvider {
     // manually intervenes, at which point the TTL will expire anyway.
     this.createdVhPathCache.set(noteFilePathInVault, vhFilePath);
 
-    console.log("[VHP][getOrCreateVHFilePath] CREATED for note", vhFilePath, noteFilePathInVault);
     return vhFilePath;
   }
 }

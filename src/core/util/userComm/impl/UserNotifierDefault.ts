@@ -1,9 +1,8 @@
 import { UserNotifier } from "../UserNotifier";
-import { MarkdownView, Notice, Plugin } from "obsidian";
+import { Notice, Plugin } from "obsidian";
 
 export class UserNotifierDefault implements UserNotifier {
   constructor(private readonly plugin: Plugin) {
-
   }
 
   showError(msg: string) {
@@ -12,8 +11,6 @@ export class UserNotifierDefault implements UserNotifier {
   }
 
   showInfo(msg: string) {
-    console.log(msg);
-
     new Notice(msg);
   }
 }

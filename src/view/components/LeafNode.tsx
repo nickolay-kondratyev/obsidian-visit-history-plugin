@@ -1,16 +1,18 @@
+import type { MouseEvent } from 'react';
 import type { HierarchyRectangularNode } from 'd3-hierarchy';
 import { leafFill, leafOpacity } from '../utils';
+import type { GradientKey, HeatField } from '../constants';
 import type { VaultNode } from '../../core/data/VaultNode';
 
 interface LeafNodeProps {
   d: HierarchyRectangularNode<VaultNode>;
   hovered: boolean;
   colorMode: 'type' | 'heatmap';
-  gradKey: string;
-  field: string;
+  gradKey: GradientKey;
+  field: HeatField;
   hotDays: number;
   coldDays: number;
-  onMouseMove: (e: React.MouseEvent) => void;
+  onMouseMove: (e: MouseEvent) => void;
   onMouseLeave: () => void;
   /** Pre-wired by TreemapViz to open the file via IFileOpener. */
   onClick?: () => void;

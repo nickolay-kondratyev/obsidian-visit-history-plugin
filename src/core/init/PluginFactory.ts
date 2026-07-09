@@ -2,7 +2,7 @@ import { App } from 'obsidian';
 import VisitHistoryPlugin from '../../main';
 import { FocusTracker } from '../focusTracker/FocusTracker';
 import { VisitHistoryFocusListenerDefault } from '../focusTracker/listener/VisitHistoryFocusListenerDefault';
-import { LinkUtilDefault } from '../util';
+import { LinkUtilDefault } from '../util/linkUtil/LinkUtil';
 import { UserNotifier } from '../util/userComm/UserNotifier';
 import { UserNotifierDefault } from '../util/userComm/impl/UserNotifierDefault';
 import { NoteFileUtilDefault } from '../util/file/note/impl/NoteFileUtilDefault';
@@ -10,7 +10,7 @@ import { VHFileProvider } from '../focusTracker/listener/VHFileProvider';
 import { DeviceNameProviderDefault } from '../util/env/DeviceNameProvider';
 import { VisitHistoryService, VisitHistoryServiceDefault } from '../service/visitHistoryService/VisitHistoryService';
 import { VaultUtil, VaultUtilDefault } from '../util/vault/VaultUtil';
-import { IsTrackedProvider, IsTrackerProviderDefault } from "../util/vault/IsTrackedProvider";
+import { IsTrackedProvider, IsTrackedProviderDefault } from "../util/vault/IsTrackedProvider";
 
 // ── PluginFactory ─────────────────────────────────────────────────────────────
 // Constructs and wires all plugin dependencies.
@@ -30,7 +30,7 @@ export class PluginFactory {
     const linkUtil = new LinkUtilDefault(app);
     const noteFileUtil = new NoteFileUtilDefault(app);
     const deviceNameProvider = new DeviceNameProviderDefault();
-    this.isTrackedProvider = new IsTrackerProviderDefault();
+    this.isTrackedProvider = new IsTrackedProviderDefault();
 
     const vhFileProvider = new VHFileProvider(
       linkUtil,

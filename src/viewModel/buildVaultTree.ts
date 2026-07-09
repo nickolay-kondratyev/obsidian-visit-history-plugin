@@ -1,8 +1,6 @@
-import { Vault, TFile } from 'obsidian';
+import { TFile } from 'obsidian';
 import type { VaultNode } from '../core/data/VaultNode';
-import { VisitHistoryService } from "../core/service/visitHistoryService/VisitHistoryService";
-import { IsTrackedProvider } from "../core/util/vault/IsTrackedProvider";
-import { VaultUtil } from "../core/util/vault/VaultUtil";
+import type { TrackedFile } from '../core/util/vault/VaultUtil';
 
 // ── File classification ────────────────────────────────────────────────────
 
@@ -21,23 +19,19 @@ function classifyFile(file: TFile): FileType | null {
 // ── Tree builder ────────────────────────────────────────────────────────────
 
 /**
- * Builds a VaultNode tree from all tracked vault files.
+ * Builds a VaultNode tree from tracked vault files.
  *
- * Walks every file in the vault, filters to supported types (md/canvas/excalidraw),
- * and constructs a nested tree matching the vault folder structure.
+ * Filters to supported types (md/canvas/excalidraw) and constructs a nested
+ * tree matching the vault folder structure.
  *
- * @param vault         - The Obsidian vault instance.
- * @param visitedMsMap  - path → last-visited Unix-ms (from FileTimeMetadata.visitedMs).
- *                        Files not in this map get `lastVisitedAt: null`.
+ * @param vaultName    - Root node display name (the vault's name).
+ * @param trackedFiles - Tracked files with time metadata, from
+ *                       {@link VaultUtil.getTrackedFiles}.
  */
-export async function buildVaultTree(
-  vaultUtil: VaultUtil,
-  visitedMsMap: Record<string, number> = {},
-): Promise<VaultNode> {
-  const files = vaultUtil.getRawTrackedFiles();
-  const root: VaultNode = {name: vaultUtil.getName(), children: []};
+export function buildVaultTree(vaultName: string, trackedFiles: TrackedFile[]): VaultNode {
+  const root: VaultNode = {name: vaultName, children: []};
 
-  for (const file of files) {
+  for (const {file, timeMetadata} of trackedFiles) {
     const type = classifyFile(file);
     if (!type) continue;
 
@@ -56,16 +50,14 @@ export async function buildVaultTree(
       node = child;
     }
 
-    const visitedMs = visitedMsMap[file.path];
-
     node.children!.push({
       name: file.name,
       path: file.path,
       type,
       size: file.stat.size,
-      createdAt: file.stat.ctime,
-      lastModifiedAt: file.stat.mtime,
-      lastVisitedAt: visitedMs !== undefined ? visitedMs : null,
+      createdAt: timeMetadata.createdMs,
+      lastModifiedAt: timeMetadata.modifiedMs,
+      lastVisitedAt: timeMetadata.visitedMs,
     });
   }
 

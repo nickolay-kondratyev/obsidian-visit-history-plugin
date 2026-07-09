@@ -1,38 +1,9 @@
-import { App, PluginSettingTab, Setting } from 'obsidian';
-import VisitHistoryPlugin from './main';
-
+// Placeholder settings — no user-facing settings exist yet. The plumbing
+// (load/save in main.ts) is kept so future settings only need a field here.
 export interface VisitHistoryPluginSettings {
-	mySetting: string;
+  mySetting: string;
 }
 
 export const DEFAULT_SETTINGS: VisitHistoryPluginSettings = {
-	mySetting: 'default',
+  mySetting: 'default',
 };
-
-export class SampleSettingTab extends PluginSettingTab {
-	plugin: VisitHistoryPlugin;
-
-	constructor(app: App, plugin: VisitHistoryPlugin) {
-		super(app, plugin);
-		this.plugin = plugin;
-	}
-
-	display(): void {
-		const { containerEl } = this;
-
-		containerEl.empty();
-
-		new Setting(containerEl)
-			.setName('Settings #1')
-			.setDesc("It's a secret")
-			.addText((text) =>
-				text
-					.setPlaceholder('Enter your secret')
-					.setValue(this.plugin.settings.mySetting)
-					.onChange(async (value) => {
-						this.plugin.settings.mySetting = value;
-						await this.plugin.saveSettings();
-					}),
-			);
-	}
-}

@@ -17,8 +17,6 @@ export class NoteFileUtilDefault implements NoteFileUtil {
    * Throws if a file already exists at that path.
    */
   async createNote(filePathInVault: string, initialContent = ""): Promise<TFile> {
-    console.log("[VHP] createNote", filePathInVault);
-
     const normalizedPath = normalizePath(filePathInVault);
 
     if (this.app.vault.getAbstractFileByPath(normalizedPath)) {

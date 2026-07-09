@@ -1,22 +1,19 @@
 import { App, TFile } from 'obsidian';
-import { TRACKED_EXTENSIONS } from "../../../Constants";
 import { FileTimeMetadata } from "../../data/FileTimeMetadata";
 import { VisitHistoryService } from "../../service/visitHistoryService/VisitHistoryService";
-import { IsTrackedProvider, IsTrackerProviderDefault } from "./IsTrackedProvider";
+import { IsTrackedProvider } from "./IsTrackedProvider";
 
 export interface VaultUtil {
   getName(): string;
 
   getTrackedFiles(): Promise<TrackedFile[]>;
-
-  getRawTrackedFiles(): TFile[];
 }
 
 /** File in vault that is part of
  *  {@link TRACKED_EXTENSIONS} and is outside of _visit_history directory
  *  ({@link VISIT_HISTORY_TOP_DIR})
  *  */
-interface TrackedFile {
+export interface TrackedFile {
   file: TFile;
   timeMetadata: FileTimeMetadata,
 }
@@ -33,14 +30,9 @@ export class VaultUtilDefault implements VaultUtil {
     return this.app.vault.getName();
   }
 
-  getRawTrackedFiles(): TFile[] {
-    return this.app.vault.getFiles().filter(f => this.isTrackedProvider.isTrackedFile(f));
-  }
-
   async getTrackedFiles(): Promise<TrackedFile[]> {
-    const rawFiles = this.getRawTrackedFiles();
-
-    console.log("[VHP] filtered files", rawFiles);
+    const rawFiles = this.app.vault.getFiles()
+      .filter(f => this.isTrackedProvider.isTrackedFile(f));
 
     const promises = rawFiles.map(f =>
       this.visitHistoryService.getLastVisitStamp(f).then(visitedMs => ({

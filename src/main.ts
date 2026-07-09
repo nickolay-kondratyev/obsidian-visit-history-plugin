@@ -1,6 +1,5 @@
 import { Plugin } from 'obsidian';
 import { DEFAULT_SETTINGS, VisitHistoryPluginSettings } from './settings';
-import { registerSampleCommands } from './core/sample/registerSampleCommands';
 import { PluginFactory } from './core/init/PluginFactory';
 import { UserNotifier } from './core/util/userComm/UserNotifier';
 import { VaultTreemapView, VIEW_TYPE_TREEMAP } from './view/VaultTreemapView';
@@ -16,35 +15,29 @@ export default class VisitHistoryPlugin extends Plugin {
     const factory = new PluginFactory(this);
     this.userNotifier = factory.userNotifier;
 
-    registerSampleCommands(this);
-
     this.initVaultTreeMapView(factory);
   }
 
   private initVaultTreeMapView(pluginFactory: PluginFactory) {
-    // ── vault heatmap view ─────────────────────────────────────────────
     this.registerView(
       VIEW_TYPE_TREEMAP,
       (leaf) => new VaultTreemapView(leaf, pluginFactory),
     );
 
-    this.addCommand({
-      id: 'open-vault-heatmap',
-      name: 'Open vault heatmap',
-      callback: () => {
-        this.app.workspace.getLeaf(true).setViewState({
-          type: VIEW_TYPE_TREEMAP,
-          active: true,
-        });
-      },
-    });
-
-    this.addRibbonIcon('layout-grid', 'Open vault heatmap', () => {
-      this.app.workspace.getLeaf(true).setViewState({
+    const openHeatmap = () => {
+      void this.app.workspace.getLeaf(true).setViewState({
         type: VIEW_TYPE_TREEMAP,
         active: true,
       });
+    };
+
+    this.addCommand({
+      id: 'open-vault-heatmap',
+      name: 'Open vault heatmap',
+      callback: openHeatmap,
     });
+
+    this.addRibbonIcon('layout-grid', 'Open vault heatmap', openHeatmap);
   }
 
   onunload() {

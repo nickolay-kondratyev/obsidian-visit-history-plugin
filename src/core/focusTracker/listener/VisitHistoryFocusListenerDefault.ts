@@ -27,7 +27,6 @@ export class VisitHistoryFocusListenerDefault implements FocusListener {
   async onFocus(event: FocusEvent): Promise<void> {
     // Guard against events with no file path — nothing meaningful we can do.
     if (!event.file?.path) {
-      console.log("[VHP][onFocus] Dropping focus event with no file path");
       return;
     }
 
@@ -37,7 +36,6 @@ export class VisitHistoryFocusListenerDefault implements FocusListener {
     // we would do here (VH file creation, appending a timestamp) would either
     // race the in-flight call or double-write. Skip it.
     if (this.inFlightFocus.has(noteFilePathInVault)) {
-      console.log("[VHP][onFocus] Dropping duplicate focus event for", noteFilePathInVault);
       return;
     }
 
@@ -58,7 +56,7 @@ export class VisitHistoryFocusListenerDefault implements FocusListener {
     await this.visitHistoryService.recordVisitNowOnFocus(event.file);
   }
 
-  async onUnfocus(event: FocusEvent): Promise<void> {
-    console.log('[FocusTracker] UNFOCUS', event);
+  async onUnfocus(_event: FocusEvent): Promise<void> {
+    // Unfocus is not recorded (yet) — only focus timestamps are persisted.
   }
 }

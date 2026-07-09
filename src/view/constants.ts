@@ -43,7 +43,7 @@ export interface GradientDef {
   nil: string;
 }
 
-export const GRADIENTS: Record<string, GradientDef> = {
+export const GRADIENTS = {
   nature: {
     label: 'Nature',
     sub: 'green → blue',
@@ -65,11 +65,21 @@ export const GRADIENTS: Record<string, GradientDef> = {
     cold: '#1c1c1c',
     nil: '#6d28d9',
   },
-};
+} satisfies Record<string, GradientDef>;
 
-// ── Field labels ───────────────────────────────────────────────────────────
+export type GradientKey = keyof typeof GRADIENTS;
 
-export const FIELD_LABELS: Record<string, string> = {
+// Object.keys() returns string[] by TS design — this cast is the single,
+// well-understood boundary for iterating a literal-keyed record.
+export const GRADIENT_KEYS = Object.keys(GRADIENTS) as GradientKey[];
+
+// ── Heatmap timestamp fields ───────────────────────────────────────────────
+// The VaultNode timestamp fields the heatmap can color by.
+
+export const HEAT_FIELDS = ['createdAt', 'lastModifiedAt', 'lastVisitedAt'] as const;
+export type HeatField = (typeof HEAT_FIELDS)[number];
+
+export const FIELD_LABELS: Record<HeatField, string> = {
   lastModifiedAt: 'modified',
   createdAt: 'created',
   lastVisitedAt: 'visited',

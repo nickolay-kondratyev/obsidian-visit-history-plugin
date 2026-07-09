@@ -1,10 +1,12 @@
 import { color as d3Color } from 'd3-color';
 import type { HierarchyNode } from 'd3-hierarchy';
 import { interpolateRgb } from 'd3-interpolate';
-import { GRADIENTS, TYPE_C } from './constants';
+import { GRADIENTS, TYPE_C, type GradientKey, type HeatField } from './constants';
 import type { VaultNode } from '../core/data/VaultNode';
 
 // ── Color helpers ──────────────────────────────────────────────────────────
+
+const MS_PER_DAY = 86400000;
 
 /**
  * Returns the fill color for a leaf given a timestamp and heatmap thresholds.
@@ -12,14 +14,14 @@ import type { VaultNode } from '../core/data/VaultNode';
  */
 export function heatColor(
   ts: number | null | undefined,
-  gradKey: string,
+  gradKey: GradientKey,
   hotDays: number,
   coldDays: number,
 ): string {
-  const g = GRADIENTS[gradKey]!;
+  const g = GRADIENTS[gradKey];
   if (ts == null) return g.nil;
 
-  const daysOld = (Date.now() - ts) / 86400000;
+  const daysOld = (Date.now() - ts) / MS_PER_DAY;
   if (daysOld <= hotDays) return g.hot;
   if (daysOld >= coldDays) return g.cold;
 
@@ -34,13 +36,13 @@ export function leafFill(
   d: HierarchyNode<VaultNode>,
   hovered: boolean,
   colorMode: 'type' | 'heatmap',
-  gradKey: string,
-  field: string,
+  gradKey: GradientKey,
+  field: HeatField,
   hotDays: number,
   coldDays: number,
 ): string {
   if (colorMode === 'heatmap') {
-    const ts = d.data[field as keyof VaultNode] as number | null | undefined;
+    const ts = d.data[field];
     const base = heatColor(ts, gradKey, hotDays, coldDays);
     return hovered && ts != null
       ? d3Color(base)!.brighter(0.45).formatHex()
@@ -58,10 +60,10 @@ export function leafFill(
 export function leafOpacity(
   d: HierarchyNode<VaultNode>,
   colorMode: 'type' | 'heatmap',
-  field: string,
+  field: HeatField,
 ): number {
   if (colorMode === 'heatmap') {
-    const ts = d.data[field as keyof VaultNode];
+    const ts = d.data[field];
     return ts == null ? 0.55 : 0.88;
   }
   return 0.78;
@@ -77,7 +79,7 @@ export function fmtBytes(b: number): string {
 
 export function fmtDate(ts: number | null | undefined): string | null {
   if (ts == null) return null;
-  const d = Math.round((Date.now() - ts) / 86400000);
+  const d = Math.round((Date.now() - ts) / MS_PER_DAY);
   const rel = d === 0 ? 'today' : d === 1 ? 'yesterday' : `${d}d ago`;
   return `${new Date(ts).toISOString().slice(0, 10)} (${rel})`;
 }
