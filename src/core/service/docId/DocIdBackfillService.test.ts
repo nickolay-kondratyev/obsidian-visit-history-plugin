@@ -2,24 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { TFile } from 'obsidian';
 import { DocIdBackfillServiceDefault } from './DocIdBackfillService';
 import { DocIdService } from './DocIdService';
-import { TrackedFile, VaultUtil } from '../../util/vault/VaultUtil';
+import { FakeVaultUtil } from '../../../testSupport/fakes';
 import { makeTFile } from '../../../testSupport/fileFactory';
-
-class FakeVaultUtil implements VaultUtil {
-  constructor(private readonly files: TFile[]) {
-  }
-
-  getName(): string {
-    return 'test-vault';
-  }
-
-  async getTrackedFiles(): Promise<TrackedFile[]> {
-    return this.files.map(file => ({
-      file,
-      timeMetadata: { createdMs: 0, modifiedMs: 0, visitedMs: null },
-    }));
-  }
-}
 
 class FakeDocIdService implements DocIdService {
   readonly ensuredPaths: string[] = [];

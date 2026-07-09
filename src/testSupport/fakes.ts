@@ -2,6 +2,7 @@ import { TFile } from 'obsidian';
 import { Backlink, LinkUtil } from '../core/util/linkUtil/LinkUtil';
 import { UserNotifier } from '../core/util/userComm/UserNotifier';
 import { DeviceNameProvider } from '../core/util/env/DeviceNameProvider';
+import { TrackedFile, VaultUtil } from '../core/util/vault/VaultUtil';
 import { makeTFile } from './fileFactory';
 
 export class FakeLinkUtil implements LinkUtil {
@@ -28,6 +29,23 @@ export class FakeUserNotifier implements UserNotifier {
 
   showInfo(msg: string): void {
     this.infos.push(msg);
+  }
+}
+
+/** VaultUtil fake serving a fixed file list as tracked files (never-visited). */
+export class FakeVaultUtil implements VaultUtil {
+  constructor(private readonly files: TFile[]) {
+  }
+
+  getName(): string {
+    return 'test-vault';
+  }
+
+  async getTrackedFiles(): Promise<TrackedFile[]> {
+    return this.files.map(file => ({
+      file,
+      timeMetadata: { createdMs: 0, modifiedMs: 0, visitedMs: null },
+    }));
   }
 }
 
