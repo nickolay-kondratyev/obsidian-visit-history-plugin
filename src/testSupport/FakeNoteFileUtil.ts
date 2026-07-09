@@ -54,4 +54,12 @@ export class FakeNoteFileUtil implements NoteFileUtil {
     }
     return content;
   }
+
+  async process(file: TFile, transform: (content: string) => string): Promise<void> {
+    const content = this.contentByPath.get(file.path);
+    if (content === undefined) {
+      throw new Error(`File not found: ${file.path}`);
+    }
+    this.contentByPath.set(file.path, transform(content));
+  }
 }

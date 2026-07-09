@@ -50,6 +50,10 @@ export class NoteFileUtilDefault implements NoteFileUtil {
     });
   }
 
+  async process(file: TFile, transform: (content: string) => string): Promise<void> {
+    await this.app.vault.process(file, transform);
+  }
+
   // ---------------------------------------------------------------------------
   // Private helpers
   // ---------------------------------------------------------------------------

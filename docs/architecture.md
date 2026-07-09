@@ -10,10 +10,12 @@ core/init/PluginFactory ──── DI container: constructs & wires everything
    │
    ├── core/focusTracker ─── FocusTracker listens to active-leaf-change,
    │      │                  dispatches FocusEvents to FocusListeners
-   │      └── listener/ ──── VisitHistoryFocusListenerDefault → records visits
+   │      └── listener/ ──── DocIdFocusListener → ensures doc id (runs first)
+   │                         VisitHistoryFocusListenerDefault → records visits
    │                         VHFileProvider → finds/creates VH files
    │
    ├── core/service ──────── VisitHistoryService: record visit / last-visit stamp
+   │                         DocIdService: ensure per-document id on focus
    │
    ├── core/util ─────────── LinkUtil (backlinks), NoteFileUtil (vault file I/O),
    │                         VaultUtil (tracked files), IsTrackedProvider,
@@ -49,6 +51,29 @@ active-leaf-change
   → VHFileProvider.getOrCreateVHFilePathForThisMachine
   → NoteFileUtil.appendLineToNote (atomic vault.process)
 ```
+
+## Doc id flow
+
+Every focused document gets a persistent id: `docid_{21 base62 chars}_E`.
+
+```
+active-leaf-change
+  → FocusTracker
+  → DocIdFocusListener (registered FIRST; in-flight DROP guard per path)
+  → DocIdService (dispatch by extension)
+       md      → FrontmatterDocIdStore: YAML frontmatter key 'id'
+                 (covers .excalidraw.md — extension is 'md')
+       canvas  → CanvasDocIdStore: JSON metadata.frontmatter.id
+       other   → skipped (raw .excalidraw has no id location — owner decision)
+```
+
+Rules:
+- An existing id is used as-is even if it does not follow the docid_ format —
+  the file is then NOT modified (no mtime churn, no sync noise).
+- An id slot occupied by an unusable value (e.g. an object) is never
+  overwritten; ensure returns null.
+- Writes are atomic: `FileManager.processFrontMatter` for md,
+  `Vault.process` for canvas (id re-checked inside the transform).
 
 ## Caching (all LRU, instance-scoped)
 

@@ -15,4 +15,10 @@ export interface NoteFileUtil {
   appendLineToNote(existingFilePathInVault: string, contentToAppend: string): Promise<void>;
 
   cachedRead(file: TFile): Promise<string>;
+
+  /**
+   * Atomically reads, transforms, and saves a file's content
+   * (Obsidian Vault.process — avoids the read()+modify() race).
+   */
+  process(file: TFile, transform: (content: string) => string): Promise<void>;
 }

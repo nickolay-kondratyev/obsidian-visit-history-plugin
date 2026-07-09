@@ -11,6 +11,12 @@ import { DeviceNameProviderDefault } from '../util/env/DeviceNameProvider';
 import { VisitHistoryService, VisitHistoryServiceDefault } from '../service/visitHistoryService/VisitHistoryService';
 import { VaultUtil, VaultUtilDefault } from '../util/vault/VaultUtil';
 import { IsTrackedProvider, IsTrackedProviderDefault } from "../util/vault/IsTrackedProvider";
+import { FrontmatterUtilDefault } from '../util/file/frontmatter/impl/FrontmatterUtilDefault';
+import { DocIdGeneratorDefault } from '../service/docId/DocIdGenerator';
+import { DocIdService, DocIdServiceDefault } from '../service/docId/DocIdService';
+import { FrontmatterDocIdStore } from '../service/docId/FrontmatterDocIdStore';
+import { CanvasDocIdStore } from '../service/docId/CanvasDocIdStore';
+import { DocIdFocusListener } from '../focusTracker/listener/DocIdFocusListener';
 
 // ── PluginFactory ─────────────────────────────────────────────────────────────
 // Constructs and wires all plugin dependencies.
@@ -20,6 +26,7 @@ export class PluginFactory {
   readonly focusTracker: FocusTracker;
   readonly vaultUtil: VaultUtil;
   readonly visitHistoryService: VisitHistoryService;
+  readonly docIdService: DocIdService;
   readonly isTrackedProvider: IsTrackedProvider;
 
   constructor(plugin: VisitHistoryPlugin) {
@@ -40,7 +47,17 @@ export class PluginFactory {
     );
     this.visitHistoryService = new VisitHistoryServiceDefault(vhFileProvider, noteFileUtil);
 
+    const frontmatterUtil = new FrontmatterUtilDefault(app);
+    const docIdGenerator = new DocIdGeneratorDefault();
+    this.docIdService = new DocIdServiceDefault(
+      new FrontmatterDocIdStore(frontmatterUtil, noteFileUtil, docIdGenerator),
+      new CanvasDocIdStore(noteFileUtil, docIdGenerator),
+    );
+
     this.focusTracker = new FocusTracker(plugin, this.isTrackedProvider);
+    // Doc id listener FIRST: assigning the id is the first thing that happens
+    // when a file gains focus (listeners are dispatched in order).
+    this.focusTracker.registerListener(new DocIdFocusListener(this.docIdService));
     this.focusTracker.registerListener(
       new VisitHistoryFocusListenerDefault(this.visitHistoryService),
     );

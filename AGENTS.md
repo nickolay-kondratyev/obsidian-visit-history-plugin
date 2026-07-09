@@ -39,6 +39,7 @@ src/
     focusTracker/
       FocusTracker.ts      # Listens to Obsidian active-leaf-change; dispatches to FocusListeners
       listener/
+        DocIdFocusListener.ts                # On focus → ensures doc id via DocIdService (registered first)
         VisitHistoryFocusListenerDefault.ts  # On focus → records visit via VisitHistoryService
         VHFileProvider.ts   # Manages VH files: backlink discovery, ulid-based creation, per-device
       data/
@@ -46,12 +47,19 @@ src/
     service/
       visitHistoryService/
         VisitHistoryService.ts  # Interface + default impl. Records visits, retrieves last-visit stamps
+      docId/
+        DocIdService.ts       # Ensure per-doc id on focus; dispatch by extension (md/canvas)
+        DocIdGenerator.ts     # docid_{21 base62}_E generation (crypto, unbiased)
+        FrontmatterDocIdStore.ts  # md (incl. .excalidraw.md): frontmatter 'id' key
+        CanvasDocIdStore.ts   # canvas: JSON metadata.frontmatter.id
     data/
       FileTimeMetadata.ts   # created/modified/visited timestamps per file
       VaultNode.ts          # Tree node for heatmap visualization (folder or leaf)
     util/
       vault/                # VaultUtil (tracked files), IsTrackedProvider
       file/note/            # NoteFileUtil — vault file I/O
+      file/frontmatter/     # FrontmatterUtil — atomic frontmatter read-modify-write
+      async/                # InFlightDropGuard — per-key async dedup (DROP semantics)
       env/                  # DeviceNameProvider
       userComm/             # UserNotifier (notices/warnings)
       linkUtil/             # Backlink resolution
@@ -83,7 +91,8 @@ src/
 - **PluginFactory** is the DI container. `main.ts` calls it once. All dependencies are constructor-injected — no service locators, no global state.
 - **VaultTreemapView** is the **only file** in `view/` that imports from `obsidian`. All React components are Obsidian-agnostic and receive data/callbacks as props.
 - **VH files** live under `_visit_history/v1/focus/<device>/` with ulid-based filenames. The backlink to the source note is embedded in the file content — the filename is never derived from the note title (which can change).
-- **Visit deduplication**: `VisitHistoryFocusListenerDefault` uses in-flight promise tracking with DROP semantics to avoid duplicate writes on rapid focus events. `VisitHistoryService` additionally skips consecutive records to the same VH file — intentionally NOT time-window based, so A→B→A navigation pathways stay fully recorded (owner decision).
+- **Visit deduplication**: focus listeners use `InFlightDropGuard` (`core/util/async/`) — in-flight promise tracking with DROP semantics — to avoid duplicate writes on rapid focus events. `VisitHistoryService` additionally skips consecutive records to the same VH file — intentionally NOT time-window based, so A→B→A navigation pathways stay fully recorded (owner decision).
+- **Doc ids**: every focused document gets a persistent id `docid_{21 base62}_E`. md (incl. `.excalidraw.md`) → frontmatter `id`; canvas → `metadata.frontmatter.id`; raw `.excalidraw` skipped (no id location — owner decision). An existing id — any format — is used as-is and the file is NOT modified; an unusable occupied id slot (e.g. object) is never overwritten. Writes are atomic (`processFrontMatter` / `Vault.process`).
 - **LRU caching** (instance fields, never module-level): `VisitHistoryServiceDefault` caches last-visit stamps (10k entries); `VHFileProvider` caches self-created VH file paths (500 entries, 1min TTL). Cached only for paths we control — never for backlink-resolved paths.
 - **Malformed VH files never throw**: `FocusFile.getLastStamp` returns `null` for stamp-less/unparseable content so one bad file can't break heatmap aggregation.
 - **Console logging**: only `console.error` for real failures (obsidianmd no-console rule); no debug logs.
