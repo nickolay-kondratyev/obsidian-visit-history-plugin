@@ -14,12 +14,16 @@ Records visit history of notes, canvases, and Excalidraw drawings. When you focu
 npm install        # install dependencies
 npm run dev        # watch mode
 npm run build      # production build (tsc + esbuild)
-npm run lint       # ESLint
+npm run lint       # ESLint (obsidianmd rules) — kept at ZERO errors
+npm test           # vitest unit tests
 ```
 
 - Node 18+, npm, esbuild bundler
 - `tsconfig.json`: strict, ES2021, React JSX (`react-jsx`)
 - Dependencies: React 18, d3-hierarchy, d3-color, d3-interpolate, visx/zoom, lru-cache, ulid
+
+High-level docs live in [`docs/`](docs/README.md): architecture, VH on-disk
+format, heatmap view.
 
 ## Architecture
 
@@ -46,12 +50,14 @@ src/
       FileTimeMetadata.ts   # created/modified/visited timestamps per file
       VaultNode.ts          # Tree node for heatmap visualization (folder or leaf)
     util/
-      vault/                # VaultUtil, IsTrackedProvider
+      vault/                # VaultUtil (tracked files), IsTrackedProvider
       file/note/            # NoteFileUtil — vault file I/O
       env/                  # DeviceNameProvider
       userComm/             # UserNotifier (notices/warnings)
       linkUtil/             # Backlink resolution
-      out/                  # Logging abstraction
+
+  testSupport/              # Test-only fakes + runtime stand-in for 'obsidian'
+                            # (the npm package is types-only; see vitest.config.ts)
 
   view/                     # React UI (Obsidian-agnostic except VaultTreemapView)
     VaultTreemapView.tsx    # Obsidian ItemView — mounts/unmounts React, handles vault events
@@ -64,11 +70,11 @@ src/
       LeafNode.tsx          # File rect + on-click open
       Tooltip.tsx           # Hover tooltip
       Legend.tsx            # Color legend
-    constants.ts            # Color palette definitions
-    utils.ts                # Treemap geometry helpers
+    constants.ts            # Palettes + HeatField/GradientKey unions
+    utils.ts                # Pure color/format helpers
 
   viewModel/
-    buildVaultTree.ts       # Walks vault files → constructs VaultNode tree
+    buildVaultTree.ts       # TrackedFile[] → VaultNode tree (single vault walk)
     FileOpener.ts           # IFileOpener interface + ObsidianFileOpener impl
 ```
 
@@ -77,8 +83,10 @@ src/
 - **PluginFactory** is the DI container. `main.ts` calls it once. All dependencies are constructor-injected — no service locators, no global state.
 - **VaultTreemapView** is the **only file** in `view/` that imports from `obsidian`. All React components are Obsidian-agnostic and receive data/callbacks as props.
 - **VH files** live under `_visit_history/v1/focus/<device>/` with ulid-based filenames. The backlink to the source note is embedded in the file content — the filename is never derived from the note title (which can change).
-- **Visit deduplication**: `VisitHistoryFocusListenerDefault` uses in-flight promise tracking with DROP semantics to avoid duplicate writes on rapid focus events.
-- **LRU caching**: `VisitHistoryServiceDefault` caches last-visit stamps (10k entries); `VHFileProvider` caches self-created VH file paths (500 entries, 1min TTL). Cached only for paths we control — never for backlink-resolved paths.
+- **Visit deduplication**: `VisitHistoryFocusListenerDefault` uses in-flight promise tracking with DROP semantics to avoid duplicate writes on rapid focus events. `VisitHistoryService` additionally skips consecutive records to the same VH file — intentionally NOT time-window based, so A→B→A navigation pathways stay fully recorded (owner decision).
+- **LRU caching** (instance fields, never module-level): `VisitHistoryServiceDefault` caches last-visit stamps (10k entries); `VHFileProvider` caches self-created VH file paths (500 entries, 1min TTL). Cached only for paths we control — never for backlink-resolved paths.
+- **Malformed VH files never throw**: `FocusFile.getLastStamp` returns `null` for stamp-less/unparseable content so one bad file can't break heatmap aggregation.
+- **Console logging**: only `console.error` for real failures (obsidianmd no-console rule); no debug logs.
 
 ## TypeScript & React rules
 
@@ -127,8 +135,9 @@ src/
 
 ### How to test
 
+- **Runner: vitest** (`npm test` / `npm run test:watch`). The `obsidian` npm package is types-only; tests run against `src/testSupport/obsidianMock.ts` via the alias in `vitest.config.ts`.
 - **Test files mirror source structure**: `src/core/foo/Bar.ts` → `src/core/foo/Bar.test.ts`
-- **Isolate the unit**: mock only at system boundaries (Obsidian APIs). Test the class's own logic directly.
+- **Isolate the unit**: mock only at system boundaries (Obsidian APIs). Reusable fakes (`FakeNoteFileUtil`, `FakeLinkUtil`, `makeTFile`, …) live in `src/testSupport/`. Test the class's own logic directly.
 - **Test behavior, not implementation**: when you refactor internals without changing behavior, tests should not break.
 - **Cover edge cases explicitly**: null/undefined inputs, empty collections, duplicate events, concurrent operations, boundary timestamps.
 - **No Jest globals** — explicit imports for `describe`, `it`, `expect`.
