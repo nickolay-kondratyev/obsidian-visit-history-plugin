@@ -6,9 +6,12 @@ import { LinkUtilDefault } from '../util/linkUtil/LinkUtil';
 import { UserNotifier } from '../util/userComm/UserNotifier';
 import { UserNotifierDefault } from '../util/userComm/impl/UserNotifierDefault';
 import { NoteFileUtilDefault } from '../util/file/note/impl/NoteFileUtilDefault';
-import { VHFileProvider } from '../focusTracker/listener/VHFileProvider';
+import { HiddenFileUtilDefault } from '../util/file/hidden/impl/HiddenFileUtilDefault';
 import { DeviceNameProviderDefault } from '../util/env/DeviceNameProvider';
-import { VisitHistoryService, VisitHistoryServiceDefault } from '../service/visitHistoryService/VisitHistoryService';
+import { VisitHistoryService } from '../service/visitHistoryService/VisitHistoryService';
+import { VisitHistoryServiceV2 } from '../service/visitHistoryService/v2/VisitHistoryServiceV2';
+import { VhV2FocusStore } from '../service/visitHistoryService/v2/VhV2FocusStore';
+import { VhV2ReadmeWriter } from '../service/visitHistoryService/v2/VhV2ReadmeWriter';
 import { VaultUtil, VaultUtilDefault } from '../util/vault/VaultUtil';
 import { IsTrackedProvider, IsTrackedProviderDefault } from "../util/vault/IsTrackedProvider";
 import { DocIdGeneratorDefault } from '../service/docId/DocIdGenerator';
@@ -17,6 +20,9 @@ import { FrontmatterDocIdStore } from '../service/docId/FrontmatterDocIdStore';
 import { CanvasDocIdStore } from '../service/docId/CanvasDocIdStore';
 import { DocIdFocusListener } from '../focusTracker/listener/DocIdFocusListener';
 import { DocIdBackfillService, DocIdBackfillServiceDefault } from '../service/docId/DocIdBackfillService';
+import { V1FocusFileRepoDefault } from '../service/migration/V1FocusFileRepo';
+import { VhV1ToV2MigrationService } from '../service/migration/VhV1ToV2MigrationService';
+import { VhV2StartupTasks } from './VhV2StartupTasks';
 
 // ── PluginFactory ─────────────────────────────────────────────────────────────
 // Constructs and wires all plugin dependencies.
@@ -29,6 +35,7 @@ export class PluginFactory {
   readonly docIdService: DocIdService;
   readonly docIdBackfillService: DocIdBackfillService;
   readonly isTrackedProvider: IsTrackedProvider;
+  readonly vhV2StartupTasks: VhV2StartupTasks;
 
   constructor(plugin: VisitHistoryPlugin) {
     const app: App = plugin.app;
@@ -37,22 +44,23 @@ export class PluginFactory {
 
     const linkUtil = new LinkUtilDefault(app);
     const noteFileUtil = new NoteFileUtilDefault(app);
+    const hiddenFileUtil = new HiddenFileUtilDefault(app);
     const deviceNameProvider = new DeviceNameProviderDefault();
     this.isTrackedProvider = new IsTrackedProviderDefault();
-
-    const vhFileProvider = new VHFileProvider(
-      linkUtil,
-      this.userNotifier,
-      noteFileUtil,
-      deviceNameProvider,
-    );
-    this.visitHistoryService = new VisitHistoryServiceDefault(vhFileProvider, noteFileUtil);
 
     const docIdGenerator = new DocIdGeneratorDefault();
     this.docIdService = new DocIdServiceDefault(
       new FrontmatterDocIdStore(noteFileUtil, docIdGenerator),
       new CanvasDocIdStore(noteFileUtil, docIdGenerator),
     );
+
+    const vhV2FocusStore = new VhV2FocusStore(hiddenFileUtil);
+    const visitHistoryServiceV2 = new VisitHistoryServiceV2(
+      this.docIdService,
+      vhV2FocusStore,
+      deviceNameProvider,
+    );
+    this.visitHistoryService = visitHistoryServiceV2;
 
     this.focusTracker = new FocusTracker(plugin, this.isTrackedProvider);
     // Doc id listener FIRST: assigning the id is the first thing that happens
@@ -64,5 +72,20 @@ export class PluginFactory {
 
     this.vaultUtil = new VaultUtilDefault(app, this.visitHistoryService, this.isTrackedProvider);
     this.docIdBackfillService = new DocIdBackfillServiceDefault(this.vaultUtil, this.docIdService);
+
+    const migrationService = new VhV1ToV2MigrationService(
+      new V1FocusFileRepoDefault(app),
+      noteFileUtil,
+      linkUtil,
+      this.docIdService,
+      this.docIdBackfillService,
+      vhV2FocusStore,
+    );
+    this.vhV2StartupTasks = new VhV2StartupTasks(
+      new VhV2ReadmeWriter(hiddenFileUtil),
+      migrationService,
+      visitHistoryServiceV2,
+      this.userNotifier,
+    );
   }
 }

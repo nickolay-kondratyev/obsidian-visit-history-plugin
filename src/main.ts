@@ -24,6 +24,12 @@ export default class VisitHistoryPlugin extends Plugin {
       factory.docIdBackfillService,
       this.userNotifier,
     ));
+
+    // Deferred: V2 format README write + V1→V2 auto migration. onLayoutReady
+    // — the vault index must be complete before migration resolves backlinks.
+    this.app.workspace.onLayoutReady(() => {
+      void factory.vhV2StartupTasks.run();
+    });
   }
 
   private initVaultTreeMapView(pluginFactory: PluginFactory) {

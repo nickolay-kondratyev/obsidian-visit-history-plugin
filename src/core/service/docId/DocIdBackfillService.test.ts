@@ -18,6 +18,10 @@ class FakeDocIdService implements DocIdService {
     return this.nullResultPaths.has(file.path) ? null : 'some-id';
   }
 
+  async getDocId(_file: TFile): Promise<string | null> {
+    return null;
+  }
+
   isEligible(file: TFile): boolean {
     return file.extension === 'md' || file.extension === 'canvas';
   }

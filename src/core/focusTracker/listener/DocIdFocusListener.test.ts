@@ -20,6 +20,10 @@ class ControlledDocIdService implements DocIdService {
     this.pendingResolvers = [];
   }
 
+  async getDocId(_file: TFile): Promise<string | null> {
+    return null;
+  }
+
   isEligible(_file: TFile): boolean {
     return true;
   }

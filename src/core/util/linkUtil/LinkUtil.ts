@@ -12,6 +12,13 @@ export interface Backlink {
 
 export interface LinkUtil {
   getBacklinks(file: TFile): Backlink[];
+
+  /**
+   * Resolves wiki-link text (e.g. "notes/target.md" or a shortest-unique
+   * name like "target") to its target file, as Obsidian itself would when
+   * the link appears in the given source file. Null when unresolvable.
+   */
+  resolveLinkTarget(linkText: string, sourcePath: string): TFile | null;
 }
 
 // ── ObsidianLinkUtil ──────────────────────────────────────────────────────────
@@ -42,5 +49,9 @@ export class LinkUtilDefault implements LinkUtil {
           title: sourceFile.basename,
         }];
       });
+  }
+
+  resolveLinkTarget(linkText: string, sourcePath: string): TFile | null {
+    return this.app.metadataCache.getFirstLinkpathDest(linkText, sourcePath);
   }
 }
