@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf } from 'obsidian';
+import { ItemView, ViewStateResult, WorkspaceLeaf } from 'obsidian';
 import { Root, createRoot } from 'react-dom/client';
 import { App as TreemapApp } from './components/App';
 import { buildVaultTree } from '../viewModel/buildVaultTree';
@@ -26,6 +26,12 @@ export class VaultTreemapView extends ItemView {
   private readonly pluginFactory: PluginFactory;
   private refreshTimer: number | null = null;
   private readonly REFRESH_DEBOUNCE_MS = 500;
+  /**
+   * Vault folder the heatmap starts drilled into (from the file-tree context
+   * menu), or undefined for the full vault. Persisted via getState so the
+   * view survives workspace layout save/restore.
+   */
+  private folderPath: string | undefined;
 
   constructor(leaf: WorkspaceLeaf, pluginFactory: PluginFactory) {
     super(leaf);
@@ -65,6 +71,26 @@ export class VaultTreemapView extends ItemView {
     this.root = null;
   }
 
+  // ── View state (folder targeting) ─────────────────────────────────────
+
+  override async setState(state: unknown, result: ViewStateResult): Promise<void> {
+    const folderPath =
+      state && typeof state === 'object' && 'folderPath' in state
+        ? state.folderPath
+        : undefined;
+    this.folderPath = typeof folderPath === 'string' ? folderPath : undefined;
+    await super.setState(state, result);
+    // Re-render if already mounted (setState can arrive after onOpen, e.g.
+    // when an existing leaf is re-targeted at a different folder).
+    if (this.root) {
+      await this.refresh();
+    }
+  }
+
+  override getState(): Record<string, unknown> {
+    return { folderPath: this.folderPath };
+  }
+
   // ── Private helpers ───────────────────────────────────────────────────
 
   /**
@@ -91,6 +117,15 @@ export class VaultTreemapView extends ItemView {
 
     const fileOpener = new ObsidianFileOpener(this.app);
 
-    this.root?.render(<TreemapApp data={data} fileOpener={fileOpener}/>);
+    this.root?.render(
+      // key: remount App (fresh nav state) when the target folder changes;
+      // plain refreshes keep the key stable, preserving user navigation.
+      <TreemapApp
+        key={this.folderPath ?? ''}
+        data={data}
+        fileOpener={fileOpener}
+        initialFolderPath={this.folderPath}
+      />,
+    );
   }
 }

@@ -1,4 +1,4 @@
-import { Plugin } from 'obsidian';
+import { Plugin, TFolder } from 'obsidian';
 import { DEFAULT_SETTINGS, VisitHistoryPluginSettings } from './settings';
 import { PluginFactory } from './core/init/PluginFactory';
 import { UserNotifier } from './core/util/userComm/UserNotifier';
@@ -24,20 +24,35 @@ export default class VisitHistoryPlugin extends Plugin {
       (leaf) => new VaultTreemapView(leaf, pluginFactory),
     );
 
-    const openHeatmap = () => {
+    /** Opens the heatmap in a new leaf, optionally drilled into a folder. */
+    const openHeatmap = (folderPath?: string) => {
       void this.app.workspace.getLeaf(true).setViewState({
         type: VIEW_TYPE_TREEMAP,
         active: true,
+        state: { folderPath },
       });
     };
 
     this.addCommand({
       id: 'open-vault-heatmap',
       name: 'Open vault heatmap',
-      callback: openHeatmap,
+      callback: () => openHeatmap(),
     });
 
-    this.addRibbonIcon('layout-grid', 'Open vault heatmap', openHeatmap);
+    this.addRibbonIcon('layout-grid', 'Open vault heatmap', () => openHeatmap());
+
+    // File-tree context menu: open the heatmap drilled into the folder.
+    this.registerEvent(
+      this.app.workspace.on('file-menu', (menu, file) => {
+        if (!(file instanceof TFolder)) return;
+        menu.addItem(item =>
+          item
+            .setTitle('Open heatmap for folder')
+            .setIcon('layout-grid')
+            .onClick(() => openHeatmap(file.path)),
+        );
+      }),
+    );
   }
 
   onunload() {

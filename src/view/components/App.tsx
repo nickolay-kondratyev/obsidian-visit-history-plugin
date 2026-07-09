@@ -5,10 +5,17 @@ import { TreemapViz } from './TreemapViz';
 import type { GradientKey, HeatField } from '../constants';
 import type { VaultNode } from '../../core/data/VaultNode';
 import type { IFileOpener } from '../../viewModel/FileOpener';
+import { findFolderTrail } from '../../viewModel/folderTrail';
 
 interface AppProps {
   data: VaultNode;
   fileOpener: IFileOpener;
+  /**
+   * Vault folder path to start drilled into (e.g. from the file-tree context
+   * menu). Read once on mount; the host remounts App (via React key) when it
+   * changes. Ignored when the path is absent from the tree.
+   */
+  initialFolderPath?: string;
 }
 
 /**
@@ -24,7 +31,7 @@ interface AppProps {
  * - Drilling into a folder pushes the previous root onto the stack.
  * - "Back" pops the stack — the popped item becomes the new currentRoot.
  */
-export function App({ data, fileOpener }: AppProps) {
+export function App({ data, fileOpener, initialFolderPath }: AppProps) {
   const [colorMode, setColorMode] = useState<'type' | 'heatmap'>('heatmap');
   const [gradKey, setGradKey] = useState<GradientKey>('nature');
   const [field, setField] = useState<HeatField>('lastModifiedAt');
@@ -40,10 +47,20 @@ export function App({ data, fileOpener }: AppProps) {
 
   // ── Folder drill-down state ──────────────────────────────────────────────
 
+  /**
+   * History of ancestor nodes for "go back". Each entry is a parent we can return to.
+   * Seeded with the full ancestor trail when opened on a folder (file-tree context
+   * menu), so "back" walks up parent-by-parent to the vault root.
+   */
+  const [navStack, setNavStack] = useState<VaultNode[]>(
+    () => (initialFolderPath ? findFolderTrail(data, initialFolderPath) : null) ?? [],
+  );
   /** Currently drilled-into folder subtree, or null to show full vault. */
-  const [currentRoot, setCurrentRoot] = useState<VaultNode | null>(null);
-  /** History of ancestor nodes for "go back". Each entry is a parent we can return to. */
-  const [navStack, setNavStack] = useState<VaultNode[]>([]);
+  const [currentRoot, setCurrentRoot] = useState<VaultNode | null>(
+    // Lazy initializer runs during the first render — navStack already holds
+    // its seeded initial value, and its last entry IS the current root.
+    () => (navStack.length > 0 ? navStack[navStack.length - 1]! : null),
+  );
 
   const handleFolderClick = useCallback((folder: VaultNode) => {
     setNavStack(prev => [...prev, folder]);
