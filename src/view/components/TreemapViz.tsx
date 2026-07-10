@@ -11,6 +11,7 @@ import { fmtBytes } from '../utils';
 import type { GradientKey, HeatField } from '../constants';
 import type { VaultNode } from '../../core/data/VaultNode';
 import type { IFileOpener } from '../../viewModel/FileOpener';
+import { pruneArchiveFolders } from '../../viewModel/pruneArchiveFolders';
 
 // ── Props ───────────────────────────────────────────────────────────────────
 
@@ -119,11 +120,16 @@ export function TreemapViz({
 
   // ── D3 treemap layout — pure math in useMemo ──────────────────────────
 
+  // _archive folders below the view root are hidden; scoping the view INTO
+  // an archive (file-explorer context menu) is the way to see its contents.
+  const treeRoot = useMemo(
+    () => pruneArchiveFolders(currentRoot ?? data),
+    [data, currentRoot],
+  );
+
   const { folders, leaves } = useMemo(() => {
     const { w, h } = dims;
     if (!w || !h) return { folders: [], leaves: [] };
-
-    const treeRoot = currentRoot ?? data;
 
     const root = hierarchy(treeRoot)
       .sum(d => (d.children ? 0 : Math.max(1, Math.round((d.size ?? 0) * (scales[d.type ?? ''] ?? 1)))))
@@ -143,7 +149,7 @@ export function TreemapViz({
       ) as HierarchyRectangularNode<VaultNode>[],
       leaves: root.leaves() as HierarchyRectangularNode<VaultNode>[],
     };
-  }, [data, currentRoot, scales, dims]);
+  }, [treeRoot, scales, dims]);
 
   // ── Bubble stats up to Header ─────────────────────────────────────────
 

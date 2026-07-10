@@ -27,6 +27,13 @@ Folder targeting: the `file-menu` handler (`main.ts`) opens the view with
 it to an ancestor trail with `viewModel/folderTrail.ts` and seeds the nav
 stack; the App is keyed by folder path so re-targeting remounts fresh.
 
+Archive hiding: folders named `_archive` are hidden below the current view
+root — `viewModel/pruneArchiveFolders.ts` prunes them (and folders left
+empty by the prune) inside `TreemapViz` before layout. Because pruning is
+relative to the view root, scoping INTO an archive (its file-tree context
+menu → "Open heatmap for folder") shows its contents, backing out hides it
+again, and nested archives below the root stay hidden by the same rule.
+
 `VaultNode` is a dual-purpose tree node: folders have `children`; leaves have
 `path`, `type` (`md`/`canvas`/`excalidraw`), `size`, and the three timestamps.
 
