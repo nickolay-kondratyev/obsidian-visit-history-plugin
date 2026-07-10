@@ -91,8 +91,8 @@ src/
   view/                     # React UI (Obsidian-agnostic except VaultTreemapView)
     VaultTreemapView.tsx    # Obsidian ItemView boundary — mounts React, handles vault events
     components/             # App (config state owner), TreemapViz (SVG treemap + zoom),
-                            # Header, ConfigPanel/ (SegmentedToggle, GradientPicker radio
-                            # group, RangeSlider w/ editable bounds), FolderNode, LeafNode,
+                            # Header, ConfigPanel/ (SegmentedToggle, RadioGroup,
+                            # RangeSlider w/ editable bounds), FolderNode, LeafNode,
                             # Tooltip, Legend
     constants.ts, utils.ts  # Palettes + ColorMode/HeatField/GradientKey unions; pure helpers
 

@@ -90,3 +90,10 @@ export const FIELD_LABELS: Record<HeatField, string> = {
   createdAt: 'created',
   lastVisitedAt: 'visited',
 };
+
+/** Secondary description per field, shown in the config panel's radio rows. */
+export const FIELD_SUBS: Record<HeatField, string> = {
+  lastModifiedAt: 'file modified time',
+  createdAt: 'file created time',
+  lastVisitedAt: 'your visit history',
+};

@@ -299,15 +299,15 @@ body.vault-heatmap-active .status-bar-mobile {
   color: var(--vt-text);
 }
 
-/* ── Gradient radio group ───────────────────────────────── */
-.vault-heatmap-view .grad-radios {
+/* ── Radio group (timestamp field) ──────────────────────── */
+.vault-heatmap-view .cfg-radios {
   display: flex;
   flex-direction: column;
   gap: 2px;
   margin-bottom: 12px;
 }
 
-.vault-heatmap-view .grad-radio {
+.vault-heatmap-view .cfg-radio {
   display: flex;
   align-items: center;
   gap: 7px;
@@ -320,18 +320,18 @@ body.vault-heatmap-active .status-bar-mobile {
   transition: color 0.15s, border-color 0.15s, background 0.15s;
 }
 
-.vault-heatmap-view .grad-radio:hover {
+.vault-heatmap-view .cfg-radio:hover {
   color: var(--vt-text);
 }
 
-.vault-heatmap-view .grad-radio.active {
+.vault-heatmap-view .cfg-radio.active {
   color: var(--vt-text);
   background: var(--vt-bg);
   border-color: var(--vt-border);
 }
 
 /* Native radio kept for keyboard/AT; the custom dot is the visual. */
-.vault-heatmap-view .grad-radio input[type="radio"] {
+.vault-heatmap-view .cfg-radio input[type="radio"] {
   position: absolute;
   opacity: 0;
   pointer-events: none;
@@ -347,7 +347,7 @@ body.vault-heatmap-active .status-bar-mobile {
   flex-shrink: 0;
 }
 
-.vault-heatmap-view .grad-radio.active .radio-dot::after {
+.vault-heatmap-view .cfg-radio.active .radio-dot::after {
   content: '';
   position: absolute;
   inset: 2px;
@@ -355,25 +355,15 @@ body.vault-heatmap-active .status-bar-mobile {
   background: var(--vt-text);
 }
 
-.vault-heatmap-view .grad-radio input[type="radio"]:focus-visible + .radio-dot {
+.vault-heatmap-view .cfg-radio input[type="radio"]:focus-visible + .radio-dot {
   outline: 1px solid var(--vt-border2);
   outline-offset: 2px;
 }
 
-.vault-heatmap-view .grad-radio-sub {
+.vault-heatmap-view .cfg-radio-sub {
   font-size: 9px;
   opacity: 0.55;
-}
-
-.vault-heatmap-view .grad-radio .grad-swatch {
   margin-left: auto;
-  width: 44px;
-}
-
-.vault-heatmap-view .grad-swatch {
-  display: block;
-  height: 5px;
-  border-radius: 2px;
 }
 
 /* ── Sliders ────────────────────────────────────────────── */

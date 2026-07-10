@@ -48,7 +48,7 @@ App                     state owner: HeatmapConfig (color mode, gradient,
  │                      (currentRoot + navStack)
  ├─ Header              stats, breadcrumb + back, legend, config toggle
  ├─ ConfigPanel         SegmentedToggle (color mode), HeatmapOptions
- │                      (field select, GradientPicker radio group,
+ │                      (field RadioGroup, gradient dropdown,
  │                      hot/cold RangeSliders), per-type scale RangeSliders
  └─ TreemapViz          d3 treemap layout (useMemo), @visx/zoom pan/zoom,
      │                  hover + edge-flipping tooltip

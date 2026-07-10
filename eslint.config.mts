@@ -17,6 +17,9 @@ export default tseslint.config(
 		// Build/test tooling (like esbuild.config.mjs above) — runs in Node,
 		// not inside Obsidian, so Obsidian plugin rules don't apply.
 		'vitest.config.ts',
+		// AI tooling scratch + test screenshots (gitignored, never shipped).
+		'.tmp',
+		'.out',
 	]),
 	{
 		languageOptions: {

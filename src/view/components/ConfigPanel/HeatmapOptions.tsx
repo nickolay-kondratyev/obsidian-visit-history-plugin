@@ -1,7 +1,20 @@
-import { FIELD_LABELS, GRADIENTS, HEAT_FIELDS, type HeatField } from '../../constants';
+import {
+  FIELD_LABELS,
+  FIELD_SUBS,
+  GRADIENTS,
+  GRADIENT_KEYS,
+  HEAT_FIELDS,
+  type GradientKey,
+} from '../../constants';
 import { DAYS_HARD_MIN, type BoundedValue, type HeatmapConfig } from '../../../viewModel/heatmapConfig';
-import { GradientPicker } from './GradientPicker';
+import { RadioGroup } from './RadioGroup';
 import { RangeSlider } from './RangeSlider';
+
+const FIELD_OPTIONS = HEAT_FIELDS.map(f => ({
+  value: f,
+  label: FIELD_LABELS[f],
+  sub: FIELD_SUBS[f],
+}));
 
 interface HeatmapOptionsProps {
   config: HeatmapConfig;
@@ -36,23 +49,28 @@ export function HeatmapOptions({ config, onConfigChange }: HeatmapOptionsProps) 
       <div className="cfg-label" style={{ marginBottom: '6px' }}>
         Timestamp field
       </div>
+      <RadioGroup
+        ariaLabel="Timestamp field"
+        options={FIELD_OPTIONS}
+        value={config.field}
+        onChange={f => onConfigChange({ field: f })}
+      />
+
+      <div className="cfg-label" style={{ marginBottom: '6px' }}>
+        Gradient
+      </div>
       <select
         className="cfg-select"
-        value={config.field}
-        // DOM boundary: <option> values are exactly HEAT_FIELDS entries.
-        onChange={e => onConfigChange({ field: e.target.value as HeatField })}
+        value={config.gradKey}
+        // DOM boundary: <option> values are exactly GRADIENT_KEYS entries.
+        onChange={e => onConfigChange({ gradKey: e.target.value as GradientKey })}
       >
-        {HEAT_FIELDS.map(val => (
-          <option key={val} value={val}>
-            {FIELD_LABELS[val]}
+        {GRADIENT_KEYS.map(key => (
+          <option key={key} value={key}>
+            {GRADIENTS[key].label} — {GRADIENTS[key].sub}
           </option>
         ))}
       </select>
-
-      <div className="cfg-label" style={{ marginBottom: '8px' }}>
-        Gradient
-      </div>
-      <GradientPicker active={config.gradKey} onChange={k => onConfigChange({ gradKey: k })} />
 
       <RangeSlider
         label={<span style={{ color: hotColor }}>hot / new</span>}
