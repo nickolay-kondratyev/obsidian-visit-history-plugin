@@ -17,36 +17,70 @@ const ACTIVITY_EVENT_TYPES: ReadonlyArray<keyof DocumentEventMap> = [
 /**
  * DOM boundary for V3 duration tracking: translates window focus/blur,
  * visibility changes, and user-input events into FocusDurationTracker calls.
- * All handlers are registered via plugin.registerDomEvent → auto-cleanup on
- * unload. Trivial glue by design — the logic lives in the tracker.
+ *
+ * Registers on EVERY Obsidian window: the main window at construction, each
+ * popout via the 'window-open' workspace event. A window's Document object is
+ * its identity (WindowHandle) — the same object a leaf reports through
+ * FocusEvent.ownerDocument, so per-window focus matches up.
+ *
+ * All handlers go through plugin.registerDomEvent → auto-cleanup on unload;
+ * popout listeners additionally die with their window. Trivial glue by
+ * design — the logic lives in the tracker.
  */
 export class WindowActivityMonitor {
   /* eslint-disable obsidianmd/prefer-active-doc --
-     WHY-NOT activeDocument: registration happens ONCE at plugin load, when
-     activeDocument === document (the main window), so it would not change
-     behavior. Tracking activity inside popout windows needs per-window
-     registration via the 'window-open' workspace event — follow-up work. */
-  constructor(plugin: Plugin, tracker: FocusDurationTracker) {
-    plugin.registerDomEvent(window, 'blur', () => tracker.onWindowBlurred());
-    plugin.registerDomEvent(window, 'focus', () => tracker.onWindowFocused());
+     WHY-NOT activeDocument: this class deliberately registers on a SPECIFIC
+     window's document (main at load, each popout on 'window-open'), never on
+     "whichever window is active right now". */
+  constructor(
+    private readonly plugin: Plugin,
+    private readonly tracker: FocusDurationTracker,
+  ) {
+    this.registerWindow(window, document);
+    this.plugin.registerEvent(
+      this.plugin.app.workspace.on('window-open', (workspaceWindow) => {
+        this.registerWindow(workspaceWindow.win, workspaceWindow.doc);
+      }),
+    );
+    this.plugin.registerEvent(
+      this.plugin.app.workspace.on('window-close', (workspaceWindow) => {
+        // A closing window can no longer emit blur — unfocus it explicitly so
+        // a doc it hosted records its duration.
+        this.tracker.onWindowBlurred(workspaceWindow.doc);
+      }),
+    );
+  }
+
+  // ── private ─────────────────────────────────────────────────────────────
+
+  private registerWindow(win: Window, doc: Document): void {
+    const tracker = this.tracker;
+    this.plugin.registerDomEvent(win, 'blur', () => tracker.onWindowBlurred(doc));
+    this.plugin.registerDomEvent(win, 'focus', () => tracker.onWindowFocused(doc));
     // visibilitychange complements blur/focus (e.g. minimize / OS app switch
-    // on some platforms); the tracker ignores duplicate transitions.
-    plugin.registerDomEvent(document, 'visibilitychange', () => {
-      if (document.hidden) {
-        tracker.onWindowBlurred();
-      } else {
-        tracker.onWindowFocused();
+    // on some platforms, mobile backgrounding). Visible does NOT imply
+    // focused — hence the hasFocus() check.
+    this.plugin.registerDomEvent(doc, 'visibilitychange', () => {
+      if (doc.hidden) {
+        tracker.onWindowBlurred(doc);
+      } else if (doc.hasFocus()) {
+        tracker.onWindowFocused(doc);
       }
     });
     for (const eventType of ACTIVITY_EVENT_TYPES) {
       // capture: leaf content often stops propagation; passive: never block
       // scrolling — the handler only stamps lastActivity.
-      plugin.registerDomEvent(
-        document,
+      this.plugin.registerDomEvent(
+        doc,
         eventType,
         () => tracker.onUserActivity(),
         { capture: true, passive: true },
       );
+    }
+    // Seed: focus events won't fire for a window that is ALREADY focused at
+    // registration time (main window at plugin load; a fresh popout).
+    if (doc.hasFocus()) {
+      tracker.onWindowFocused(doc);
     }
   }
   /* eslint-enable obsidianmd/prefer-active-doc */

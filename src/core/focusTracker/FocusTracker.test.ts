@@ -36,11 +36,15 @@ const trackAllProvider: IsTrackedProvider = {
   isTrackedView: (view) => view !== null,
 };
 
+// Stand-in for the hosting window's document (node tests have no DOM).
+const OWNER_DOC = { name: 'main-window-doc' };
+
 function makeLeaf(file: TFile): WorkspaceLeaf {
   const view = {
     getViewType: () => 'markdown',
     getDisplayText: () => file.basename,
     file,
+    containerEl: { ownerDocument: OWNER_DOC },
   };
   return { view: view as unknown as View } as unknown as WorkspaceLeaf;
 }

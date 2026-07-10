@@ -60,11 +60,13 @@ alongside it — both are written live, independently.
   `<ISO 8601 UTC ms stamp of focus start> D:<millis spent in focus>`,
   newline-terminated. Appended when a session ends, in session-start order
   (sessions on one device never overlap) → naturally ascending.
-- A session closes on the first of: navigation away from the doc, Obsidian
-  window blur, 3 minutes without user interaction
-  (`FocusDurationTracker.IDLE_TIMEOUT_MS`; the recorded duration then ends at
-  the LAST interaction — the idle tail is not counted), or plugin unload
-  (best-effort flush; a hard app quit can lose the last open session).
+- A session closes on the first of: navigation away from the doc, blur of the
+  Obsidian window HOSTING it (main or popout — switching between popout
+  windows closes the left-behind doc's session), 3 minutes without user
+  interaction (`FocusDurationTracker.IDLE_TIMEOUT_MS`; the recorded duration
+  then ends at the LAST interaction — the idle tail is not counted), or
+  plugin unload (best-effort flush; a hard app quit can lose the last open
+  session). A tab dragged out to a new window keeps its session running.
 - **OS sleep is never counted**: timers don't run during suspend, so the idle
   cutoff is also enforced retroactively at every session close and on the
   first post-wake interaction — a session spanning a sleep still ends at the

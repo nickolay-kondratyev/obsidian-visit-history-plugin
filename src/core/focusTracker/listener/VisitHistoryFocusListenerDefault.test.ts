@@ -26,7 +26,12 @@ class ControlledVisitHistoryService implements VisitHistoryService {
 }
 
 function focusEvent(path: string): FocusEvent {
-  return { type: 'markdown', title: path, file: makeTFile({ path }) };
+  return {
+    type: 'markdown',
+    title: path,
+    file: makeTFile({ path }),
+    ownerDocument: {} as Document,
+  };
 }
 
 describe('VisitHistoryFocusListenerDefault', () => {

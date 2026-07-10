@@ -32,7 +32,8 @@ export class VhV3FocusDurationListener implements FocusListener {
       this.focusDurationTracker.onDocUnfocused();
       return;
     }
-    this.focusDurationTracker.onDocFocused(docId);
+    // The hosting window's document is the tracker's per-window identity.
+    this.focusDurationTracker.onDocFocused(docId, event.ownerDocument);
   }
 
   async onUnfocus(_event: FocusEvent): Promise<void> {

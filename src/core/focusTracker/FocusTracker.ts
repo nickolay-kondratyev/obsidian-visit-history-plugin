@@ -8,6 +8,12 @@ export interface FocusEvent {
   type: string;   // 'markdown' | 'canvas' | 'excalidraw'
   title: string;
   file: TFile;
+  /**
+   * Document of the OS window hosting the view (main window or popout).
+   * Identity token for per-window focus tracking (V3 durations) — stable for
+   * the window's lifetime; compare by reference.
+   */
+  ownerDocument: Document;
 }
 
 export interface FocusListener {
@@ -27,6 +33,9 @@ function viewToFocusEvent(view: View): FocusEvent {
     // tracked view types (markdown/canvas/excalidraw) carry it at runtime.
     // IsTrackedProvider.isTrackedView() has already verified it is present.
     file: (view as View & { file: TFile }).file,
+    // The window hosting the view: main window's document for main-window
+    // leaves, the popout's own document for popout leaves.
+    ownerDocument: view.containerEl.ownerDocument,
   };
 }
 

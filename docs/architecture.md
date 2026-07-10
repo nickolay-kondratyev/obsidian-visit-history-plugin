@@ -81,16 +81,23 @@ active-leaf-change
 ## V3 duration flow (recorded ALONGSIDE V2 — V2 stays the main history)
 
 ```
-active-leaf-change ──► VhV3FocusDurationListener (ensureDocId → docId)
-window blur/focus  ──► WindowActivityMonitor ─┐
-user input events  ──► (idle detection)       │
+active-leaf-change ──► VhV3FocusDurationListener (ensureDocId → docId
+                       + hosting window via FocusEvent.ownerDocument)
+window blur/focus  ──► WindowActivityMonitor ─┐   registered on EVERY window:
+user input events  ──► (idle detection)       │   main at load, popouts via
+                                              │   'window-open'/'window-close'
                                               ▼
-                              FocusDurationTracker (state machine)
-                                │  session CLOSES on: navigate away, window
-                                │  blur, 3-min idle (duration then ends at the
-                                │  LAST interaction), or plugin unload flush;
-                                │  window refocus / interaction after idle
-                                │  opens a NEW session for the same doc
+                              FocusDurationTracker (state machine; a window's
+                                │  Document object is its identity handle)
+                                │  session CLOSES on: navigate away, blur of
+                                │  the window HOSTING the doc (incl. popout →
+                                │  popout switches), 3-min idle (duration then
+                                │  ends at the LAST interaction; also enforced
+                                │  retroactively — OS sleep never counts), or
+                                │  plugin unload flush; refocusing the doc's
+                                │  window / interaction after idle opens a NEW
+                                │  session; a tab DRAGGED to another window
+                                │  keeps its session
                                 ▼
                               VhV3DurationRecorder (one serialized write chain)
                                 ▼
@@ -99,10 +106,8 @@ user input events  ──► (idle detection)       │
                                  <device>/<id>.vh_v3 — `<ISO start> D:<millis>`)
 ```
 
-Known limitations (owner-accepted):
-- Hard app quit can lose the last open session (unload cannot await the write).
-- Activity/window events are registered on the MAIN window only; popout-window
-  activity is not seen (follow-up: per-window registration via 'window-open').
+Known limitation (owner-accepted): a hard app quit can lose the last open
+session (unload cannot await the write).
 
 ## Doc id flow
 

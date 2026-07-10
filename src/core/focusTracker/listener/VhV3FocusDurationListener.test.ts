@@ -5,9 +5,12 @@ import { FocusDurationSink, FocusDurationTracker } from '../../focusDuration/Foc
 import { FakeDocIdService } from '../../../testSupport/fakes';
 import { makeTFile } from '../../../testSupport/fileFactory';
 
+// Window identity is by reference — one shared "main window" document.
+const OWNER_DOC = { name: 'main-window-doc' } as unknown as Document;
+
 function makeFocusEvent(path: string): FocusEvent {
   const file = makeTFile({ path });
-  return { type: 'markdown', title: file.basename, file };
+  return { type: 'markdown', title: file.basename, file, ownerDocument: OWNER_DOC };
 }
 
 class RecordingSink implements FocusDurationSink {
@@ -27,7 +30,10 @@ interface Setup {
 function setup(): Setup {
   const docIdService = new FakeDocIdService();
   const sink = new RecordingSink();
-  const listener = new VhV3FocusDurationListener(docIdService, new FocusDurationTracker(sink));
+  const tracker = new FocusDurationTracker(sink);
+  // Mirrors WindowActivityMonitor's hasFocus() seeding at plugin load.
+  tracker.onWindowFocused(OWNER_DOC);
+  const listener = new VhV3FocusDurationListener(docIdService, tracker);
   return { listener, docIdService, sink };
 }
 
@@ -90,7 +96,9 @@ describe('VhV3FocusDurationListener', () => {
     it('should ignore focus events without a file path', async () => {
       // GIVEN an event with no file
       const { listener, sink } = setup();
-      const event = { type: 'markdown', title: '?', file: undefined } as unknown as FocusEvent;
+      const event = {
+        type: 'markdown', title: '?', file: undefined, ownerDocument: OWNER_DOC,
+      } as unknown as FocusEvent;
       // WHEN focused
       await listener.onFocus(event);
       // THEN nothing happened

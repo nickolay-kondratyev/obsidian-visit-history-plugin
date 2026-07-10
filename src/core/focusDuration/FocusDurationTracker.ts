@@ -3,6 +3,20 @@ export interface FocusDurationSink {
   recordFocusDuration(docId: string, focusStartEpochMs: number, durationMs: number): void;
 }
 
+/**
+ * Opaque identity of one Obsidian OS window (main or popout), compared by
+ * reference. Callers use the window's `Document` object — stable for the
+ * window's lifetime and reachable both from a leaf's `containerEl` and from
+ * the DOM event boundary. Kept opaque so this class stays DOM-agnostic.
+ */
+export type WindowHandle = object;
+
+interface CurrentDoc {
+  docId: string;
+  /** The window hosting the doc's leaf — sessions live and die with ITS focus. */
+  windowHandle: WindowHandle;
+}
+
 interface ActiveSession {
   docId: string;
   startMs: number;
@@ -12,17 +26,21 @@ interface ActiveSession {
  * V3 focus-duration state machine (Obsidian-agnostic).
  *
  * A session = one continuous stretch of attention on one document. It opens
- * when a tracked doc is focused while the window is focused, and CLOSES —
- * emitting exactly one sink record — on the first of:
+ * when a tracked doc is focused while ITS OS window (main or popout) is
+ * focused, and CLOSES — emitting exactly one sink record — on the first of:
  *  - the user navigates to another doc (or to an untracked view),
- *  - the Obsidian window loses focus,
+ *  - the window HOSTING the doc loses OS focus (incl. switching to another
+ *    Obsidian popout window),
  *  - IDLE_TIMEOUT_MS passes without any user interaction; the recorded
  *    duration then ends at the LAST interaction (owner decision — the idle
- *    tail is not counted),
+ *    tail is not counted). Enforced retroactively too (OS sleep suspends
+ *    timers) — a session can never include a sleep/idle gap,
  *  - dispose() (plugin unload) — best-effort flush.
  *
- * After a window blur or idle close, the document stays "current": window
- * refocus or a new interaction opens a fresh session for the same doc.
+ * After a window blur or idle close, the document stays "current": refocusing
+ * its window or a new interaction opens a fresh session for the same doc.
+ * A doc MOVED to another window (tab dragged out) keeps its session — only
+ * the hosting window updates.
  *
  * Idle detection is cheap under mousemove storms: activity only updates
  * lastActivityMs; the single timer re-arms itself for the remainder instead
@@ -32,8 +50,9 @@ export class FocusDurationTracker {
   static readonly IDLE_TIMEOUT_MS = 3 * 60 * 1000;
 
   /** Doc shown in the active leaf — outlives sessions closed by blur/idle. */
-  private currentDocId: string | null = null;
-  private windowFocused = true;
+  private currentDoc: CurrentDoc | null = null;
+  /** OS-focused Obsidian windows. Multiple only transiently (event ordering). */
+  private readonly focusedWindows = new Set<WindowHandle>();
   private session: ActiveSession | null = null;
   private lastActivityMs = 0;
   private idleTimer: ReturnType<typeof setTimeout> | null = null;
@@ -41,41 +60,44 @@ export class FocusDurationTracker {
   constructor(private readonly sink: FocusDurationSink) {
   }
 
-  onDocFocused(docId: string): void {
+  onDocFocused(docId: string, windowHandle: WindowHandle): void {
     if (this.session?.docId === docId) {
-      // Obsidian fires several leaf-change events for one user action —
-      // an already-running session for the same doc must not be fragmented.
+      // Obsidian fires several leaf-change events for one user action — an
+      // already-running session for the same doc must not be fragmented.
+      // Still adopt the (possibly new) hosting window: a tab dragged out to
+      // a popout keeps its session but lives in that window from now on.
+      this.currentDoc = { docId, windowHandle };
       return;
     }
     // Same-leaf navigation changes the file WITHOUT an unfocus event —
     // closing any running session here covers that pathway.
     this.endSession(Date.now());
-    this.currentDocId = docId;
-    if (this.windowFocused) {
+    this.currentDoc = { docId, windowHandle };
+    if (this.focusedWindows.has(windowHandle)) {
       this.startSession(docId);
     }
   }
 
   onDocUnfocused(): void {
     this.endSession(Date.now());
-    this.currentDocId = null;
+    this.currentDoc = null;
   }
 
-  onWindowBlurred(): void {
-    if (!this.windowFocused) {
-      return;
+  onWindowBlurred(windowHandle: WindowHandle): void {
+    this.focusedWindows.delete(windowHandle);
+    // Close when the doc's OWN window blurred (covers popout → popout
+    // switches), or when no Obsidian window is focused at all (drift safety).
+    if (this.currentDoc?.windowHandle === windowHandle || this.focusedWindows.size === 0) {
+      this.endSession(Date.now());
     }
-    this.windowFocused = false;
-    this.endSession(Date.now());
   }
 
-  onWindowFocused(): void {
-    if (this.windowFocused) {
-      return;
-    }
-    this.windowFocused = true;
-    if (this.currentDocId !== null) {
-      this.startSession(this.currentDocId);
+  onWindowFocused(windowHandle: WindowHandle): void {
+    this.focusedWindows.add(windowHandle);
+    // Reopen only when the focused window is the one HOSTING the current doc
+    // — focusing an unrelated popout must not revive another window's doc.
+    if (this.session === null && this.currentDoc?.windowHandle === windowHandle) {
+      this.startSession(this.currentDoc.docId);
     }
   }
 
@@ -88,16 +110,22 @@ export class FocusDurationTracker {
       this.endSession(this.lastActivityMs);
     }
     this.lastActivityMs = now;
-    // Idle resume: interaction re-opens a session for the still-current doc.
-    if (this.windowFocused && this.currentDocId !== null && this.session === null) {
-      this.startSession(this.currentDocId);
+    // Idle resume: interaction re-opens a session for the still-current doc,
+    // provided its hosting window is focused.
+    if (
+      this.session === null
+      && this.currentDoc !== null
+      && this.focusedWindows.has(this.currentDoc.windowHandle)
+    ) {
+      this.startSession(this.currentDoc.docId);
     }
   }
 
   /** Best-effort flush on plugin unload: closes any open session. */
   dispose(): void {
     this.endSession(Date.now());
-    this.currentDocId = null;
+    this.currentDoc = null;
+    this.focusedWindows.clear();
   }
 
   // ── private ─────────────────────────────────────────────────────────────
@@ -151,8 +179,8 @@ export class FocusDurationTracker {
     }
     const idleForMs = Date.now() - this.lastActivityMs;
     if (idleForMs >= FocusDurationTracker.IDLE_TIMEOUT_MS) {
-      // currentDocId intentionally stays set — the next interaction or
-      // window refocus starts a NEW session for the same document.
+      // currentDoc intentionally stays set — the next interaction or window
+      // refocus starts a NEW session for the same document.
       this.endSession(this.lastActivityMs);
     } else {
       this.armIdleTimer(FocusDurationTracker.IDLE_TIMEOUT_MS - idleForMs);
