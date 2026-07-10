@@ -78,8 +78,8 @@ export class FocusDurationTracker {
       this.currentDoc = { docId, windowHandle };
       return;
     }
-    // Same-leaf navigation changes the file WITHOUT an unfocus event —
-    // closing any running session here covers that pathway.
+    // Defense in depth: FocusTracker dispatches unfocus before a new focus,
+    // but a missed unfocus must never merge two docs' sessions.
     this.endSession(Date.now());
     this.currentDoc = { docId, windowHandle };
     if (this.focusedWindows.has(windowHandle)) {

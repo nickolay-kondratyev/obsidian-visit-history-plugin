@@ -36,17 +36,33 @@ const trackAllProvider: IsTrackedProvider = {
   isTrackedView: (view) => view !== null,
 };
 
+// Mirrors production filtering: only markdown views are tracked — used by
+// tests that navigate to untracked view types (e.g. a PDF).
+const markdownOnlyProvider: IsTrackedProvider = {
+  isTrackedFile: () => true,
+  isTrackedView: (view) => view !== null && view.getViewType() === 'markdown',
+};
+
 // Stand-in for the hosting window's document (node tests have no DOM).
 const OWNER_DOC = { name: 'main-window-doc' };
 
-function makeLeaf(file: TFile): WorkspaceLeaf {
+function makeView(file: TFile, viewType = 'markdown'): View {
   const view = {
-    getViewType: () => 'markdown',
+    getViewType: () => viewType,
     getDisplayText: () => file.basename,
     file,
     containerEl: { ownerDocument: OWNER_DOC },
   };
-  return { view: view as unknown as View } as unknown as WorkspaceLeaf;
+  return view as unknown as View;
+}
+
+/** Leaf whose view is swappable — models same-leaf navigation. */
+function makeMutableLeaf(view: View): WorkspaceLeaf & { view: View } {
+  return { view } as unknown as WorkspaceLeaf & { view: View };
+}
+
+function makeLeaf(file: TFile): WorkspaceLeaf {
+  return makeMutableLeaf(makeView(file));
 }
 
 
@@ -104,6 +120,87 @@ describe('FocusTracker', () => {
       await tracker.whenIdle();
       // THEN the second event was NOT interleaved ahead of the first
       expect(listener.calls).toEqual(['focus:a.md', 'unfocus:a.md', 'focus:b.md']);
+    });
+
+    it('should dispatch unfocus when same-leaf navigation lands on an UNTRACKED view (e.g. a PDF)', async () => {
+      // GIVEN note A focused in a leaf
+      const { plugin, fireLeafChange } = makeStubPlugin();
+      const tracker = new FocusTracker(plugin, markdownOnlyProvider);
+      const listener = new RecordingListener();
+      tracker.registerListener(listener);
+      const leaf = makeMutableLeaf(makeView(makeTFile({ path: 'a.md' })));
+      fireLeafChange(leaf);
+      await tracker.whenIdle();
+      // WHEN the SAME leaf navigates to an untracked view (its view is replaced)
+      leaf.view = makeView(makeTFile({ path: 'doc.pdf' }), 'pdf');
+      fireLeafChange(leaf);
+      await tracker.whenIdle();
+      // THEN note A was unfocused — its V3 session must not keep running
+      expect(listener.calls).toEqual(['focus:a.md', 'unfocus:a.md']);
+    });
+
+    it('should dispatch unfocus of the old file on same-leaf navigation between two tracked files', async () => {
+      // GIVEN note A focused in a leaf
+      const { plugin, fireLeafChange } = makeStubPlugin();
+      const tracker = new FocusTracker(plugin, markdownOnlyProvider);
+      const listener = new RecordingListener();
+      tracker.registerListener(listener);
+      const leaf = makeMutableLeaf(makeView(makeTFile({ path: 'a.md' })));
+      fireLeafChange(leaf);
+      await tracker.whenIdle();
+      // WHEN the SAME leaf navigates to note B
+      leaf.view = makeView(makeTFile({ path: 'b.md' }));
+      fireLeafChange(leaf);
+      await tracker.whenIdle();
+      // THEN the event stream is symmetric with different-leaf navigation
+      expect(listener.calls).toEqual(['focus:a.md', 'unfocus:a.md', 'focus:b.md']);
+    });
+
+    it('should NOT dispatch unfocus on a duplicate event for the same focused file', async () => {
+      // GIVEN note A focused
+      const { plugin, fireLeafChange } = makeStubPlugin();
+      const tracker = new FocusTracker(plugin, trackAllProvider);
+      const listener = new RecordingListener();
+      tracker.registerListener(listener);
+      const leaf = makeLeaf(makeTFile({ path: 'a.md' }));
+      fireLeafChange(leaf);
+      await tracker.whenIdle();
+      // WHEN Obsidian re-fires active-leaf-change for the same leaf and file
+      fireLeafChange(leaf);
+      await tracker.whenIdle();
+      // THEN no unfocus was interleaved (a V3 session must not fragment)
+      expect(listener.calls).toEqual(['focus:a.md', 'focus:a.md']);
+    });
+
+    it('should NOT dispatch unfocus when the same file is refocused in a DIFFERENT leaf', async () => {
+      // GIVEN note A focused in leaf 1
+      const { plugin, fireLeafChange } = makeStubPlugin();
+      const tracker = new FocusTracker(plugin, trackAllProvider);
+      const listener = new RecordingListener();
+      tracker.registerListener(listener);
+      const file = makeTFile({ path: 'a.md' });
+      fireLeafChange(makeLeaf(file));
+      await tracker.whenIdle();
+      // WHEN the same file gains focus in another leaf (split pane / drag-out)
+      fireLeafChange(makeLeaf(file));
+      await tracker.whenIdle();
+      // THEN no unfocus was interleaved (a V3 session must not fragment)
+      expect(listener.calls).toEqual(['focus:a.md', 'focus:a.md']);
+    });
+
+    it('should dispatch unfocus when the active leaf becomes null', async () => {
+      // GIVEN note A focused
+      const { plugin, fireLeafChange } = makeStubPlugin();
+      const tracker = new FocusTracker(plugin, trackAllProvider);
+      const listener = new RecordingListener();
+      tracker.registerListener(listener);
+      fireLeafChange(makeLeaf(makeTFile({ path: 'a.md' })));
+      await tracker.whenIdle();
+      // WHEN the active leaf goes away
+      fireLeafChange(null);
+      await tracker.whenIdle();
+      // THEN note A was unfocused
+      expect(listener.calls).toEqual(['focus:a.md', 'unfocus:a.md']);
     });
 
     it('should keep dispatching after a leaf-change event whose listener threw', async () => {

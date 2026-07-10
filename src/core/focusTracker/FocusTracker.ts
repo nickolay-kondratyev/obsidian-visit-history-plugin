@@ -42,7 +42,13 @@ function viewToFocusEvent(view: View): FocusEvent {
 // ── FocusTracker ──────────────────────────────────────────────────────────────
 
 export class FocusTracker {
-  private previousLeaf: WorkspaceLeaf | null = null;
+  /**
+   * The focus event last DISPATCHED — replayed as the unfocus payload.
+   * Tracked by FILE (not leaf): same-leaf navigation replaces the leaf's view
+   * in place, so leaf identity cannot tell "still the same doc" from "moved
+   * to another doc or an untracked view (e.g. a PDF)".
+   */
+  private lastFocusEvent: FocusEvent | null = null;
   private listeners: FocusListener[] = [];
 
   // Serializes event handling: listener handlers await file IO, so without
@@ -80,18 +86,25 @@ export class FocusTracker {
   // ── private ───────────────────────────────────────────────────────────────
 
   private async handleLeafChange(leaf: WorkspaceLeaf | null): Promise<void> {
-    if (this.previousLeaf && this.previousLeaf !== leaf) {
-      const prev = this.previousLeaf.view;
-      if (this.isTrackedProvider.isTrackedView(prev)) {
-        await this.dispatch(viewToFocusEvent(prev), 'onUnfocus');
-      }
+    const view = leaf === null ? null : leaf.view;
+    const nextEvent = view !== null && this.isTrackedProvider.isTrackedView(view)
+      ? viewToFocusEvent(view)
+      : null;
+
+    // Unfocus whenever the focused FILE changes — including same-leaf
+    // navigation to an untracked view, which would otherwise dispatch nothing
+    // and leave a V3 duration session running. A duplicate event for the SAME
+    // file dispatches no unfocus (a running session must not fragment), but
+    // still re-dispatches focus so listeners see the fresh ownerDocument
+    // (tab dragged to a popout keeps its session in the new window).
+    if (this.lastFocusEvent !== null && this.lastFocusEvent.file.path !== nextEvent?.file.path) {
+      await this.dispatch(this.lastFocusEvent, 'onUnfocus');
     }
 
-    if (leaf && this.isTrackedProvider.isTrackedView(leaf.view)) {
-      await this.dispatch(viewToFocusEvent(leaf.view), 'onFocus');
+    this.lastFocusEvent = nextEvent;
+    if (nextEvent !== null) {
+      await this.dispatch(nextEvent, 'onFocus');
     }
-
-    this.previousLeaf = leaf;
   }
 
   /**
