@@ -31,10 +31,9 @@ const ACTIVITY_EVENT_TYPES: ReadonlyArray<keyof DocumentEventMap> = [
  * design — the logic lives in the tracker.
  */
 export class WindowActivityMonitor {
-  /* eslint-disable obsidianmd/prefer-active-doc --
-     WHY-NOT activeDocument: this class deliberately registers on a SPECIFIC
-     window's document (main at load, each popout on 'window-open' or leaf
-     discovery), never on "whichever window is active right now". */
+  // WHY-NOT activeDocument: this class deliberately registers on SPECIFIC
+  // windows' documents (main injected, popouts via 'window-open' or leaf
+  // discovery), never on "whichever window is active right now".
   /** Guards against double-registration (leaf discovery vs. constructor). */
   private readonly registeredDocs = new Set<Document>();
 
@@ -111,5 +110,4 @@ export class WindowActivityMonitor {
       tracker.onWindowFocused(doc);
     }
   }
-  /* eslint-enable obsidianmd/prefer-active-doc */
 }
