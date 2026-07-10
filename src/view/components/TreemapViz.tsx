@@ -23,6 +23,11 @@ interface TreemapVizProps {
    * null = show full vault. Non-null = drilled into a specific folder.
    */
   currentRoot: VaultNode | null;
+  /**
+   * True when the view root is at or under an _archive folder — _archive
+   * pruning is skipped then (within an archive ALL archived content shows).
+   */
+  showArchived: boolean;
   colorMode: 'type' | 'heatmap';
   gradKey: GradientKey;
   field: HeatField;
@@ -62,6 +67,7 @@ interface TooltipState {
 export function TreemapViz({
   data,
   currentRoot,
+  showArchived,
   colorMode,
   gradKey,
   field,
@@ -121,11 +127,12 @@ export function TreemapViz({
   // ── D3 treemap layout — pure math in useMemo ──────────────────────────
 
   // _archive folders below the view root are hidden; scoping the view INTO
-  // an archive (file-explorer context menu) is the way to see its contents.
-  const treeRoot = useMemo(
-    () => pruneArchiveFolders(currentRoot ?? data),
-    [data, currentRoot],
-  );
+  // an archive (file-explorer context menu) is the way to see its contents —
+  // and within one, nothing is pruned (showArchived).
+  const treeRoot = useMemo(() => {
+    const root = currentRoot ?? data;
+    return showArchived ? root : pruneArchiveFolders(root);
+  }, [data, currentRoot, showArchived]);
 
   const { folders, leaves } = useMemo(() => {
     const { w, h } = dims;

@@ -6,6 +6,7 @@ import type { GradientKey, HeatField } from '../constants';
 import type { VaultNode } from '../../core/data/VaultNode';
 import type { IFileOpener } from '../../viewModel/FileOpener';
 import { findFolderTrail } from '../../viewModel/folderTrail';
+import { isWithinArchive } from '../../viewModel/pruneArchiveFolders';
 
 interface AppProps {
   data: VaultNode;
@@ -84,6 +85,10 @@ export function App({ data, fileOpener, initialFolderPath }: AppProps) {
     [navStack],
   );
 
+  // Within an archive ALL archived content is visible (nested archives
+  // included) — TreemapViz skips its _archive pruning then.
+  const showArchived = useMemo(() => isWithinArchive(navStack), [navStack]);
+
   return (
     <>
       <Header
@@ -113,6 +118,7 @@ export function App({ data, fileOpener, initialFolderPath }: AppProps) {
       <TreemapViz
         data={data}
         currentRoot={currentRoot}
+        showArchived={showArchived}
         colorMode={colorMode}
         gradKey={gradKey}
         field={field}
