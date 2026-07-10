@@ -221,13 +221,6 @@ body.vault-heatmap-active .status-bar-mobile {
   margin-bottom: 10px;
 }
 
-.vault-heatmap-view .cfg-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 9px;
-}
-
 .vault-heatmap-view .cfg-label {
   font-size: 10px;
   color: var(--vt-text-dim);
@@ -240,22 +233,6 @@ body.vault-heatmap-active .status-bar-mobile {
   width: 6px;
   height: 6px;
   border-radius: 1px;
-}
-
-.vault-heatmap-view .cfg-input {
-  width: 60px;
-  background: var(--vt-bg);
-  border: 1px solid var(--vt-border);
-  color: var(--vt-text);
-  font-family: inherit;
-  font-size: 10px;
-  padding: 3px 6px;
-  text-align: right;
-}
-
-.vault-heatmap-view .cfg-input:focus {
-  outline: none;
-  border-color: var(--vt-border2);
 }
 
 .vault-heatmap-view .cfg-sep {
@@ -280,55 +257,123 @@ body.vault-heatmap-active .status-bar-mobile {
   border-color: var(--vt-border2);
 }
 
-/* ── Mode + gradient buttons ────────────────────────────── */
-.vault-heatmap-view .mode-row,
-.vault-heatmap-view .grad-row {
+/* ── Segmented toggle (binary radio rendered as a sliding switch) ── */
+.vault-heatmap-view .seg-toggle {
+  position: relative;
   display: flex;
-  gap: 5px;
+  background: var(--vt-bg);
+  border: 1px solid var(--vt-border);
+  border-radius: 4px;
+  padding: 2px;
   margin-bottom: 12px;
 }
 
-.vault-heatmap-view .mode-btn,
-.vault-heatmap-view .grad-btn {
+.vault-heatmap-view .seg-thumb {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 2px;
+  background: var(--vt-surface);
+  border: 1px solid var(--vt-border2);
+  border-radius: 3px;
+  transition: transform 0.18s ease;
+}
+
+.vault-heatmap-view .seg-opt {
   flex: 1;
+  position: relative; /* sit above the thumb */
   font-family: inherit;
   font-size: 10px;
   letter-spacing: 0.04em;
-  background: none;
-  border: 1px solid var(--vt-border);
-  color: var(--vt-text-dim);
-  padding: 6px 4px;
-  cursor: pointer;
-  text-align: center;
-  transition: all 0.15s;
   text-transform: uppercase;
+  background: none;
+  border: none;
+  color: var(--vt-text-dim);
+  padding: 5px 4px;
+  cursor: pointer;
+  transition: color 0.15s;
 }
 
-.vault-heatmap-view .grad-btn {
+.vault-heatmap-view .seg-opt:hover,
+.vault-heatmap-view .seg-opt.active {
+  color: var(--vt-text);
+}
+
+/* ── Gradient radio group ───────────────────────────────── */
+.vault-heatmap-view .grad-radios {
   display: flex;
   flex-direction: column;
-  text-transform: none;
-  line-height: 1.3;
-  padding: 6px 4px 5px;
+  gap: 2px;
+  margin-bottom: 12px;
 }
 
-.vault-heatmap-view .mode-btn:hover,
-.vault-heatmap-view .grad-btn:hover {
-  border-color: var(--vt-border2);
+.vault-heatmap-view .grad-radio {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 6px;
+  font-size: 10px;
+  color: var(--vt-text-dim);
+  border: 1px solid transparent;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.vault-heatmap-view .grad-radio:hover {
   color: var(--vt-text);
 }
 
-.vault-heatmap-view .mode-btn.active,
-.vault-heatmap-view .grad-btn.active {
-  border-color: var(--vt-border2);
+.vault-heatmap-view .grad-radio.active {
   color: var(--vt-text);
+  background: var(--vt-bg);
+  border-color: var(--vt-border);
+}
+
+/* Native radio kept for keyboard/AT; the custom dot is the visual. */
+.vault-heatmap-view .grad-radio input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  margin: 0;
+}
+
+.vault-heatmap-view .radio-dot {
+  position: relative;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 1px solid var(--vt-border2);
+  flex-shrink: 0;
+}
+
+.vault-heatmap-view .grad-radio.active .radio-dot::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border-radius: 50%;
+  background: var(--vt-text);
+}
+
+.vault-heatmap-view .grad-radio input[type="radio"]:focus-visible + .radio-dot {
+  outline: 1px solid var(--vt-border2);
+  outline-offset: 2px;
+}
+
+.vault-heatmap-view .grad-radio-sub {
+  font-size: 9px;
+  opacity: 0.55;
+}
+
+.vault-heatmap-view .grad-radio .grad-swatch {
+  margin-left: auto;
+  width: 44px;
 }
 
 .vault-heatmap-view .grad-swatch {
   display: block;
   height: 5px;
   border-radius: 2px;
-  margin-bottom: 5px;
 }
 
 /* ── Sliders ────────────────────────────────────────────── */
@@ -345,6 +390,37 @@ body.vault-heatmap-active .status-bar-mobile {
 }
 
 .vault-heatmap-view .slider-label-row span {
+  color: var(--vt-text);
+}
+
+.vault-heatmap-view .slider-track-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.vault-heatmap-view .slider-track-row input[type="range"] {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Editable slider bounds flanking the track. */
+.vault-heatmap-view .bound-input {
+  width: 34px;
+  flex-shrink: 0;
+  background: var(--vt-bg);
+  border: 1px solid var(--vt-border);
+  border-radius: 2px;
+  color: var(--vt-text-dim);
+  font-family: inherit;
+  font-size: 9px;
+  padding: 2px 3px;
+  text-align: center;
+}
+
+.vault-heatmap-view .bound-input:focus {
+  outline: none;
+  border-color: var(--vt-border2);
   color: var(--vt-text);
 }
 

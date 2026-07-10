@@ -31,7 +31,8 @@ format, heatmap view.
 ```
 src/
   main.ts                  # Plugin lifecycle (onload, onunload, register views/commands)
-  settings.ts              # Persisted settings: idleTimeoutSeconds (default 180, min 5);
+  settings.ts              # Persisted settings: idleTimeoutSeconds (default 180, min 5)
+                           # + heatmap (HeatmapConfig — sticky heatmap view config);
                            # SettingsSanitizer validates loadData() at the boundary
   Constants.ts             # Tracked view types, file extensions, top-level dir names
 
@@ -90,13 +91,19 @@ src/
   view/                     # React UI (Obsidian-agnostic except VaultTreemapView)
     VaultTreemapView.tsx    # Obsidian ItemView boundary — mounts React, handles vault events
     components/             # App (config state owner), TreemapViz (SVG treemap + zoom),
-                            # Header, ConfigPanel/, FolderNode, LeafNode, Tooltip, Legend
-    constants.ts, utils.ts  # Palettes + HeatField/GradientKey unions; pure color/format helpers
+                            # Header, ConfigPanel/ (SegmentedToggle, GradientPicker radio
+                            # group, RangeSlider w/ editable bounds), FolderNode, LeafNode,
+                            # Tooltip, Legend
+    constants.ts, utils.ts  # Palettes + ColorMode/HeatField/GradientKey unions; pure helpers
 
   viewModel/
     buildVaultTree.ts       # TrackedFile[] → VaultNode tree (single vault walk)
     pruneArchiveFolders.ts  # Hides _archive folders below the heatmap view root
                             # (scope into an archive via its folder context menu)
+    heatmapConfig.ts        # HeatmapConfig model (BoundedValue = value + editable slider
+                            # min/max) + HeatmapConfigSanitizer (data.json boundary)
+    HeatmapConfigStore.ts   # HeatmapConfigStore interface + PluginHeatmapConfigStore
+                            # (debounced saveData; flush on unload)
     FileOpener.ts           # IFileOpener interface + ObsidianFileOpener impl
 ```
 
@@ -105,6 +112,7 @@ src/
 - **PluginFactory** is the DI container. `main.ts` calls it once. All dependencies are constructor-injected — no service locators, no global state.
 - **`_archive` folders are hidden in the heatmap** below the current view root: `pruneArchiveFolders` (applied in `TreemapViz` before layout) drops them plus folders they leave empty. Viewing an archive = scoping into it (folder context menu → "Open heatmap for folder"); backing out hides it again. When the view root is at/under an `_archive` (`isWithinArchive` on the nav stack), pruning is skipped — nested archives stay visible (an archive moved under another archive must not lose visibility — owner decision).
 - **VaultTreemapView** is the **only file** in `view/` that imports from `obsidian`. All React components are Obsidian-agnostic and receive data/callbacks as props.
+- **Heatmap config is sticky**: `App` owns a single `HeatmapConfig` and writes every change through `HeatmapConfigStore` into `settings.heatmap` (data.json) — saves debounced (slider drags), flushed on unload, sanitized on load. Every slider is a `BoundedValue`: its min/max bounds are user-editable and persist too.
 - **VH V2 files** live under `.visit_history/v2/focus_per_device/<device>/<doc-id>.vh_v2` — one ISO 8601 UTC ms stamp per line, sorted, deduped, newline-terminated. The doc id IS the filename (survives renames; no backlink indirection). `.visit_history` is a dot-folder — invisible to the Vault API/metadata cache — so ALL access goes through `HiddenFileUtil` (DataAdapter). Ids that are not filename-safe (`DocIdFilenameSafety.isFilenameSafeId`) are skipped with `console.error`.
 - **VH V3 (focus durations)** is recorded ALONGSIDE V2 under `.visit_history/v3/focus_duration_per_device/<device>/<doc-id>.vh_v3` — one completed session per line: `<ISO start stamp> D:<millis>`. `FocusDurationTracker` closes a session on navigation away, blur of the window HOSTING the doc, idle timeout (setting `idleTimeoutSeconds`, default 180 s, min 5 s, live-read — no reload needed; duration then ends at the LAST interaction — owner decision; also enforced retroactively so OS sleep is never counted; interaction after idle starts a NEW session), or unload flush (hard app quit can lose the last open session — accepted). Writes go through `VhV3DurationRecorder`'s single serialized chain.
 - **Popout windows are first-class for V3**: `WindowActivityMonitor` registers on every window (main + `window-open`/`window-close`; popouts already open at plugin load are discovered via leaf enumeration — their `window-open` fired before we loaded); a window's `Document` object is its identity handle (`WindowHandle`), also carried by `FocusEvent.ownerDocument` from the leaf's `containerEl`. Switching popout→popout closes the left-behind doc's session; a tab dragged to a new window keeps its session.

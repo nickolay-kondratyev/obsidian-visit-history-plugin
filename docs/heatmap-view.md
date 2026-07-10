@@ -42,11 +42,14 @@ another never loses visibility into it.
 ## Component tree & state
 
 ```
-App                     state owner: color mode, gradient, heat field,
- │                      hot/cold thresholds, per-type size scales,
- │                      folder drill-down (currentRoot + navStack)
+App                     state owner: HeatmapConfig (color mode, gradient,
+ │                      heat field, hot/cold thresholds, per-type scales —
+ │                      all as value+bounds), folder drill-down
+ │                      (currentRoot + navStack)
  ├─ Header              stats, breadcrumb + back, legend, config toggle
- ├─ ConfigPanel         scale factors, color mode, HeatmapOptions/GradientPicker
+ ├─ ConfigPanel         SegmentedToggle (color mode), HeatmapOptions
+ │                      (field select, GradientPicker radio group,
+ │                      hot/cold RangeSliders), per-type scale RangeSliders
  └─ TreemapViz          d3 treemap layout (useMemo), @visx/zoom pan/zoom,
      │                  hover + edge-flipping tooltip
      ├─ FolderNode      click → drill into subtree
@@ -55,10 +58,31 @@ App                     state owner: color mode, gradient, heat field,
 ```
 
 - Props drilling by design (small app, no context).
-- Types are compile-time-safe unions: `HeatField`
-  (`createdAt | lastModifiedAt | lastVisitedAt`) and `GradientKey`
-  (`nature | ember | mono`) — see `view/constants.ts`.
+- Types are compile-time-safe unions: `ColorMode` (`type | heatmap`),
+  `HeatField` (`createdAt | lastModifiedAt | lastVisitedAt`) and
+  `GradientKey` (`nature | ember | mono`) — see `view/constants.ts`.
 - Pure color/format helpers live in `view/utils.ts` (unit-tested).
+
+## Config persistence
+
+Config panel state is `HeatmapConfig` (`viewModel/heatmapConfig.ts`):
+color mode, gradient, heat field, plus `BoundedValue`s — every slider
+carries its own USER-EDITABLE `min`/`max` bounds alongside its `value`
+(`RangeSlider` renders bound inputs flanking the track).
+
+The config is persisted in the plugin's `data.json` (`settings.heatmap`)
+so it sticks across restarts:
+
+- `App` writes every change through `HeatmapConfigStore`
+  (`viewModel/HeatmapConfigStore.ts`), handed in by `VaultTreemapView`
+  from `PluginFactory`.
+- `PluginHeatmapConfigStore` DEBOUNCES saves (slider drags fire a change
+  per pixel) and flushes pending writes on plugin unload.
+- `HeatmapConfigSanitizer` validates the persisted shape at load
+  (data.json is user-editable): invalid fields fall back to defaults,
+  out-of-bounds values are clamped, `hot < cold` is enforced.
+- Two heatmap views open at once each hold their own state; last save
+  wins, and a view picks up persisted config when (re)opened.
 
 ## Heatmap coloring
 

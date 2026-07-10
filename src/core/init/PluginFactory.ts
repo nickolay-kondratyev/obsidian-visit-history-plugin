@@ -29,6 +29,7 @@ import { DocIdBackfillService, DocIdBackfillServiceDefault } from '../service/do
 import { V1FocusFileRepoDefault } from '../service/migration/V1FocusFileRepo';
 import { VhV1ToV2MigrationService } from '../service/migration/VhV1ToV2MigrationService';
 import { VhStartupTasks } from './VhStartupTasks';
+import { HeatmapConfigStore, PluginHeatmapConfigStore } from '../../viewModel/HeatmapConfigStore';
 
 // ── PluginFactory ─────────────────────────────────────────────────────────────
 // Constructs and wires all plugin dependencies.
@@ -44,11 +45,14 @@ export class PluginFactory {
   readonly vhStartupTasks: VhStartupTasks;
   /** V3 duration state machine — main.ts flushes it on unload (dispose()). */
   readonly focusDurationTracker: FocusDurationTracker;
+  /** Persists the heatmap view's config panel state across restarts. */
+  readonly heatmapConfigStore: HeatmapConfigStore;
 
   constructor(plugin: VisitHistoryPlugin) {
     const app: App = plugin.app;
 
     this.userNotifier = new UserNotifierDefault(plugin);
+    this.heatmapConfigStore = new PluginHeatmapConfigStore(plugin);
 
     const linkUtil = new LinkUtilDefault(app);
     const noteFileUtil = new NoteFileUtilDefault(app);

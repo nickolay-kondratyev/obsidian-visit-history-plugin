@@ -1,45 +1,34 @@
-import type { ChangeEvent } from 'react';
-import { FIELD_LABELS, GRADIENTS, HEAT_FIELDS, type GradientKey, type HeatField } from '../../constants';
+import { FIELD_LABELS, GRADIENTS, HEAT_FIELDS, type HeatField } from '../../constants';
+import { DAYS_HARD_MIN, type BoundedValue, type HeatmapConfig } from '../../../viewModel/heatmapConfig';
 import { GradientPicker } from './GradientPicker';
+import { RangeSlider } from './RangeSlider';
 
 interface HeatmapOptionsProps {
-  field: HeatField;
-  setField: (f: HeatField) => void;
-  gradKey: GradientKey;
-  setGradKey: (k: GradientKey) => void;
-  hotDays: number;
-  setHotDays: (d: number) => void;
-  coldDays: number;
-  setColdDays: (d: number) => void;
+  config: HeatmapConfig;
+  onConfigChange: (partial: Partial<HeatmapConfig>) => void;
 }
 
 /**
- * Heatmap configuration: timestamp field, gradient picker, threshold sliders.
- * Fully controlled — no internal state.
+ * Heatmap configuration: timestamp field, gradient radio group, hot/cold
+ * threshold sliders (with editable bounds). Fully controlled — no internal
+ * state; changes flow up via onConfigChange.
  */
-export function HeatmapOptions({
-  field,
-  setField,
-  gradKey,
-  setGradKey,
-  hotDays,
-  setHotDays,
-  coldDays,
-  setColdDays,
-}: HeatmapOptionsProps) {
-  const g = GRADIENTS[gradKey];
+export function HeatmapOptions({ config, onConfigChange }: HeatmapOptionsProps) {
+  const g = GRADIENTS[config.gradKey];
   // Mono gradient has near-white/near-black endpoints; dim for dark-bg legibility.
-  const hotColor = gradKey === 'mono' ? '#888888' : g.hot;
-  const coldColor = gradKey === 'mono' ? '#666666' : g.cold;
+  const hotColor = config.gradKey === 'mono' ? '#888888' : g.hot;
+  const coldColor = config.gradKey === 'mono' ? '#666666' : g.cold;
 
-  function onHotInput(e: ChangeEvent<HTMLInputElement>) {
-    const v = Math.min(parseInt(e.target.value, 10), coldDays - 1);
-    setHotDays(v);
+  // Cross-invariant hot < cold: clamp the moved slider's VALUE against the
+  // other one (bounds stay as the user set them).
+  function onHotChange(range: BoundedValue): void {
+    const value = Math.max(Math.min(range.value, config.coldDays.value - 1), range.min);
+    onConfigChange({ hotDays: { ...range, value } });
   }
 
-  function onColdInput(e: ChangeEvent<HTMLInputElement>) {
-    const v = Math.max(parseInt(e.target.value, 10), hotDays + 1);
-    setColdDays(v);
+  function onColdChange(range: BoundedValue): void {
+    const value = Math.min(Math.max(range.value, config.hotDays.value + 1), range.max);
+    onConfigChange({ coldDays: { ...range, value } });
   }
 
   return (
@@ -49,9 +38,9 @@ export function HeatmapOptions({
       </div>
       <select
         className="cfg-select"
-        value={field}
+        value={config.field}
         // DOM boundary: <option> values are exactly HEAT_FIELDS entries.
-        onChange={e => setField(e.target.value as HeatField)}
+        onChange={e => onConfigChange({ field: e.target.value as HeatField })}
       >
         {HEAT_FIELDS.map(val => (
           <option key={val} value={val}>
@@ -63,37 +52,24 @@ export function HeatmapOptions({
       <div className="cfg-label" style={{ marginBottom: '8px' }}>
         Gradient
       </div>
-      <GradientPicker active={gradKey} onChange={setGradKey} />
+      <GradientPicker active={config.gradKey} onChange={k => onConfigChange({ gradKey: k })} />
 
-      <div className="slider-wrap">
-        <div className="slider-label-row">
-          <span style={{ color: hotColor }}>hot / new</span>
-          <span>{hotDays} days</span>
-        </div>
-        <input
-          type="range"
-          min="1"
-          max="365"
-          step="1"
-          value={hotDays}
-          onChange={onHotInput}
-        />
-      </div>
-
-      <div className="slider-wrap">
-        <div className="slider-label-row">
-          <span style={{ color: coldColor }}>cold / old</span>
-          <span>{coldDays} days</span>
-        </div>
-        <input
-          type="range"
-          min="2"
-          max="730"
-          step="1"
-          value={coldDays}
-          onChange={onColdInput}
-        />
-      </div>
+      <RangeSlider
+        label={<span style={{ color: hotColor }}>hot / new</span>}
+        valueText={`${config.hotDays.value} days`}
+        range={config.hotDays}
+        step={1}
+        hardMin={DAYS_HARD_MIN}
+        onChange={onHotChange}
+      />
+      <RangeSlider
+        label={<span style={{ color: coldColor }}>cold / old</span>}
+        valueText={`${config.coldDays.value} days`}
+        range={config.coldDays}
+        step={1}
+        hardMin={DAYS_HARD_MIN}
+        onChange={onColdChange}
+      />
 
       <div
         className="grad-preview"

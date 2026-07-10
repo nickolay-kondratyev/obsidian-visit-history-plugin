@@ -1,7 +1,7 @@
 import { color as d3Color } from 'd3-color';
 import type { HierarchyNode } from 'd3-hierarchy';
 import { interpolateRgb } from 'd3-interpolate';
-import { GRADIENTS, TYPE_C, type GradientKey, type HeatField } from './constants';
+import { GRADIENTS, TYPE_C, type ColorMode, type GradientKey, type HeatField } from './constants';
 import type { VaultNode } from '../core/data/VaultNode';
 
 // ── Color helpers ──────────────────────────────────────────────────────────
@@ -35,7 +35,7 @@ export function heatColor(
 export function leafFill(
   d: HierarchyNode<VaultNode>,
   hovered: boolean,
-  colorMode: 'type' | 'heatmap',
+  colorMode: ColorMode,
   gradKey: GradientKey,
   field: HeatField,
   hotDays: number,
@@ -59,7 +59,7 @@ export function leafFill(
  */
 export function leafOpacity(
   d: HierarchyNode<VaultNode>,
-  colorMode: 'type' | 'heatmap',
+  colorMode: ColorMode,
   field: HeatField,
 ): number {
   if (colorMode === 'heatmap') {

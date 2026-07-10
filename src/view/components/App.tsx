@@ -2,15 +2,18 @@ import { useState, useCallback, useMemo } from 'react';
 import { Header } from './Header';
 import { ConfigPanel } from './ConfigPanel';
 import { TreemapViz } from './TreemapViz';
-import type { GradientKey, HeatField } from '../constants';
 import type { VaultNode } from '../../core/data/VaultNode';
 import type { IFileOpener } from '../../viewModel/FileOpener';
+import type { HeatmapConfig } from '../../viewModel/heatmapConfig';
+import type { HeatmapConfigStore } from '../../viewModel/HeatmapConfigStore';
 import { findFolderTrail } from '../../viewModel/folderTrail';
 import { isWithinArchive } from '../../viewModel/pruneArchiveFolders';
 
 interface AppProps {
   data: VaultNode;
   fileOpener: IFileOpener;
+  /** Loads the initial config and persists every change (sticky settings). */
+  configStore: HeatmapConfigStore;
   /**
    * Vault folder path to start drilled into (e.g. from the file-tree context
    * menu). Read once on mount; the host remounts App (via React key) when it
@@ -23,7 +26,8 @@ interface AppProps {
  * Top-level state owner for the treemap view.
  *
  * Obsidian-agnostic — receives `data` as a prop from the ItemView host.
- * All config state lives here and threads down to children.
+ * All config state lives here and threads down to children. Config changes
+ * are written through to the HeatmapConfigStore so they survive restarts.
  * Stats bubble up from TreemapViz via onStatsChange.
  *
  * Folder drill-down:
@@ -32,19 +36,24 @@ interface AppProps {
  * - Drilling into a folder pushes the previous root onto the stack.
  * - "Back" pops the stack — the popped item becomes the new currentRoot.
  */
-export function App({ data, fileOpener, initialFolderPath }: AppProps) {
-  const [colorMode, setColorMode] = useState<'type' | 'heatmap'>('heatmap');
-  const [gradKey, setGradKey] = useState<GradientKey>('nature');
-  const [field, setField] = useState<HeatField>('lastModifiedAt');
-  const [hotDays, setHotDays] = useState(7);
-  const [coldDays, setColdDays] = useState(180);
-  const [scales, setScales] = useState<Record<string, number>>({
-    md: 1.0,
-    canvas: 0.3,
-    excalidraw: 0.2,
-  });
+export function App({ data, fileOpener, configStore, initialFolderPath }: AppProps) {
+  const [config, setConfig] = useState<HeatmapConfig>(() => configStore.load());
   const [configOpen, setConfigOpen] = useState(false);
   const [stats, setStats] = useState({ files: 0, folders: 0, size: '—' });
+
+  /** Applies a config change AND writes it through to the persistent store. */
+  function updateConfig(partial: Partial<HeatmapConfig>): void {
+    const next = { ...config, ...partial };
+    setConfig(next);
+    configStore.save(next);
+  }
+
+  // TreemapViz consumes plain per-type factors — strip the slider bounds.
+  const scaleFactors = useMemo(
+    () =>
+      Object.fromEntries(Object.entries(config.scales).map(([type, s]) => [type, s.value])),
+    [config.scales],
+  );
 
   // ── Folder drill-down state ──────────────────────────────────────────────
 
@@ -92,9 +101,9 @@ export function App({ data, fileOpener, initialFolderPath }: AppProps) {
   return (
     <>
       <Header
-        colorMode={colorMode}
-        gradKey={gradKey}
-        field={field}
+        colorMode={config.colorMode}
+        gradKey={config.gradKey}
+        field={config.field}
         stats={stats}
         onConfigToggle={() => setConfigOpen(o => !o)}
         breadcrumb={breadcrumb}
@@ -102,29 +111,19 @@ export function App({ data, fileOpener, initialFolderPath }: AppProps) {
       />
       <ConfigPanel
         open={configOpen}
-        colorMode={colorMode}
-        setColorMode={setColorMode}
-        gradKey={gradKey}
-        setGradKey={setGradKey}
-        field={field}
-        setField={setField}
-        hotDays={hotDays}
-        setHotDays={setHotDays}
-        coldDays={coldDays}
-        setColdDays={setColdDays}
-        scales={scales}
-        setScales={setScales}
+        config={config}
+        onConfigChange={updateConfig}
       />
       <TreemapViz
         data={data}
         currentRoot={currentRoot}
         showArchived={showArchived}
-        colorMode={colorMode}
-        gradKey={gradKey}
-        field={field}
-        hotDays={hotDays}
-        coldDays={coldDays}
-        scales={scales}
+        colorMode={config.colorMode}
+        gradKey={config.gradKey}
+        field={config.field}
+        hotDays={config.hotDays.value}
+        coldDays={config.coldDays.value}
+        scales={scaleFactors}
         onStatsChange={setStats}
         onFolderClick={handleFolderClick}
         fileOpener={fileOpener}

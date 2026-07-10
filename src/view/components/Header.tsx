@@ -1,8 +1,8 @@
-import { FIELD_LABELS, type GradientKey, type HeatField } from '../constants';
+import { FIELD_LABELS, type ColorMode, type GradientKey, type HeatField } from '../constants';
 import { Legend } from './Legend';
 
 interface HeaderProps {
-  colorMode: 'type' | 'heatmap';
+  colorMode: ColorMode;
   gradKey: GradientKey;
   field: HeatField;
   stats: { files: number; folders: number; size: string };
