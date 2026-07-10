@@ -62,7 +62,7 @@ function setup(hidden: FakeHiddenFileUtil = new FakeHiddenFileUtil()): Setup {
     linkUtil,
     docIdService,
     backfill,
-    new VhV2FocusStore(hidden),
+    new VhV2FocusStore(hidden, 'alice'),
   );
   return { service, v1Repo, noteFileUtil, linkUtil, docIdService, backfill, hidden };
 }
@@ -88,7 +88,7 @@ function seedNote(s: Setup, notePath: string, docId: string): void {
 }
 
 function v2Content(s: Setup, deviceName: string, docId: string): string | undefined {
-  return s.hidden.getContent(`.visit_history/v2/focus_per_device/${deviceName}/${docId}.vh_v2`);
+  return s.hidden.getContent(`.visit_history/user/alice/v2/focus_per_device/${deviceName}/${docId}.vh_v2`);
 }
 
 function suppressConsoleError() {
@@ -185,7 +185,7 @@ describe('VhV1ToV2MigrationService', () => {
     it('should union with stamps already present in V2 (idempotent re-run)', async () => {
       // GIVEN a V2 file that already holds a live-recorded stamp AND one V1 stamp
       const hidden = new FakeHiddenFileUtil();
-      hidden.seedFile(`.visit_history/v2/focus_per_device/mac/doc-a.vh_v2`, `${ISO_2}\n${ISO_1}\n`);
+      hidden.seedFile(`.visit_history/user/alice/v2/focus_per_device/mac/doc-a.vh_v2`, `${ISO_2}\n${ISO_1}\n`);
       const s = setup(hidden);
       seedNote(s, 'notes/a.md', 'doc-a');
       seedV1File(s, {

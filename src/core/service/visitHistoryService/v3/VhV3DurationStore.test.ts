@@ -2,13 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { VhV3DurationStore } from './VhV3DurationStore';
 import { FakeHiddenFileUtil } from '../../../../testSupport/FakeHiddenFileUtil';
 
+const USER = 'alice';
 const DEVICE = 'my-host';
 const DOC_ID = 'docid_ABC123_E';
-const FILE_PATH = `.visit_history/v3/focus_duration_per_device/${DEVICE}/${DOC_ID}.vh_v3`;
+const FILE_PATH = `.visit_history/user/${USER}/v3/focus_duration_per_device/${DEVICE}/${DOC_ID}.vh_v3`;
 
 function setup(): { store: VhV3DurationStore; hidden: FakeHiddenFileUtil } {
   const hidden = new FakeHiddenFileUtil();
-  return { store: new VhV3DurationStore(hidden), hidden };
+  return { store: new VhV3DurationStore(hidden, USER), hidden };
 }
 
 describe('VhV3DurationStore', () => {

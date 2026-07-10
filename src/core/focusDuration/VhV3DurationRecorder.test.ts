@@ -4,13 +4,14 @@ import { VhV3DurationStore } from '../service/visitHistoryService/v3/VhV3Duratio
 import { FakeHiddenFileUtil } from '../../testSupport/FakeHiddenFileUtil';
 import { FixedDeviceNameProvider } from '../../testSupport/fakes';
 
+const USER = 'alice';
 const DEVICE = 'my-host';
-const DOC_FILE = `.visit_history/v3/focus_duration_per_device/${DEVICE}/docid_A_E.vh_v3`;
+const DOC_FILE = `.visit_history/user/${USER}/v3/focus_duration_per_device/${DEVICE}/docid_A_E.vh_v3`;
 
 function setup(): { recorder: VhV3DurationRecorder; hidden: FakeHiddenFileUtil } {
   const hidden = new FakeHiddenFileUtil();
   const recorder = new VhV3DurationRecorder(
-    new VhV3DurationStore(hidden),
+    new VhV3DurationStore(hidden, USER),
     new FixedDeviceNameProvider(DEVICE),
   );
   return { recorder, hidden };

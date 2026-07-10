@@ -1,6 +1,9 @@
 import { Plugin, TFolder } from 'obsidian';
 import { SettingsSanitizer, VisitHistoryPluginSettings } from './settings';
 import { PluginFactory } from './core/init/PluginFactory';
+import { HiddenFileUtilDefault } from './core/util/file/hidden/impl/HiddenFileUtilDefault';
+import { UserNameProviderDefault } from './core/service/visitHistoryService/user/UserNameProvider';
+import { VhUserScopeMigrationService } from './core/service/migration/VhUserScopeMigrationService';
 import { UserNotifier } from './core/util/userComm/UserNotifier';
 import { CSS_CLASS_HEATMAP_ACTIVE, VaultTreemapView, VIEW_TYPE_TREEMAP } from './view/VaultTreemapView';
 import { VisitHistorySettingTab } from './settingsTab/VisitHistorySettingTab';
@@ -15,7 +18,21 @@ export default class VisitHistoryPlugin extends Plugin {
   async onload() {
     await this.loadSettings();
 
-    const factory = new PluginFactory(this);
+    // User name FIRST: it keys `.visit_history/user/<user-name>/` and the
+    // legacy-layout move below — both must be settled before any focus
+    // tracking writes (cheap: cached in localStorage after first resolution).
+    const hiddenFileUtil = new HiddenFileUtilDefault(this.app);
+    const userName = await new UserNameProviderDefault(hiddenFileUtil).getUserName();
+    try {
+      // TODO(cleanup): remove after 2026-October (see VhUserScopeMigrationService).
+      await new VhUserScopeMigrationService(hiddenFileUtil, userName).migrateIfLegacyPresent();
+    } catch (error) {
+      // Never blocks load: new visits go to the user-scoped layout, legacy
+      // dirs stay untouched, and the migration retries on the next load.
+      console.error('[VHP][main] user-scope VH migration failed', error);
+    }
+
+    const factory = new PluginFactory(this, userName);
     this.factory = factory;
     this.userNotifier = factory.userNotifier;
 

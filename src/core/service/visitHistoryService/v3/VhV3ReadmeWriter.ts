@@ -10,11 +10,13 @@ const README_CONTENT = `<!--
 
 \`\`\`
 .visit_history/
-  v3/
-    README__generated__vh_v3_format.md    # this file
-    focus_duration_per_device/
-      <device-name>/                      # hostname on desktop; mobile-XXXXXXXX on mobile
-        <doc-id>.vh_v3                    # one duration file per (device, document)
+  user/
+    <user-name>/                          # OS user name on desktop; see the V2 README for mobile
+      v3/
+        README__generated__vh_v3_format.md    # this file
+        focus_duration_per_device/
+          <device-name>/                      # hostname on desktop; mobile-XXXXXXXX on mobile
+            <doc-id>.vh_v3                    # one duration file per (device, document)
 \`\`\`
 
 - V3 is recorded ALONGSIDE V2 (V2 stays the main visit history). The filename
@@ -39,10 +41,13 @@ const README_CONTENT = `<!--
  * previous version so it always documents the CURRENT format.
  */
 export class VhV3ReadmeWriter {
-  constructor(private readonly hiddenFileUtil: HiddenFileUtil) {
+  constructor(
+    private readonly hiddenFileUtil: HiddenFileUtil,
+    private readonly userName: string,
+  ) {
   }
 
   async writeReadme(): Promise<void> {
-    await this.hiddenFileUtil.write(VhV3Paths.README_PATH, README_CONTENT);
+    await this.hiddenFileUtil.write(VhV3Paths.readmePath(this.userName), README_CONTENT);
   }
 }

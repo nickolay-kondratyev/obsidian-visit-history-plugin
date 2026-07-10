@@ -4,7 +4,8 @@ import { VhV3Paths } from './VhV3Paths';
 
 /**
  * Owns the on-disk V3 focus-duration format: one file per (device, doc id)
- * holding one completed focus session per line, newline-terminated:
+ * under the CURRENT user's tree (injected user name), holding one completed
+ * focus session per line, newline-terminated:
  *
  *   <ISO 8601 UTC ms stamp of when focus started> D:<millis spent in focus>
  *   e.g. `2026-07-09T22:02:15.745Z D:5600`
@@ -16,7 +17,10 @@ import { VhV3Paths } from './VhV3Paths';
  * appendFocusDuration throws on unsafe ids (programming error).
  */
 export class VhV3DurationStore {
-  constructor(private readonly hiddenFileUtil: HiddenFileUtil) {
+  constructor(
+    private readonly hiddenFileUtil: HiddenFileUtil,
+    private readonly userName: string,
+  ) {
   }
 
   /** Appends one completed focus session (creates the file when absent). */
@@ -30,7 +34,7 @@ export class VhV3DurationStore {
       throw new Error(`Doc id is not filename-safe docId=[${docId}]`);
     }
     await this.hiddenFileUtil.append(
-      VhV3Paths.focusDurationFilePath(deviceName, docId),
+      VhV3Paths.focusDurationFilePath(this.userName, deviceName, docId),
       `${new Date(focusStartEpochMs).toISOString()} D:${durationMs}\n`,
     );
   }
