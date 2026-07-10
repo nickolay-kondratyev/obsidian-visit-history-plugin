@@ -1,5 +1,6 @@
 import { HiddenFileUtil } from '../../../util/file/hidden/HiddenFileUtil';
 import { StampLineParser } from '../../../util/time/StampLineParser';
+import { DocIdFilenameSafety } from '../DocIdFilenameSafety';
 import { VhV2Paths } from './VhV2Paths';
 
 /**
@@ -10,7 +11,7 @@ import { VhV2Paths } from './VhV2Paths';
  * Reading never throws on malformed content — unparseable lines are skipped
  * so one bad file cannot break aggregation.
  *
- * Callers must pre-validate ids with VhV2Paths.isFilenameSafeId; write
+ * Callers must pre-validate ids with DocIdFilenameSafety.isFilenameSafeId; write
  * methods throw on unsafe ids (programming error), read methods treat them
  * as "no file".
  */
@@ -29,7 +30,7 @@ export class VhV2FocusStore {
 
   /** All stamps (epoch ms) recorded for the doc on one device; [] when absent. */
   async readStampsMs(deviceName: string, docId: string): Promise<number[]> {
-    if (!VhV2Paths.isFilenameSafeId(docId)) {
+    if (!DocIdFilenameSafety.isFilenameSafeId(docId)) {
       return [];
     }
     const content = await this.hiddenFileUtil.readIfExists(
@@ -71,7 +72,7 @@ export class VhV2FocusStore {
   // ── private ─────────────────────────────────────────────────────────────
 
   private assertSafeId(docId: string): void {
-    if (!VhV2Paths.isFilenameSafeId(docId)) {
+    if (!DocIdFilenameSafety.isFilenameSafeId(docId)) {
       throw new Error(`Doc id is not filename-safe docId=[${docId}]`);
     }
   }

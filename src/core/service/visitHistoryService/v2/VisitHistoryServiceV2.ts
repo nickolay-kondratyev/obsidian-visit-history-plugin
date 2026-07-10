@@ -4,7 +4,7 @@ import { VisitHistoryService } from '../VisitHistoryService';
 import { DocIdService } from '../../docId/DocIdService';
 import { DeviceNameProvider } from '../../../util/env/DeviceNameProvider';
 import { VhV2FocusStore } from './VhV2FocusStore';
-import { VhV2Paths } from './VhV2Paths';
+import { DocIdFilenameSafety } from '../DocIdFilenameSafety';
 
 /**
  * V2 visit history: doc-id-keyed focus files under
@@ -71,7 +71,7 @@ export class VisitHistoryServiceV2 implements VisitHistoryService {
     if (docId === null) {
       return;
     }
-    if (!VhV2Paths.isFilenameSafeId(docId)) {
+    if (!DocIdFilenameSafety.isFilenameSafeId(docId)) {
       console.error(`[VHP][VisitHistoryServiceV2] doc id not filename-safe, visit not recorded path=[${file.path}] docId=[${docId}]`);
       return;
     }

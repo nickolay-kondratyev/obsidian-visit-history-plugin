@@ -3,7 +3,7 @@ import { LinkUtil } from '../../util/linkUtil/LinkUtil';
 import { DocIdService } from '../docId/DocIdService';
 import { DocIdBackfillService } from '../docId/DocIdBackfillService';
 import { VhV2FocusStore } from '../visitHistoryService/v2/VhV2FocusStore';
-import { VhV2Paths } from '../visitHistoryService/v2/VhV2Paths';
+import { DocIdFilenameSafety } from '../visitHistoryService/DocIdFilenameSafety';
 import { V1FocusFileParser } from './V1FocusFileParser';
 import { V1FocusFileRepo, V1VhFile } from './V1FocusFileRepo';
 
@@ -130,7 +130,7 @@ export class VhV1ToV2MigrationService implements VhV1Migration {
       this.logUnmigratable(v1File, `doc cannot carry an id notePath=[${note.path}]`);
       return null;
     }
-    if (!VhV2Paths.isFilenameSafeId(docId)) {
+    if (!DocIdFilenameSafety.isFilenameSafeId(docId)) {
       this.logUnmigratable(v1File, `doc id not filename-safe docId=[${docId}]`);
       return null;
     }

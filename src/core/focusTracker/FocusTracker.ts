@@ -36,13 +36,25 @@ export class FocusTracker {
   private previousLeaf: WorkspaceLeaf | null = null;
   private listeners: FocusListener[] = [];
 
+  // Serializes event handling: listener handlers await file IO, so without
+  // chaining, a second rapid leaf-change could interleave at those awaits and
+  // deliver focus/unfocus to listeners OUT OF ORDER (breaking stateful
+  // listeners such as duration tracking). The chain never stays rejected —
+  // handleLeafChange isolates listener errors and the .catch below is a
+  // safety net for unexpected throws.
+  private dispatchChain: Promise<void> = Promise.resolve();
+
   constructor(
     private readonly plugin: Plugin,
     private readonly isTrackedProvider: IsTrackedProvider
   ) {
     this.plugin.registerEvent(
       this.plugin.app.workspace.on('active-leaf-change', (leaf) => {
-        void this.handleLeafChange(leaf ?? null);
+        this.dispatchChain = this.dispatchChain
+          .then(() => this.handleLeafChange(leaf ?? null))
+          .catch((error) => {
+            console.error('[VHP][FocusTracker] leaf-change handling failed', error);
+          });
       })
     );
   }

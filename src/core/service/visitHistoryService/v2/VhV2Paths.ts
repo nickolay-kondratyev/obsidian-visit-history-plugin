@@ -1,9 +1,3 @@
-// Doc ids become V2 filenames, and an EXISTING id is honored in any format —
-// so it must be validated before use as a path segment. Conservative
-// portable-filename charset; leading/trailing dots excluded ('.', '..',
-// hidden files); 200 chars keeps `<id>.vh_v2` under common 255-byte limits.
-const FILENAME_SAFE_ID_PATTERN = /^[A-Za-z0-9_-][A-Za-z0-9._-]{0,198}[A-Za-z0-9_-]$|^[A-Za-z0-9_-]$/;
-
 /**
  * Path layout of visit history V2 (see docs/visit-history-format.md):
  *
@@ -27,14 +21,5 @@ export class VhV2Paths {
 
   static deviceDir(deviceName: string): string {
     return `${VhV2Paths.FOCUS_PER_DEVICE_DIR}/${deviceName}`;
-  }
-
-  /**
-   * True when the doc id can safely be used as a filename. Ids that fail
-   * (e.g. containing '/', exotic characters, or overlong) cannot get a V2
-   * focus file — callers must skip such docs and report.
-   */
-  static isFilenameSafeId(docId: string): boolean {
-    return FILENAME_SAFE_ID_PATTERN.test(docId);
   }
 }
