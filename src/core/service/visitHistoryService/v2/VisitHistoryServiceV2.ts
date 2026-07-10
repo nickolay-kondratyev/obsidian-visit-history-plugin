@@ -8,7 +8,7 @@ import { DocIdFilenameSafety } from '../DocIdFilenameSafety';
 
 /**
  * V2 visit history: doc-id-keyed focus files under
- * `.visit_history/v2/focus_per_device/<device>/<doc-id>.vh_v2`
+ * `.visit_history/user/<user>/v2/focus_per_device/<device>/<doc-id>.vh_v2`
  * (format owned by VhV2FocusStore).
  */
 export class VisitHistoryServiceV2 implements VisitHistoryService {
@@ -57,7 +57,7 @@ export class VisitHistoryServiceV2 implements VisitHistoryService {
     const docId = await this.docIdService.getDocId(file);
     const lastVisit = docId === null
       ? null
-      : await this.vhV2FocusStore.getLastVisitMsAcrossDevices(docId);
+      : await this.vhV2FocusStore.getLastVisitMsAcrossUsersAndDevices(docId);
 
     this.pathToLastVisit.set(path, { value: lastVisit });
     return lastVisit;

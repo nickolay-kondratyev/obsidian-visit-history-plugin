@@ -33,10 +33,14 @@ core/init/PluginFactory ──── DI container: constructs & wires everything
    │                         VhV3DurationStore owns the .vh_v3 duration format
    │                         (+ VhV3Paths, VhV3ReadmeWriter;
    │                          DocIdFilenameSafety shared by V2 + V3)
+   │                         user/: VhUserPaths (.visit_history/user/<user-name>/)
+   │                         + UserNameProvider (resolves + persists the user name)
    │                         DocIdService: ensure per-document id on focus
    │                         DocIdBackfillService: vault-wide doc id backfill
    │                         migration/: VhV1ToV2MigrationService + V1FocusFileRepo
    │                         + V1FocusFileParser (legacy V1 → V2, then V1 deleted)
+   │                         + VhUserScopeMigrationService (pre-user-scoped
+   │                         v2/v3 dirs → user/<user-name>/; drop after 2026-Oct)
    │
    ├── settingsTab/ ───────── VisitHistorySettingTab (Settings → Visit History):
    │                         "File modifying actions" → doc id backfill button
@@ -79,7 +83,8 @@ active-leaf-change
         dedup: skip if last record went to the same doc id — keeps full
         A→B→A navigation pathways, drops same-note event bursts)
   → VhV2FocusStore.appendVisit
-  → HiddenFileUtil.append (.visit_history/v2/focus_per_device/<device>/<id>.vh_v2)
+  → HiddenFileUtil.append
+      (.visit_history/user/<user>/v2/focus_per_device/<device>/<id>.vh_v2)
 ```
 
 ## V3 duration flow (recorded ALONGSIDE V2 — V2 stays the main history)
@@ -109,8 +114,9 @@ user input events  ──► (idle detection)       │   main at load, popouts 
                               VhV3DurationRecorder (one serialized write chain)
                                 ▼
                               VhV3DurationStore.appendFocusDuration
-                                (.visit_history/v3/focus_duration_per_device/
-                                 <device>/<id>.vh_v3 — `<ISO start> D:<millis>`)
+                                (.visit_history/user/<user>/v3/
+                                 focus_duration_per_device/<device>/<id>.vh_v3
+                                 — `<ISO start> D:<millis>`)
 ```
 
 Known limitation (owner-accepted): a hard app quit can lose the last open
@@ -151,9 +157,14 @@ The settings tab button "Add ids to all eligible files" runs
 I/O), per-file errors collected without aborting the run, concurrent calls
 JOIN the in-flight run.
 
-## Startup flow (V1 → V2 migration)
+## Startup flow (user name + migrations)
 
-`main.ts` schedules `VhStartupTasks.run()` via `onLayoutReady` (vault index
+`main.ts#onload` first resolves the user name (`UserNameProvider` — cached in
+device-scoped localStorage) and moves any pre-user-scoped `v2`/`v3` dirs under
+`user/<user-name>/` (`VhUserScopeMigrationService`) BEFORE wiring
+`PluginFactory`, so focus tracking can never write to the legacy location.
+
+`main.ts` then schedules `VhStartupTasks.run()` via `onLayoutReady` (vault index
 must be complete before backlink resolution): rewrite the generated V2 and V3
 format READMEs, then run `VhV1ToV2MigrationService.migrateIfV1Present()` — see
 [visit-history-format.md](visit-history-format.md) for the exact steps and the

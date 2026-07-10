@@ -7,22 +7,30 @@ alongside it — both are written live, independently.
 
 ```
 .visit_history/
-  v2/
-    README__generated__vh_v2_format.md   # generated on every load (VhV2ReadmeWriter)
-    focus_per_device/
-      <device-name>/                     # one dir per device (hostname or mobile-XXXX)
-        <doc-id>.vh_v2                   # one focus file per (device, document)
-  v3/
-    README__generated__vh_v3_format.md   # generated on every load (VhV3ReadmeWriter)
-    focus_duration_per_device/
-      <device-name>/
-        <doc-id>.vh_v3                   # one duration file per (device, document)
+  user/
+    <user-name>/                           # one dir per user (see "User name" below)
+      v2/
+        README__generated__vh_v2_format.md   # generated on every load (VhV2ReadmeWriter)
+        focus_per_device/
+          <device-name>/                     # one dir per device (hostname or mobile-XXXX)
+            <doc-id>.vh_v2                   # one focus file per (device, document)
+      v3/
+        README__generated__vh_v3_format.md   # generated on every load (VhV3ReadmeWriter)
+        focus_duration_per_device/
+          <device-name>/
+            <doc-id>.vh_v3                   # one duration file per (device, document)
 ```
 
 - **Dot-folder on purpose**: Obsidian's Vault API and metadata cache do not
   see dot-folders, so V2 files never pollute search, graph, or backlinks.
   All access goes through `HiddenFileUtil` (DataAdapter-backed) —
-  see `VhV2Paths` for the path layout.
+  see `VhUserPaths`/`VhV2Paths`/`VhV3Paths` for the path layout.
+- **User name** (`UserNameProvider`): keeps the histories of different people
+  syncing one vault apart. Resolution — first resolution wins, persisted in
+  device-scoped localStorage so it can never flip later: desktop → OS account
+  user name; mobile → the single existing `user/<name>` dir if exactly one
+  exists, else a persisted `mobile-user-<random8>` (Obsidian mobile exposes
+  no user-identity API to plugins).
 - **Device name**: OS hostname on desktop; `mobile-<random8>` persisted in
   device-scoped localStorage on mobile. Must stay stable — it keys the
   directory (see `DeviceNameProvider`).
@@ -78,9 +86,19 @@ alongside it — both are written live, independently.
 
 ## Reading (heatmap)
 
-Last-visit for a note = max stamp across all device dirs for the note's doc
-id, resolved via the READ-ONLY `DocIdService.getDocId` (bulk read paths must
+Last-visit for a note = max stamp across ALL users' device dirs for the
+note's doc id (the heatmap shows whole-vault activity — owner decision),
+resolved via the READ-ONLY `DocIdService.getDocId` (bulk read paths must
 never write ids into user files).
+
+## Legacy pre-user-scoped layout (migration input only)
+
+Before July 2026, `v2/` and `v3/` lived directly under `.visit_history/`.
+`VhUserScopeMigrationService` (run early in `onload`, before focus tracking
+starts) moves each under `user/<user-name>/`, attributing legacy data to the
+CURRENT user. It never merges and never deletes: if a destination dir already
+exists, the legacy dir is kept and an error is logged. Such one-shot layout
+migrations should be cleaned up after 2026-October.
 
 ## Legacy V1 format (migration input only)
 

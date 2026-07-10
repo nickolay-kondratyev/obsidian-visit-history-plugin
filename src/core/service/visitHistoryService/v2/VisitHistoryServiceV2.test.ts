@@ -5,6 +5,7 @@ import { FakeHiddenFileUtil } from '../../../../testSupport/FakeHiddenFileUtil';
 import { FakeDocIdService, FixedDeviceNameProvider } from '../../../../testSupport/fakes';
 import { makeTFile } from '../../../../testSupport/fileFactory';
 
+const USER = 'alice';
 const DEVICE = 'mac';
 const ISO_STAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 
@@ -19,7 +20,7 @@ function setup(): Setup {
   const hidden = new FakeHiddenFileUtil();
   const service = new VisitHistoryServiceV2(
     docIdService,
-    new VhV2FocusStore(hidden),
+    new VhV2FocusStore(hidden, USER),
     new FixedDeviceNameProvider(DEVICE),
   );
   return { service, docIdService, hidden };
@@ -27,7 +28,7 @@ function setup(): Setup {
 
 /** Counts recorded stamp lines in the note's V2 focus file for DEVICE. */
 function countStamps(hidden: FakeHiddenFileUtil, docId: string): number {
-  const content = hidden.getContent(`.visit_history/v2/focus_per_device/${DEVICE}/${docId}.vh_v2`) ?? '';
+  const content = hidden.getContent(`.visit_history/user/${USER}/v2/focus_per_device/${DEVICE}/${docId}.vh_v2`) ?? '';
   return content.split('\n').filter(line => ISO_STAMP_PATTERN.test(line)).length;
 }
 
@@ -132,8 +133,8 @@ describe('VisitHistoryServiceV2', () => {
       docIdService.seedId(note.path, 'doc-a');
       const older = '2026-01-01T00:00:00.000Z';
       const newer = '2026-06-01T00:00:00.000Z';
-      hidden.seedFile('.visit_history/v2/focus_per_device/mac/doc-a.vh_v2', `${older}\n`);
-      hidden.seedFile('.visit_history/v2/focus_per_device/phone/doc-a.vh_v2', `${newer}\n`);
+      hidden.seedFile(`.visit_history/user/${USER}/v2/focus_per_device/mac/doc-a.vh_v2`, `${older}\n`);
+      hidden.seedFile(`.visit_history/user/${USER}/v2/focus_per_device/phone/doc-a.vh_v2`, `${newer}\n`);
       // WHEN / THEN the most recent across devices wins
       expect(await service.getLastVisitStamp(note)).toBe(Date.parse(newer));
     });

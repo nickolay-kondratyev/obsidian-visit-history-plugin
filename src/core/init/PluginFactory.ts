@@ -45,7 +45,8 @@ export class PluginFactory {
   /** V3 duration state machine — main.ts flushes it on unload (dispose()). */
   readonly focusDurationTracker: FocusDurationTracker;
 
-  constructor(plugin: VisitHistoryPlugin) {
+  /** userName: resolved once in main.ts (UserNameProvider) before wiring. */
+  constructor(plugin: VisitHistoryPlugin, userName: string) {
     const app: App = plugin.app;
 
     this.userNotifier = new UserNotifierDefault(plugin);
@@ -62,7 +63,7 @@ export class PluginFactory {
       new CanvasDocIdStore(noteFileUtil, docIdGenerator),
     );
 
-    const vhV2FocusStore = new VhV2FocusStore(hiddenFileUtil);
+    const vhV2FocusStore = new VhV2FocusStore(hiddenFileUtil, userName);
     const visitHistoryServiceV2 = new VisitHistoryServiceV2(
       this.docIdService,
       vhV2FocusStore,
@@ -72,7 +73,7 @@ export class PluginFactory {
 
     // V3 (focus DURATIONS) is recorded alongside V2 — V2 stays the main history.
     this.focusDurationTracker = new FocusDurationTracker(
-      new VhV3DurationRecorder(new VhV3DurationStore(hiddenFileUtil), deviceNameProvider),
+      new VhV3DurationRecorder(new VhV3DurationStore(hiddenFileUtil, userName), deviceNameProvider),
       // Live read: a settings-tab change applies without plugin reload.
       () => plugin.settings.idleTimeoutSeconds * 1000,
     );
@@ -104,8 +105,8 @@ export class PluginFactory {
       vhV2FocusStore,
     );
     this.vhStartupTasks = new VhStartupTasks(
-      new VhV2ReadmeWriter(hiddenFileUtil),
-      new VhV3ReadmeWriter(hiddenFileUtil),
+      new VhV2ReadmeWriter(hiddenFileUtil, userName),
+      new VhV3ReadmeWriter(hiddenFileUtil, userName),
       migrationService,
       visitHistoryServiceV2,
       this.userNotifier,

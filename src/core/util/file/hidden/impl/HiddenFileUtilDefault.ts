@@ -46,6 +46,22 @@ export class HiddenFileUtilDefault implements HiddenFileUtil {
     return listed.folders.map(fullPath => fullPath.slice(fullPath.lastIndexOf('/') + 1));
   }
 
+  async exists(path: string): Promise<boolean> {
+    return this.app.vault.adapter.exists(normalizePath(path));
+  }
+
+  async rename(fromPath: string, toPath: string): Promise<void> {
+    const from = normalizePath(fromPath);
+    const to = normalizePath(toPath);
+    // DataAdapter.rename's behavior on an existing destination is not a
+    // documented guarantee across platforms — fail loudly instead.
+    if (await this.app.vault.adapter.exists(to)) {
+      throw new Error(`Rename destination already exists toPath=[${to}]`);
+    }
+    await this.ensureParentFolders(to);
+    await this.app.vault.adapter.rename(from, to);
+  }
+
   // ── private ─────────────────────────────────────────────────────────────
 
   /** Creates every missing folder segment above the file. */

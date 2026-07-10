@@ -26,4 +26,14 @@ export interface HiddenFileUtil {
    * Returns [] when the folder does not exist.
    */
   listSubfolderNames(folderPath: string): Promise<string[]>;
+
+  /** True when a file OR folder exists at the path. */
+  exists(path: string): Promise<boolean>;
+
+  /**
+   * Moves a file or folder (with its whole subtree), creating the
+   * destination's parent folders as needed. Throws when the destination
+   * already exists — callers must check first (never merges).
+   */
+  rename(fromPath: string, toPath: string): Promise<void>;
 }
