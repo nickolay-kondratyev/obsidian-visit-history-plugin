@@ -1,6 +1,6 @@
 # Visit History Plugin
 
-Records visit history of notes, canvases, and Excalidraw drawings. When you focus a file, a timestamp is appended to a per-document, per-device visit history log under `.visit_history/` (keyed by the file's persistent doc id, assigned on focus if missing). V3 additionally records the DURATION of each focus session alongside V2 (V2 stays the main history). Legacy `_visit_history/` (V1) data is auto-migrated to V2 on load. Also provides a treemap heatmap visualization of vault file activity.
+Records visit history of notes, canvases, and Excalidraw drawings. When you focus a file, a timestamp is appended to a per-user, per-document, per-device visit history log under `.visit_history/user/<user-name>/` (keyed by the file's persistent doc id, assigned on focus if missing). V3 additionally records the DURATION of each focus session alongside V2 (V2 stays the main history). Legacy `_visit_history/` (V1) data is auto-migrated to V2 on load; the pre-user-scoped `.visit_history/v2|v3` layout is auto-moved under `user/<user-name>/`. Also provides a treemap heatmap visualization of vault file activity.
 
 ## Project overview
 
@@ -30,7 +30,9 @@ format, heatmap view.
 
 ```
 src/
-  main.ts                  # Plugin lifecycle (onload, onunload, register views/commands)
+  main.ts                  # Plugin lifecycle (onload, onunload, register views/commands);
+                           # onload resolves the user name + runs the user-scope layout move
+                           # BEFORE wiring PluginFactory
   settings.ts              # Persisted settings: idleTimeoutSeconds (default 180, min 5)
                            # + heatmap (HeatmapConfig — sticky heatmap view config);
                            # SettingsSanitizer validates loadData() at the boundary
@@ -58,6 +60,8 @@ src/
     service/
       visitHistoryService/  # VisitHistoryService interface;
                             # DocIdFilenameSafety (shared V2+V3 id-as-filename check)
+        user/               # VhUserPaths (.visit_history/user/<user-name>/ level),
+                            # UserNameProvider (resolves + persists the user name)
         v2/                 # VisitHistoryServiceV2 (record/last-visit via doc id),
                             # VhV2FocusStore (owns .vh_v2 format), VhV2Paths (layout),
                             # VhV2ReadmeWriter
@@ -69,7 +73,9 @@ src/
                             # CanvasDocIdStore (canvas JSON), DocIdBackfillService
                             # (vault-wide backfill; concurrent calls JOIN)
       migration/            # VhV1ToV2MigrationService, V1FocusFileRepo (legacy
-                            # _visit_history tree), V1FocusFileParser (V1 content)
+                            # _visit_history tree), V1FocusFileParser (V1 content),
+                            # VhUserScopeMigrationService (pre-user-scoped v2/v3 →
+                            # user/<user-name>/; cleanup after 2026-October)
     data/                   # FileTimeMetadata, VaultNode (heatmap tree node)
     util/                   # vault/ (VaultUtil, IsTrackedProvider),
                             # file/note/ (NoteFileUtil — vault file I/O),
@@ -113,10 +119,11 @@ src/
 - **`_archive` folders are hidden in the heatmap** below the current view root: `pruneArchiveFolders` (applied in `TreemapViz` before layout) drops them plus folders they leave empty. Viewing an archive = scoping into it (folder context menu → "Open heatmap for folder"); backing out hides it again. When the view root is at/under an `_archive` (`isWithinArchive` on the nav stack), pruning is skipped — nested archives stay visible (an archive moved under another archive must not lose visibility — owner decision).
 - **VaultTreemapView** is the **only file** in `view/` that imports from `obsidian`. All React components are Obsidian-agnostic and receive data/callbacks as props.
 - **Heatmap config is sticky**: `App` owns a single `HeatmapConfig` and writes every change through `HeatmapConfigStore` into `settings.heatmap` (data.json) — saves debounced (slider drags), flushed on unload, sanitized on load. Every slider is a `BoundedValue`: its min/max bounds are user-editable and persist too.
-- **VH V2 files** live under `.visit_history/v2/focus_per_device/<device>/<doc-id>.vh_v2` — one ISO 8601 UTC ms stamp per line, sorted, deduped, newline-terminated. The doc id IS the filename (survives renames; no backlink indirection). `.visit_history` is a dot-folder — invisible to the Vault API/metadata cache — so ALL access goes through `HiddenFileUtil` (DataAdapter). Ids that are not filename-safe (`DocIdFilenameSafety.isFilenameSafeId`) are skipped with `console.error`.
-- **VH V3 (focus durations)** is recorded ALONGSIDE V2 under `.visit_history/v3/focus_duration_per_device/<device>/<doc-id>.vh_v3` — one completed session per line: `<ISO start stamp> D:<millis>`. `FocusDurationTracker` closes a session on navigation away, blur of the window HOSTING the doc, idle timeout (setting `idleTimeoutSeconds`, default 180 s, min 5 s, live-read — no reload needed; duration then ends at the LAST interaction — owner decision; also enforced retroactively so OS sleep is never counted; interaction after idle starts a NEW session), or unload flush (hard app quit can lose the last open session — accepted). Writes go through `VhV3DurationRecorder`'s single serialized chain.
+- **VH V2 files** live under `.visit_history/user/<user>/v2/focus_per_device/<device>/<doc-id>.vh_v2` — one ISO 8601 UTC ms stamp per line, sorted, deduped, newline-terminated. The doc id IS the filename (survives renames; no backlink indirection). `.visit_history` is a dot-folder — invisible to the Vault API/metadata cache — so ALL access goes through `HiddenFileUtil` (DataAdapter). Ids that are not filename-safe (`DocIdFilenameSafety.isFilenameSafeId`) are skipped with `console.error`.
+- **VH V3 (focus durations)** is recorded ALONGSIDE V2 under `.visit_history/user/<user>/v3/focus_duration_per_device/<device>/<doc-id>.vh_v3` — one completed session per line: `<ISO start stamp> D:<millis>`. `FocusDurationTracker` closes a session on navigation away, blur of the window HOSTING the doc, idle timeout (setting `idleTimeoutSeconds`, default 180 s, min 5 s, live-read — no reload needed; duration then ends at the LAST interaction — owner decision; also enforced retroactively so OS sleep is never counted; interaction after idle starts a NEW session), or unload flush (hard app quit can lose the last open session — accepted). Writes go through `VhV3DurationRecorder`'s single serialized chain.
 - **Popout windows are first-class for V3**: `WindowActivityMonitor` registers on every window (main + `window-open`/`window-close`; popouts already open at plugin load are discovered via leaf enumeration — their `window-open` fired before we loaded); a window's `Document` object is its identity handle (`WindowHandle`), also carried by `FocusEvent.ownerDocument` from the leaf's `containerEl`. Switching popout→popout closes the left-behind doc's session; a tab dragged to a new window keeps its session.
 - **FocusTracker dispatch is SERIALIZED** (promise chain): listeners await file IO, so rapid leaf-change events would otherwise interleave and deliver focus/unfocus out of order — stateful listeners (V3 durations) require in-order delivery.
+- **User scoping** (`VhUserPaths`/`UserNameProvider`): all V2/V3 data sits under `.visit_history/user/<user-name>/`, keeping histories of different people syncing one vault apart. Name resolution (first resolution WINS, persisted in device-scoped localStorage so it never flips): desktop → OS account user name; mobile → the single existing `user/<name>` dir if exactly one, else persisted `mobile-user-<random8>` (no user-identity API on Obsidian mobile). Heatmap reads aggregate across ALL users (whole-vault activity — owner decision); writes go to the current user only. Pre-user-scoped `.visit_history/v2|v3` dirs are moved under the user by `VhUserScopeMigrationService` early in `onload` (never merges/deletes; cleanup after 2026-October).
 - **V1 → V2 auto migration** (`VhV1ToV2MigrationService`, from `VhStartupTasks` on layout-ready): doc id backfill → parse V1 files → merge per (device, doc id) into V2 → validate readback → only then PERMANENTLY delete `_visit_history/` (unmigratable files included — owner decision); any validation failure deletes nothing.
 - **Visit deduplication**: focus listeners use `InFlightDropGuard` (`core/util/async/`) — in-flight promise tracking with DROP semantics — to avoid duplicate writes on rapid focus events. `VisitHistoryServiceV2` additionally skips consecutive records to the same doc id — intentionally NOT time-window based, so A→B→A navigation pathways stay fully recorded (owner decision).
 - **Doc ids**: every focused document gets a persistent id `docid_{21 base62}_E`. md (incl. `.excalidraw.md`) → frontmatter `id`; canvas → `metadata.frontmatter.id`; raw `.excalidraw` skipped (no id location — owner decision). An existing id — any format — is used as-is and the file is NOT modified; an unusable occupied id slot (e.g. nested mapping) is never overwritten. Writes are atomic raw-text edits via `Vault.process` that only add/fill the id line — Obsidian's `FileManager.processFrontMatter` is deliberately NOT used (it re-serializes the whole frontmatter block, mangling formatting of keys we don't own, e.g. stripping quotes). Vault-wide backfill (settings tab) reuses the same `ensureDocId` path per file.

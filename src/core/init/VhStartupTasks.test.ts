@@ -41,12 +41,12 @@ function setup(migrationOutcome: VhV1MigrationResult | null | Error): Setup {
   const notifier = new FakeUserNotifier();
   const serviceV2 = new VisitHistoryServiceV2(
     new FakeDocIdService(),
-    new VhV2FocusStore(hidden),
+    new VhV2FocusStore(hidden, 'alice'),
     new FixedDeviceNameProvider('mac'),
   );
   const tasks = new VhStartupTasks(
-    new VhV2ReadmeWriter(hidden),
-    new VhV3ReadmeWriter(hidden),
+    new VhV2ReadmeWriter(hidden, 'alice'),
+    new VhV3ReadmeWriter(hidden, 'alice'),
     new StubMigration(migrationOutcome),
     serviceV2,
     notifier,
@@ -62,7 +62,7 @@ describe('VhStartupTasks', () => {
       // WHEN
       await tasks.run();
       // THEN the README exists
-      expect(hidden.getContent(VhV2Paths.README_PATH)).toContain('Visit History V2');
+      expect(hidden.getContent(VhV2Paths.readmePath('alice'))).toContain('Visit History V2');
     });
 
     it('should write the V3 format README on every run', async () => {
@@ -71,7 +71,7 @@ describe('VhStartupTasks', () => {
       // WHEN
       await tasks.run();
       // THEN the README exists
-      expect(hidden.getContent(VhV3Paths.README_PATH)).toContain('Visit History V3');
+      expect(hidden.getContent(VhV3Paths.readmePath('alice'))).toContain('Visit History V3');
     });
 
     it('should stay silent when there was nothing to migrate', async () => {
@@ -120,7 +120,7 @@ describe('VhStartupTasks', () => {
       // THEN error notice shown and README written before the crash
       expect({
         errors: notifier.errors.length,
-        readmeWritten: hidden.getContent(VhV2Paths.README_PATH) !== undefined,
+        readmeWritten: hidden.getContent(VhV2Paths.readmePath('alice')) !== undefined,
       }).toEqual({ errors: 1, readmeWritten: true });
       errorSpy.mockRestore();
     });

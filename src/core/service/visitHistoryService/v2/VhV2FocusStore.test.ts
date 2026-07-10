@@ -3,8 +3,9 @@ import { VhV2FocusStore } from './VhV2FocusStore';
 import { FakeHiddenFileUtil } from '../../../../testSupport/FakeHiddenFileUtil';
 
 const DOC_ID = 'docid_4n8VbFqzXKp0RtLmW2sYc_E';
+const USER = 'alice';
 const DEVICE = 'my-host';
-const DOC_PATH = `.visit_history/v2/focus_per_device/${DEVICE}/${DOC_ID}.vh_v2`;
+const DOC_PATH = `.visit_history/user/${USER}/v2/focus_per_device/${DEVICE}/${DOC_ID}.vh_v2`;
 
 const T1 = Date.parse('2026-06-23T12:34:56.789Z');
 const T2 = Date.parse('2026-06-24T09:01:02.345Z');
@@ -16,12 +17,12 @@ interface Setup {
 
 function setup(): Setup {
   const hidden = new FakeHiddenFileUtil();
-  return { store: new VhV2FocusStore(hidden), hidden };
+  return { store: new VhV2FocusStore(hidden, USER), hidden };
 }
 
 describe('VhV2FocusStore', () => {
   describe('appendVisit', () => {
-    it('should create the file with one ISO line and a trailing newline', async () => {
+    it('should create the file under the user tree with one ISO line and a trailing newline', async () => {
       // GIVEN an empty store
       const { store, hidden } = setup();
       // WHEN recording a visit
@@ -105,32 +106,44 @@ describe('VhV2FocusStore', () => {
     });
   });
 
-  describe('getLastVisitMsAcrossDevices', () => {
-    it('should return the max stamp across device directories', async () => {
+  describe('getLastVisitMsAcrossUsersAndDevices', () => {
+    it('should return the max stamp across device directories of one user', async () => {
       // GIVEN the doc visited on two devices
       const { store, hidden } = setup();
       hidden.seedFile(
-        `.visit_history/v2/focus_per_device/host-a/${DOC_ID}.vh_v2`,
+        `.visit_history/user/${USER}/v2/focus_per_device/host-a/${DOC_ID}.vh_v2`,
         '2026-06-23T12:34:56.789Z\n',
       );
       hidden.seedFile(
-        `.visit_history/v2/focus_per_device/host-b/${DOC_ID}.vh_v2`,
+        `.visit_history/user/${USER}/v2/focus_per_device/host-b/${DOC_ID}.vh_v2`,
         '2026-06-24T09:01:02.345Z\n',
       );
       // WHEN / THEN the most recent across devices wins
-      expect(await store.getLastVisitMsAcrossDevices(DOC_ID)).toBe(T2);
+      expect(await store.getLastVisitMsAcrossUsersAndDevices(DOC_ID)).toBe(T2);
     });
 
-    it('should return null when no device has a file for the doc', async () => {
+    it('should aggregate across OTHER users (heatmap shows whole-vault activity)', async () => {
+      // GIVEN the doc visited by the current user and, more recently, by another user
+      const { store, hidden } = setup();
+      hidden.seedFile(DOC_PATH, '2026-06-23T12:34:56.789Z\n');
+      hidden.seedFile(
+        `.visit_history/user/bob/v2/focus_per_device/bobs-host/${DOC_ID}.vh_v2`,
+        '2026-06-24T09:01:02.345Z\n',
+      );
+      // WHEN / THEN the other user's more recent visit wins
+      expect(await store.getLastVisitMsAcrossUsersAndDevices(DOC_ID)).toBe(T2);
+    });
+
+    it('should return null when no user has a file for the doc', async () => {
       // GIVEN another doc's file only
       const { store, hidden } = setup();
-      hidden.seedFile('.visit_history/v2/focus_per_device/host-a/other-doc.vh_v2', '2026-06-23T12:34:56.789Z\n');
+      hidden.seedFile(`.visit_history/user/${USER}/v2/focus_per_device/host-a/other-doc.vh_v2`, '2026-06-23T12:34:56.789Z\n');
       // WHEN / THEN
-      expect(await store.getLastVisitMsAcrossDevices(DOC_ID)).toBeNull();
+      expect(await store.getLastVisitMsAcrossUsersAndDevices(DOC_ID)).toBeNull();
     });
 
     it('should return null when the focus tree does not exist at all', async () => {
-      expect(await setup().store.getLastVisitMsAcrossDevices(DOC_ID)).toBeNull();
+      expect(await setup().store.getLastVisitMsAcrossUsersAndDevices(DOC_ID)).toBeNull();
     });
   });
 });

@@ -33,6 +33,31 @@ export class FakeHiddenFileUtil implements HiddenFileUtil {
     this.contentByPath.set(filePath, (this.contentByPath.get(filePath) ?? '') + content);
   }
 
+  async exists(path: string): Promise<boolean> {
+    if (this.contentByPath.has(path)) {
+      return true;
+    }
+    // Folders are implied by the files under them.
+    const prefix = `${path}/`;
+    return [...this.contentByPath.keys()].some(filePath => filePath.startsWith(prefix));
+  }
+
+  async rename(fromPath: string, toPath: string): Promise<void> {
+    if (await this.exists(toPath)) {
+      throw new Error(`Rename destination already exists toPath=[${toPath}]`);
+    }
+    const fromPrefix = `${fromPath}/`;
+    for (const [path, content] of [...this.contentByPath.entries()]) {
+      const movedPath = path === fromPath
+        ? toPath
+        : path.startsWith(fromPrefix) ? toPath + '/' + path.slice(fromPrefix.length) : null;
+      if (movedPath !== null) {
+        this.contentByPath.delete(path);
+        this.contentByPath.set(movedPath, content);
+      }
+    }
+  }
+
   async listSubfolderNames(folderPath: string): Promise<string[]> {
     const prefix = `${folderPath}/`;
     const names = new Set<string>();
