@@ -5,6 +5,12 @@ Zoomable treemap of the vault, colored by file activity. Opened via the
 context menu ("Open heatmap for folder" — opens pre-drilled into that
 folder; "back" still walks up through every ancestor to the vault root).
 
+While a heatmap view is the active view, Obsidian's status bar is hidden:
+an `active-leaf-change` listener in `main.ts` toggles the
+`vault-heatmap-active` body class and `styles.css` does the hiding —
+CSS-only, so leaving the view (or unloading the plugin) restores the status
+bar to whatever state other plugins/themes gave it.
+
 ## Data flow
 
 ```

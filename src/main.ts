@@ -2,7 +2,7 @@ import { Plugin, TFolder } from 'obsidian';
 import { SettingsSanitizer, VisitHistoryPluginSettings } from './settings';
 import { PluginFactory } from './core/init/PluginFactory';
 import { UserNotifier } from './core/util/userComm/UserNotifier';
-import { VaultTreemapView, VIEW_TYPE_TREEMAP } from './view/VaultTreemapView';
+import { CSS_CLASS_HEATMAP_ACTIVE, VaultTreemapView, VIEW_TYPE_TREEMAP } from './view/VaultTreemapView';
 import { VisitHistorySettingTab } from './settingsTab/VisitHistorySettingTab';
 
 // ── VisitHistoryPlugin ────────────────────────────────────────────────────────
@@ -58,6 +58,18 @@ export default class VisitHistoryPlugin extends Plugin {
     });
 
     this.addRibbonIcon('layout-grid', 'Open vault heatmap', () => openHeatmap());
+
+    // Hide the status bar while the heatmap view is the ACTIVE view.
+    // CSS-only (body class → styles.css): removing the class restores the
+    // status bar to whatever state it had before entering the heatmap.
+    const updateStatusBarVisibility = () => {
+      const heatmapActive = this.app.workspace.getActiveViewOfType(VaultTreemapView) !== null;
+      document.body.toggleClass(CSS_CLASS_HEATMAP_ACTIVE, heatmapActive);
+    };
+    this.registerEvent(this.app.workspace.on('active-leaf-change', updateStatusBarVisibility));
+    // Plugin unload must not leave the status bar hidden.
+    this.register(() => document.body.removeClass(CSS_CLASS_HEATMAP_ACTIVE));
+    updateStatusBarVisibility();
 
     // File-tree context menu: open the heatmap drilled into the folder.
     this.registerEvent(

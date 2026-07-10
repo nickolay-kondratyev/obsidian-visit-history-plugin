@@ -9,6 +9,14 @@ import { ObsidianFileOpener } from '../viewModel/FileOpener';
 
 export const VIEW_TYPE_TREEMAP = 'vault-heatmap';
 
+/**
+ * Body class applied while a heatmap view is ACTIVE — styles.css hides the
+ * status bar under it. Toggled by the workspace-level listener in main.ts;
+ * removing the class restores the status bar to whatever state other
+ * plugins/themes gave it (we never touch its inline styles).
+ */
+export const CSS_CLASS_HEATMAP_ACTIVE = 'vault-heatmap-active';
+
 // ── ItemView ────────────────────────────────────────────────────────────────
 
 /**

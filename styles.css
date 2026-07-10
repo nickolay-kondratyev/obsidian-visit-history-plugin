@@ -2,6 +2,13 @@
    All rules scoped under .vault-heatmap-view to avoid leaking into Obsidian UI.
    CSS variable mapping: prototype vars → Obsidian theme vars for automatic light/dark support. */
 
+/* Status bar hidden while a heatmap view is active.
+   Body class is toggled in main.ts (ref: CSS_CLASS_HEATMAP_ACTIVE); removing
+   the class hands the status bar back to its prior styling untouched. */
+body.vault-heatmap-active .status-bar {
+  display: none;
+}
+
 .vault-heatmap-view {
   /* ── Theme variable mapping ─────────────────────────────── */
   --vt-bg:       var(--background-primary);
