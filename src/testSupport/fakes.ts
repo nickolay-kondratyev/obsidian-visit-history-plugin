@@ -59,6 +59,8 @@ export class FakeDocIdService implements DocIdService {
   private readonly idByPath = new Map<string, string>();
   /** Paths ensureDocId returned null for (simulates unhandled content). */
   readonly failingPaths = new Set<string>();
+  /** Paths ensureDocId throws for (simulates IO failure). */
+  readonly throwingPaths = new Set<string>();
   readonly ensuredPaths: string[] = [];
 
   seedId(path: string, id: string): void {
@@ -67,6 +69,9 @@ export class FakeDocIdService implements DocIdService {
 
   async ensureDocId(file: TFile): Promise<string | null> {
     this.ensuredPaths.push(file.path);
+    if (this.throwingPaths.has(file.path)) {
+      throw new Error(`simulated ensureDocId IO failure path=[${file.path}]`);
+    }
     if (this.failingPaths.has(file.path)) return null;
     if (!this.isEligible(file)) return null;
     const existing = this.idByPath.get(file.path);

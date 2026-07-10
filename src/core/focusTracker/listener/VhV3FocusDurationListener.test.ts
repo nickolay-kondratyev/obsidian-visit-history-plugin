@@ -93,6 +93,22 @@ describe('VhV3FocusDurationListener', () => {
       errorSpy.mockRestore();
     });
 
+    it('should close the running session when id resolution THROWS for the newly focused doc', async () => {
+      // GIVEN a note session running
+      const { listener, docIdService, sink } = setup();
+      await listener.onFocus(makeFocusEvent('notes/a.md'));
+      vi.advanceTimersByTime(5000);
+      // WHEN focus moves (same-leaf, focus only) to a doc whose id resolution fails with an IO error
+      docIdService.throwingPaths.add('notes/b.md');
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      await listener.onFocus(makeFocusEvent('notes/b.md'));
+      vi.advanceTimersByTime(60_000);
+      // THEN the note's session was closed at the focus switch — the failure
+      // must not leave it accruing time while the user views the other doc
+      expect(sink.docIds).toEqual(['docid-for-notes_a.md']);
+      errorSpy.mockRestore();
+    });
+
     it('should ignore focus events without a file path', async () => {
       // GIVEN an event with no file
       const { listener, sink } = setup();

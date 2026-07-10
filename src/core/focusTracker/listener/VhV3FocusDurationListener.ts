@@ -24,7 +24,15 @@ export class VhV3FocusDurationListener implements FocusListener {
     }
     // ensureDocId is a cheap cached read here — DocIdFocusListener (registered
     // first) has already persisted the id.
-    const docId = await this.docIdService.ensureDocId(event.file);
+    let docId: string | null;
+    try {
+      docId = await this.docIdService.ensureDocId(event.file);
+    } catch (error) {
+      // Fail toward "this doc's session is lost", never toward "the PREVIOUS
+      // doc's session keeps accruing while the user views this doc".
+      console.error(`[VHP][VhV3FocusDurationListener] ensureDocId failed, duration not tracked path=[${event.file.path}]`, error);
+      docId = null;
+    }
     if (docId === null || !this.isTrackableId(docId, event.file.path)) {
       // The newly focused doc cannot be duration-tracked. Still tell the
       // tracker focus moved away, or a same-leaf navigation from a trackable
