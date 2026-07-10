@@ -34,6 +34,12 @@ interface TreemapVizProps {
   fileOpener: IFileOpener;
 }
 
+// ── Zoom limits ─────────────────────────────────────────────────────────────
+// At scale 1 the treemap exactly fills the container, so zooming out below 1
+// only shrinks the map into empty space — cap zoom-out at the fitted view.
+const ZOOM_SCALE_MIN = 1;
+const ZOOM_SCALE_MAX = 30;
+
 // ── Tooltip state ───────────────────────────────────────────────────────────
 
 interface TooltipState {
@@ -218,10 +224,10 @@ export function TreemapViz({
       <Zoom
         width={dims.w}
         height={dims.h}
-        scaleXMin={0.05}
-        scaleXMax={30}
-        scaleYMin={0.05}
-        scaleYMax={30}
+        scaleXMin={ZOOM_SCALE_MIN}
+        scaleXMax={ZOOM_SCALE_MAX}
+        scaleYMin={ZOOM_SCALE_MIN}
+        scaleYMax={ZOOM_SCALE_MAX}
       >
         {(zoom: ProvidedZoom<SVGSVGElement> & { isDragging: boolean }) => {
           // Capture zoom instance for the reset button (outside render prop).
