@@ -26,3 +26,6 @@ data.json
 build/
 
 *do_not_commit*
+# AI tooling scratch + test screenshots (never source-controlled)
+.tmp/
+.out/

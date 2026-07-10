@@ -1,7 +1,7 @@
-import { TYPE_C, GRADIENTS, type GradientDef, type GradientKey } from '../constants';
+import { TYPE_C, GRADIENTS, type ColorMode, type GradientDef, type GradientKey } from '../constants';
 
 interface LegendProps {
-  colorMode: 'type' | 'heatmap';
+  colorMode: ColorMode;
   gradKey: GradientKey;
 }
 

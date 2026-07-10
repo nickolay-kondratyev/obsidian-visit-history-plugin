@@ -73,6 +73,12 @@ export type GradientKey = keyof typeof GRADIENTS;
 // well-understood boundary for iterating a literal-keyed record.
 export const GRADIENT_KEYS = Object.keys(GRADIENTS) as GradientKey[];
 
+// ── Color modes ────────────────────────────────────────────────────────────
+// How treemap cells are colored: by file type, or by timestamp heatmap.
+
+export const COLOR_MODES = ['type', 'heatmap'] as const;
+export type ColorMode = (typeof COLOR_MODES)[number];
+
 // ── Heatmap timestamp fields ───────────────────────────────────────────────
 // The VaultNode timestamp fields the heatmap can color by.
 

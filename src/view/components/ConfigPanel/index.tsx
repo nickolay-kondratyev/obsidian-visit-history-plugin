@@ -1,96 +1,62 @@
-import { TYPE_C, type GradientKey, type HeatField } from '../../constants';
+import { TYPE_C, type ColorMode } from '../../constants';
+import { SCALE_HARD_MIN, type HeatmapConfig } from '../../../viewModel/heatmapConfig';
 import { HeatmapOptions } from './HeatmapOptions';
+import { RangeSlider } from './RangeSlider';
+import { SegmentedToggle } from './SegmentedToggle';
 
 interface ConfigPanelProps {
   open: boolean;
-  colorMode: 'type' | 'heatmap';
-  setColorMode: (m: 'type' | 'heatmap') => void;
-  gradKey: GradientKey;
-  setGradKey: (k: GradientKey) => void;
-  field: HeatField;
-  setField: (f: HeatField) => void;
-  hotDays: number;
-  setHotDays: (d: number) => void;
-  coldDays: number;
-  setColdDays: (d: number) => void;
-  scales: Record<string, number>;
-  setScales: (updater: (prev: Record<string, number>) => Record<string, number>) => void;
+  config: HeatmapConfig;
+  /** Merges the partial into the config AND persists it (see App). */
+  onConfigChange: (partial: Partial<HeatmapConfig>) => void;
 }
 
+const COLOR_MODE_OPTIONS: readonly { value: ColorMode; label: string }[] = [
+  { value: 'type', label: 'By type' },
+  { value: 'heatmap', label: 'Heatmap' },
+];
+
+const SCALE_STEP = 0.01;
+
 /**
- * Config panel with scale factors, color mode toggle, and heatmap options.
- * Fully controlled — all state owned by App.
+ * Config panel: coloring mode toggle, heatmap options, per-type scale sliders.
+ * Fully controlled — all state owned by App (persisted between restarts).
  * Toggles visibility via CSS display.
  */
-export function ConfigPanel({
-  open,
-  colorMode,
-  setColorMode,
-  gradKey,
-  setGradKey,
-  field,
-  setField,
-  hotDays,
-  setHotDays,
-  coldDays,
-  setColdDays,
-  scales,
-  setScales,
-}: ConfigPanelProps) {
-  function updateScale(type: string, val: string) {
-    setScales(prev => ({ ...prev, [type]: parseFloat(val) || 1 }));
-  }
-
+export function ConfigPanel({ open, config, onConfigChange }: ConfigPanelProps) {
   return (
     <div id="config" className={open ? 'open' : ''}>
-      <div className="cfg-h">Scale factors</div>
-      {Object.entries(TYPE_C).map(([type, c]) => (
-        <div key={type} className="cfg-row">
-          <span className="cfg-label">
-            <span className="cfg-pip" style={{ background: c.fill }} />
-            .{type}
-          </span>
-          <input
-            className="cfg-input"
-            type="number"
-            value={scales[type] ?? 1}
-            min="0.01"
-            step="0.05"
-            onChange={e => updateScale(type, e.target.value)}
-          />
-        </div>
-      ))}
+      <div className="cfg-h">Coloring</div>
+      <SegmentedToggle
+        ariaLabel="Coloring"
+        options={COLOR_MODE_OPTIONS}
+        value={config.colorMode}
+        onChange={m => onConfigChange({ colorMode: m })}
+      />
+
+      {config.colorMode === 'heatmap' && (
+        <HeatmapOptions config={config} onConfigChange={onConfigChange} />
+      )}
 
       <hr className="cfg-sep" />
 
-      <div className="cfg-h">Coloring</div>
-      <div className="mode-row">
-        <button
-          className={'mode-btn' + (colorMode === 'type' ? ' active' : '')}
-          onClick={() => setColorMode('type')}
-        >
-          By type
-        </button>
-        <button
-          className={'mode-btn' + (colorMode === 'heatmap' ? ' active' : '')}
-          onClick={() => setColorMode('heatmap')}
-        >
-          Heatmap
-        </button>
-      </div>
-
-      {colorMode === 'heatmap' && (
-        <HeatmapOptions
-          field={field}
-          setField={setField}
-          gradKey={gradKey}
-          setGradKey={setGradKey}
-          hotDays={hotDays}
-          setHotDays={setHotDays}
-          coldDays={coldDays}
-          setColdDays={setColdDays}
+      <div className="cfg-h">Scale factors</div>
+      {Object.entries(config.scales).map(([type, scale]) => (
+        <RangeSlider
+          key={type}
+          label={
+            <span className="cfg-label">
+              <span className="cfg-pip" style={{ background: TYPE_C[type]?.fill }} />
+              .{type}
+            </span>
+          }
+          valueText={`×${scale.value.toFixed(2)}`}
+          range={scale}
+          step={SCALE_STEP}
+          hardMin={SCALE_HARD_MIN}
+          onChange={r => onConfigChange({ scales: { ...config.scales, [type]: r } })}
         />
-      )}
+      ))}
     </div>
   );
 }

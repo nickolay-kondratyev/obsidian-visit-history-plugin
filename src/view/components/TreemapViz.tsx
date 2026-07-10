@@ -8,7 +8,7 @@ import { FolderNode } from './FolderNode';
 import { LeafNode } from './LeafNode';
 import { Tooltip } from './Tooltip';
 import { fmtBytes } from '../utils';
-import type { GradientKey, HeatField } from '../constants';
+import type { ColorMode, GradientKey, HeatField } from '../constants';
 import type { VaultNode } from '../../core/data/VaultNode';
 import type { IFileOpener } from '../../viewModel/FileOpener';
 import { pruneArchiveFolders } from '../../viewModel/pruneArchiveFolders';
@@ -28,7 +28,7 @@ interface TreemapVizProps {
    * pruning is skipped then (within an archive ALL archived content shows).
    */
   showArchived: boolean;
-  colorMode: 'type' | 'heatmap';
+  colorMode: ColorMode;
   gradKey: GradientKey;
   field: HeatField;
   hotDays: number;

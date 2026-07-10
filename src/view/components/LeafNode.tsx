@@ -1,13 +1,13 @@
 import type { MouseEvent } from 'react';
 import type { HierarchyRectangularNode } from 'd3-hierarchy';
 import { leafFill, leafOpacity } from '../utils';
-import type { GradientKey, HeatField } from '../constants';
+import type { ColorMode, GradientKey, HeatField } from '../constants';
 import type { VaultNode } from '../../core/data/VaultNode';
 
 interface LeafNodeProps {
   d: HierarchyRectangularNode<VaultNode>;
   hovered: boolean;
-  colorMode: 'type' | 'heatmap';
+  colorMode: ColorMode;
   gradKey: GradientKey;
   field: HeatField;
   hotDays: number;

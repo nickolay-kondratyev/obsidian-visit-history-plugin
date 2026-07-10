@@ -1,3 +1,5 @@
+import { HeatmapConfig, HeatmapConfigSanitizer } from './viewModel/heatmapConfig';
+
 /**
  * Seconds without any user interaction before the focused document's V3
  * duration session is auto-closed (the recorded duration then ends at the
@@ -12,9 +14,11 @@ export const DEFAULT_IDLE_TIMEOUT_SECONDS = 180;
 export const MIN_IDLE_TIMEOUT_SECONDS = 5;
 
 // Persisted via loadData()/saveData() in main.ts; edited in
-// src/settingsTab/VisitHistorySettingTab.ts.
+// src/settingsTab/VisitHistorySettingTab.ts (idle timeout) and the heatmap
+// view's config panel (heatmap — persisted through HeatmapConfigStore).
 export interface VisitHistoryPluginSettings {
   idleTimeoutSeconds: number;
+  heatmap: HeatmapConfig;
 }
 
 /**
@@ -29,6 +33,7 @@ export class SettingsSanitizer {
     const raw = (loadedData ?? {}) as Partial<Record<keyof VisitHistoryPluginSettings, unknown>>;
     return {
       idleTimeoutSeconds: SettingsSanitizer.sanitizeIdleTimeoutSeconds(raw.idleTimeoutSeconds),
+      heatmap: HeatmapConfigSanitizer.sanitize(raw.heatmap),
     };
   }
 

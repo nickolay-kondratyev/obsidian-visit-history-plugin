@@ -4,6 +4,7 @@ import {
   MIN_IDLE_TIMEOUT_SECONDS,
   SettingsSanitizer,
 } from './settings';
+import { DEFAULT_HEATMAP_CONFIG } from './viewModel/heatmapConfig';
 
 describe('SettingsSanitizer', () => {
   describe('sanitize', () => {
@@ -62,6 +63,23 @@ describe('SettingsSanitizer', () => {
       const settings = SettingsSanitizer.sanitize({});
       // THEN the default applies
       expect(settings.idleTimeoutSeconds).toBe(DEFAULT_IDLE_TIMEOUT_SECONDS);
+    });
+
+    it('should apply the default heatmap config when missing (pre-heatmap data.json)', () => {
+      // GIVEN persisted data from before heatmap settings existed
+      // WHEN sanitizing
+      const settings = SettingsSanitizer.sanitize({ idleTimeoutSeconds: 600 });
+      // THEN the heatmap defaults apply
+      expect(settings.heatmap).toEqual(DEFAULT_HEATMAP_CONFIG);
+    });
+
+    it('should keep a valid persisted heatmap gradient (heatmap delegation wired)', () => {
+      // GIVEN a persisted heatmap section — deep validation is covered by
+      // HeatmapConfigSanitizer's own tests; this asserts the delegation only
+      // WHEN sanitizing
+      const settings = SettingsSanitizer.sanitize({ heatmap: { gradKey: 'ember' } });
+      // THEN the value survives
+      expect(settings.heatmap.gradKey).toBe('ember');
     });
   });
 });
