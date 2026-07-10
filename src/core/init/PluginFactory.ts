@@ -76,7 +76,9 @@ export class PluginFactory {
       // Live read: a settings-tab change applies without plugin reload.
       () => plugin.settings.idleTimeoutSeconds * 1000,
     );
-    new WindowActivityMonitor(plugin, this.focusDurationTracker);
+    // eslint-disable-next-line obsidianmd/prefer-active-doc -- the monitor
+    // needs the MAIN window specifically; it registers popouts itself.
+    new WindowActivityMonitor(plugin, this.focusDurationTracker, window, document);
 
     this.focusTracker = new FocusTracker(plugin, this.isTrackedProvider);
     // Doc id listener FIRST: assigning the id is the first thing that happens

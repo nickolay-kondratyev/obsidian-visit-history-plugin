@@ -18,9 +18,12 @@ const ACTIVITY_EVENT_TYPES: ReadonlyArray<keyof DocumentEventMap> = [
  * DOM boundary for V3 duration tracking: translates window focus/blur,
  * visibility changes, and user-input events into FocusDurationTracker calls.
  *
- * Registers on EVERY Obsidian window: the main window at construction, each
- * popout via the 'window-open' workspace event. A window's Document object is
- * its identity (WindowHandle) — the same object a leaf reports through
+ * Registers on EVERY Obsidian window: the main window at construction, future
+ * popouts via the 'window-open' workspace event, and popouts that ALREADY
+ * exist at construction (plugin enabled/reloaded/updated while popouts are
+ * open — their 'window-open' fired before this plugin loaded) discovered
+ * through their leaves' owner documents. A window's Document object is its
+ * identity (WindowHandle) — the same object a leaf reports through
  * FocusEvent.ownerDocument, so per-window focus matches up.
  *
  * All handlers go through plugin.registerDomEvent → auto-cleanup on unload;
@@ -30,13 +33,19 @@ const ACTIVITY_EVENT_TYPES: ReadonlyArray<keyof DocumentEventMap> = [
 export class WindowActivityMonitor {
   /* eslint-disable obsidianmd/prefer-active-doc --
      WHY-NOT activeDocument: this class deliberately registers on a SPECIFIC
-     window's document (main at load, each popout on 'window-open'), never on
-     "whichever window is active right now". */
+     window's document (main at load, each popout on 'window-open' or leaf
+     discovery), never on "whichever window is active right now". */
+  /** Guards against double-registration (leaf discovery vs. constructor). */
+  private readonly registeredDocs = new Set<Document>();
+
   constructor(
     private readonly plugin: Plugin,
     private readonly tracker: FocusDurationTracker,
+    // Injected (PluginFactory passes the globals) — unit-testable without a DOM.
+    mainWindow: Window,
+    mainDocument: Document,
   ) {
-    this.registerWindow(window, document);
+    this.registerWindow(mainWindow, mainDocument);
     this.plugin.registerEvent(
       this.plugin.app.workspace.on('window-open', (workspaceWindow) => {
         this.registerWindow(workspaceWindow.win, workspaceWindow.doc);
@@ -47,13 +56,32 @@ export class WindowActivityMonitor {
         // A closing window can no longer emit blur — unfocus it explicitly so
         // a doc it hosted records its duration.
         this.tracker.onWindowBlurred(workspaceWindow.doc);
+        // Drop the dead Document reference (and allow re-registration if the
+        // same Document object ever hosted a window again).
+        this.registeredDocs.delete(workspaceWindow.doc);
       }),
     );
+    this.registerPreExistingPopouts(mainDocument);
   }
 
   // ── private ─────────────────────────────────────────────────────────────
 
+  /** See the class doc: popouts open BEFORE plugin load never fire 'window-open'. */
+  private registerPreExistingPopouts(mainDocument: Document): void {
+    this.plugin.app.workspace.iterateAllLeaves((leaf) => {
+      const doc = leaf.view.containerEl.ownerDocument;
+      const win = doc.defaultView;
+      if (doc !== mainDocument && win !== null) {
+        this.registerWindow(win, doc);
+      }
+    });
+  }
+
   private registerWindow(win: Window, doc: Document): void {
+    if (this.registeredDocs.has(doc)) {
+      return;
+    }
+    this.registeredDocs.add(doc);
     const tracker = this.tracker;
     this.plugin.registerDomEvent(win, 'blur', () => tracker.onWindowBlurred(doc));
     this.plugin.registerDomEvent(win, 'focus', () => tracker.onWindowFocused(doc));
