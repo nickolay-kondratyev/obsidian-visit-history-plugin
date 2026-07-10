@@ -1,4 +1,7 @@
-# Visit History On-Disk Format (V2)
+# Visit History On-Disk Format (V2 + V3)
+
+V2 (focus stamps) is the MAIN history. V3 (focus DURATIONS) is recorded
+alongside it — both are written live, independently.
 
 ## Layout
 
@@ -9,6 +12,11 @@
     focus_per_device/
       <device-name>/                     # one dir per device (hostname or mobile-XXXX)
         <doc-id>.vh_v2                   # one focus file per (device, document)
+  v3/
+    README__generated__vh_v3_format.md   # generated on every load (VhV3ReadmeWriter)
+    focus_duration_per_device/
+      <device-name>/
+        <doc-id>.vh_v3                   # one duration file per (device, document)
 ```
 
 - **Dot-folder on purpose**: Obsidian's Vault API and metadata cache do not
@@ -23,8 +31,9 @@
 - **Doc-id filenames**: the filename IS the document's persistent id
   (frontmatter `id` for md incl. `.excalidraw.md`; `metadata.frontmatter.id`
   for canvas). Ids survive renames/moves, so no backlink indirection is
-  needed. Ids that are not filename-safe (`VhV2Paths.isFilenameSafeId`)
-  cannot be tracked — such docs are skipped with a `console.error`.
+  needed. Ids that are not filename-safe
+  (`DocIdFilenameSafety.isFilenameSafeId`, shared by V2 and V3) cannot be
+  tracked — such docs are skipped with a `console.error`.
 
 ## Focus file content (`VhV2FocusStore`)
 
@@ -39,6 +48,26 @@
   the invariants above).
 - Reading is strict per line and never throws: unparseable lines are skipped,
   so one bad file cannot break aggregation.
+
+## V3 duration file content (`VhV3DurationStore`)
+
+```
+2026-07-09T22:02:15.745Z D:5600
+2026-07-09T22:14:03.001Z D:120943
+```
+
+- One COMPLETED focus session per line:
+  `<ISO 8601 UTC ms stamp of focus start> D:<millis spent in focus>`,
+  newline-terminated. Appended when a session ends, in session-start order
+  (sessions on one device never overlap) → naturally ascending.
+- A session closes on the first of: navigation away from the doc, Obsidian
+  window blur, 3 minutes without user interaction
+  (`FocusDurationTracker.IDLE_TIMEOUT_MS`; the recorded duration then ends at
+  the LAST interaction — the idle tail is not counted), or plugin unload
+  (best-effort flush; a hard app quit can lose the last open session).
+- Window refocus or interaction after an idle close starts a NEW session for
+  the same document. Zero-duration sessions (pass-through navigation) are
+  recorded truthfully as `D:0`.
 
 ## Reading (heatmap)
 
@@ -55,7 +84,7 @@ still parses this — solely as input for migration.
 
 ### Auto migration V1 → V2 (`VhV1ToV2MigrationService`)
 
-Runs once per load (from `VhV2StartupTasks`, onLayoutReady) when
+Runs once per load (from `VhStartupTasks`, onLayoutReady) when
 `_visit_history/` exists:
 
 1. Vault-wide doc id backfill (V2 is keyed by doc id).

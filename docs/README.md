@@ -7,15 +7,16 @@ drawings, and visualizes vault activity as a treemap heatmap.
 
 1. **Recording** — focusing a tracked file appends an ISO 8601 timestamp to a
    per-document, per-device log under `.visit_history/` (keyed by the
-   document's persistent doc id). Legacy `_visit_history/` (V1) data is
-   auto-migrated on load.
+   document's persistent doc id). V3 additionally records each focus
+   session's DURATION alongside V2 (V2 stays the main history). Legacy
+   `_visit_history/` (V1) data is auto-migrated on load.
 2. **Visualization** — the "Open vault heatmap" command renders the vault as a
    zoomable treemap, colored by created/modified/visited recency.
 
 | Doc | Contents |
 |-----|----------|
 | [architecture.md](architecture.md) | Module map, dependency injection, layer boundaries, caching |
-| [visit-history-format.md](visit-history-format.md) | On-disk VH V2 format, device dirs, doc-id keying, V1 auto migration |
+| [visit-history-format.md](visit-history-format.md) | On-disk VH V2 + V3 formats, device dirs, doc-id keying, V1 auto migration |
 | [heatmap-view.md](heatmap-view.md) | React treemap view: components, state, config |
 
 ## Dev quickstart

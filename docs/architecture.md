@@ -8,17 +8,28 @@ main.ts (Plugin lifecycle)
    ▼
 core/init/PluginFactory ──── DI container: constructs & wires everything once
    │
-   ├── core/init ─────────── VhV2StartupTasks: deferred load work (README write,
-   │                         V1→V2 migration) run via onLayoutReady
+   ├── core/init ─────────── VhStartupTasks: deferred load work (V2 + V3 README
+   │                         writes, V1→V2 migration) run via onLayoutReady
    │
    ├── core/focusTracker ─── FocusTracker listens to active-leaf-change,
    │      │                  dispatches FocusEvents to FocusListeners
+   │      │                  (dispatch is SERIALIZED — events reach listeners
+   │      │                  in order even when handlers await file IO)
    │      └── listener/ ──── DocIdFocusListener → ensures doc id (runs first)
-   │                         VisitHistoryFocusListenerDefault → records visits
+   │                         VisitHistoryFocusListenerDefault → records V2 visits
+   │                         VhV3FocusDurationListener → V3 duration sessions
+   │
+   ├── core/focusDuration ── FocusDurationTracker (V3 session state machine),
+   │                         VhV3DurationRecorder (serialized store appends),
+   │                         WindowActivityMonitor (DOM boundary: window
+   │                         blur/focus, visibility, user-input events)
    │
    ├── core/service ──────── VisitHistoryServiceV2: record visit / last-visit stamp
    │                         (VhV2FocusStore owns the .vh_v2 format;
    │                          VhV2ReadmeWriter generates the in-vault format doc)
+   │                         VhV3DurationStore owns the .vh_v3 duration format
+   │                         (+ VhV3Paths, VhV3ReadmeWriter;
+   │                          DocIdFilenameSafety shared by V2 + V3)
    │                         DocIdService: ensure per-document id on focus
    │                         DocIdBackfillService: vault-wide doc id backfill
    │                         migration/: VhV1ToV2MigrationService + V1FocusFileRepo
@@ -67,6 +78,32 @@ active-leaf-change
   → HiddenFileUtil.append (.visit_history/v2/focus_per_device/<device>/<id>.vh_v2)
 ```
 
+## V3 duration flow (recorded ALONGSIDE V2 — V2 stays the main history)
+
+```
+active-leaf-change ──► VhV3FocusDurationListener (ensureDocId → docId)
+window blur/focus  ──► WindowActivityMonitor ─┐
+user input events  ──► (idle detection)       │
+                                              ▼
+                              FocusDurationTracker (state machine)
+                                │  session CLOSES on: navigate away, window
+                                │  blur, 3-min idle (duration then ends at the
+                                │  LAST interaction), or plugin unload flush;
+                                │  window refocus / interaction after idle
+                                │  opens a NEW session for the same doc
+                                ▼
+                              VhV3DurationRecorder (one serialized write chain)
+                                ▼
+                              VhV3DurationStore.appendFocusDuration
+                                (.visit_history/v3/focus_duration_per_device/
+                                 <device>/<id>.vh_v3 — `<ISO start> D:<millis>`)
+```
+
+Known limitations (owner-accepted):
+- Hard app quit can lose the last open session (unload cannot await the write).
+- Activity/window events are registered on the MAIN window only; popout-window
+  activity is not seen (follow-up: per-window registration via 'window-open').
+
 ## Doc id flow
 
 Every focused document gets a persistent id: `docid_{21 base62 chars}_E`.
@@ -104,9 +141,9 @@ JOIN the in-flight run.
 
 ## Startup flow (V1 → V2 migration)
 
-`main.ts` schedules `VhV2StartupTasks.run()` via `onLayoutReady` (vault index
-must be complete before backlink resolution): rewrite the generated V2 format
-README, then run `VhV1ToV2MigrationService.migrateIfV1Present()` — see
+`main.ts` schedules `VhStartupTasks.run()` via `onLayoutReady` (vault index
+must be complete before backlink resolution): rewrite the generated V2 and V3
+format READMEs, then run `VhV1ToV2MigrationService.migrateIfV1Present()` — see
 [visit-history-format.md](visit-history-format.md) for the exact steps and the
 validation-gated permanent deletion of `_visit_history/`. After a migration,
 the last-visit cache is invalidated (values cached mid-migration would be
