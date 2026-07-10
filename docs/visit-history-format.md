@@ -65,6 +65,10 @@ alongside it — both are written live, independently.
   (`FocusDurationTracker.IDLE_TIMEOUT_MS`; the recorded duration then ends at
   the LAST interaction — the idle tail is not counted), or plugin unload
   (best-effort flush; a hard app quit can lose the last open session).
+- **OS sleep is never counted**: timers don't run during suspend, so the idle
+  cutoff is also enforced retroactively at every session close and on the
+  first post-wake interaction — a session spanning a sleep still ends at the
+  last pre-sleep interaction.
 - Window refocus or interaction after an idle close starts a NEW session for
   the same document. Zero-duration sessions (pass-through navigation) are
   recorded truthfully as `D:0`.

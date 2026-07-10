@@ -80,7 +80,14 @@ export class FocusDurationTracker {
   }
 
   onUserActivity(): void {
-    this.lastActivityMs = Date.now();
+    const now = Date.now();
+    if (this.session !== null && now - this.lastActivityMs >= FocusDurationTracker.IDLE_TIMEOUT_MS) {
+      // The idle timeout elapsed without the timer firing (OS sleep suspends
+      // timers): enforce the idle close retroactively before stamping this
+      // interaction, or the sleep gap would count as focus time.
+      this.endSession(this.lastActivityMs);
+    }
+    this.lastActivityMs = now;
     // Idle resume: interaction re-opens a session for the still-current doc.
     if (this.windowFocused && this.currentDocId !== null && this.session === null) {
       this.startSession(this.currentDocId);
@@ -108,9 +115,16 @@ export class FocusDurationTracker {
     if (this.session === null) {
       return;
     }
+    // Sleep safety net: if the idle timeout elapsed without the timer firing
+    // (OS sleep suspends timers), apply the idle cutoff here — the session
+    // ends at the last interaction, never counting the gap. Normal closes
+    // (gap < timeout) are untouched.
+    const effectiveEndMs = endMs - this.lastActivityMs >= FocusDurationTracker.IDLE_TIMEOUT_MS
+      ? this.lastActivityMs
+      : endMs;
     const { docId, startMs } = this.session;
     this.session = null;
-    this.sink.recordFocusDuration(docId, startMs, Math.max(0, endMs - startMs));
+    this.sink.recordFocusDuration(docId, startMs, Math.max(0, effectiveEndMs - startMs));
   }
 
   private armIdleTimer(delayMs: number): void {

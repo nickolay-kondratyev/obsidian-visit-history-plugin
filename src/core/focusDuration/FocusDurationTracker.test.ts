@@ -214,6 +214,51 @@ describe('FocusDurationTracker', () => {
     });
   });
 
+  describe('OS sleep (clock jumps past the idle timer without it firing)', () => {
+    /** Simulates suspend: the clock jumps but NO timers fire during the gap. */
+    function sleepMs(ms: number): void {
+      vi.setSystemTime(Date.now() + ms);
+    }
+
+    it('should end the pre-sleep session at the last interaction when the user interacts after waking', () => {
+      // GIVEN doc A focused, last interaction 60s in, then the machine sleeps 8h
+      tracker.onDocFocused('A');
+      advanceMs(60_000);
+      tracker.onUserActivity();
+      sleepMs(8 * 60 * 60_000);
+      // WHEN the user interacts on wake (before the stale idle timer fires)
+      tracker.onUserActivity();
+      // THEN the pre-sleep session was closed at the last interaction — the
+      // sleep gap is NOT counted
+      expect(sink.records).toEqual([{ docId: 'A', focusStartEpochMs: T0, durationMs: 60_000 }]);
+    });
+
+    it('should start a NEW session at the wake interaction', () => {
+      // GIVEN doc A focused, then the machine sleeps 8h
+      tracker.onDocFocused('A');
+      sleepMs(8 * 60 * 60_000);
+      const wakeMs = Date.now();
+      // WHEN the user interacts on wake and unfocuses 30s later
+      tracker.onUserActivity();
+      advanceMs(30_000);
+      tracker.onDocUnfocused();
+      // THEN the resumed session starts at the wake interaction
+      expect(sink.records[1]).toEqual({ docId: 'A', focusStartEpochMs: wakeMs, durationMs: 30_000 });
+    });
+
+    it('should cap the duration at the last interaction when the doc is unfocused right after waking', () => {
+      // GIVEN doc A focused, last interaction 45s in, then the machine sleeps 8h
+      tracker.onDocFocused('A');
+      advanceMs(45_000);
+      tracker.onUserActivity();
+      sleepMs(8 * 60 * 60_000);
+      // WHEN the first post-wake event is navigation away (no interaction first)
+      tracker.onDocUnfocused();
+      // THEN the sleep gap is NOT counted
+      expect(sink.records).toEqual([{ docId: 'A', focusStartEpochMs: T0, durationMs: 45_000 }]);
+    });
+  });
+
   describe('dispose', () => {
     it('should flush the open session on dispose', () => {
       // GIVEN doc A focused for 42s
