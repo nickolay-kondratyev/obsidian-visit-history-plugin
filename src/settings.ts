@@ -17,6 +17,25 @@ export interface VisitHistoryPluginSettings {
   idleTimeoutSeconds: number;
 }
 
-export const DEFAULT_SETTINGS: VisitHistoryPluginSettings = {
-  idleTimeoutSeconds: DEFAULT_IDLE_TIMEOUT_SECONDS,
-};
+/**
+ * Boundary validation for loadData(): data.json is user-editable, and the
+ * settings tab is not the only writer of it. A corrupt idleTimeoutSeconds
+ * would degrade the V3 idle timer (NaN arms setTimeout(NaN) → an
+ * immediate-fire loop; 0/negative instantly closes every session as D:0).
+ * Invalid values fall back to the default.
+ */
+export class SettingsSanitizer {
+  static sanitize(loadedData: unknown): VisitHistoryPluginSettings {
+    const raw = (loadedData ?? {}) as Partial<Record<keyof VisitHistoryPluginSettings, unknown>>;
+    return {
+      idleTimeoutSeconds: SettingsSanitizer.sanitizeIdleTimeoutSeconds(raw.idleTimeoutSeconds),
+    };
+  }
+
+  private static sanitizeIdleTimeoutSeconds(value: unknown): number {
+    const isValid = typeof value === 'number'
+      && Number.isInteger(value)
+      && value >= MIN_IDLE_TIMEOUT_SECONDS;
+    return isValid ? value : DEFAULT_IDLE_TIMEOUT_SECONDS;
+  }
+}

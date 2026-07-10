@@ -1,5 +1,5 @@
 import { Plugin, TFolder } from 'obsidian';
-import { DEFAULT_SETTINGS, VisitHistoryPluginSettings } from './settings';
+import { SettingsSanitizer, VisitHistoryPluginSettings } from './settings';
 import { PluginFactory } from './core/init/PluginFactory';
 import { UserNotifier } from './core/util/userComm/UserNotifier';
 import { VaultTreemapView, VIEW_TYPE_TREEMAP } from './view/VaultTreemapView';
@@ -81,11 +81,8 @@ export default class VisitHistoryPlugin extends Plugin {
   }
 
   async loadSettings() {
-    this.settings = Object.assign(
-      {},
-      DEFAULT_SETTINGS,
-      (await this.loadData()) as Partial<VisitHistoryPluginSettings>,
-    );
+    // Sanitized at the boundary: see SettingsSanitizer for WHY.
+    this.settings = SettingsSanitizer.sanitize(await this.loadData());
   }
 
   async saveSettings() {
