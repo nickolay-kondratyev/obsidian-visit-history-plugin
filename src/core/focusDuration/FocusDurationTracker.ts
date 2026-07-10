@@ -115,11 +115,16 @@ export class FocusDurationTracker {
 
   private armIdleTimer(delayMs: number): void {
     this.clearIdleTimer();
+    // WHY-NOT window.setTimeout: the idle timer is app-wide logic, not tied
+    // to any (popout) window's lifetime, and this class stays DOM-agnostic
+    // so it is unit-testable in a plain node environment.
+    // eslint-disable-next-line obsidianmd/prefer-window-timers
     this.idleTimer = setTimeout(() => this.onIdleTimerFired(), delayMs);
   }
 
   private clearIdleTimer(): void {
     if (this.idleTimer !== null) {
+      // eslint-disable-next-line obsidianmd/prefer-window-timers -- see armIdleTimer
       clearTimeout(this.idleTimer);
       this.idleTimer = null;
     }

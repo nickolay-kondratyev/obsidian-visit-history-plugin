@@ -45,10 +45,6 @@ function makeLeaf(file: TFile): WorkspaceLeaf {
   return { view: view as unknown as View } as unknown as WorkspaceLeaf;
 }
 
-/** Resolves once the microtask queue (incl. chained dispatches) has drained. */
-async function drainDispatch(): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, 0));
-}
 
 class RecordingListener implements FocusListener {
   readonly calls: string[] = [];
@@ -76,10 +72,10 @@ describe('FocusTracker', () => {
       const listener = new RecordingListener();
       tracker.registerListener(listener);
       fireLeafChange(makeLeaf(makeTFile({ path: 'a.md' })));
-      await drainDispatch();
+      await tracker.whenIdle();
       // WHEN navigating to note B
       fireLeafChange(makeLeaf(makeTFile({ path: 'b.md' })));
-      await drainDispatch();
+      await tracker.whenIdle();
       // THEN order is focus A, unfocus A, focus B
       expect(listener.calls).toEqual(['focus:a.md', 'unfocus:a.md', 'focus:b.md']);
     });
@@ -101,7 +97,7 @@ describe('FocusTracker', () => {
       fireLeafChange(makeLeaf(makeTFile({ path: 'a.md' })));
       fireLeafChange(makeLeaf(makeTFile({ path: 'b.md' })));
       releaseGate();
-      await drainDispatch();
+      await tracker.whenIdle();
       // THEN the second event was NOT interleaved ahead of the first
       expect(listener.calls).toEqual(['focus:a.md', 'unfocus:a.md', 'focus:b.md']);
     });
@@ -122,7 +118,7 @@ describe('FocusTracker', () => {
       // WHEN two leaf changes fire
       fireLeafChange(makeLeaf(makeTFile({ path: 'a.md' })));
       fireLeafChange(makeLeaf(makeTFile({ path: 'b.md' })));
-      await drainDispatch();
+      await tracker.whenIdle();
       // THEN the recording listener still received everything in order
       expect(listener.calls).toEqual(['focus:a.md', 'unfocus:a.md', 'focus:b.md']);
     });

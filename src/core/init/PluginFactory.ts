@@ -12,6 +12,12 @@ import { VisitHistoryService } from '../service/visitHistoryService/VisitHistory
 import { VisitHistoryServiceV2 } from '../service/visitHistoryService/v2/VisitHistoryServiceV2';
 import { VhV2FocusStore } from '../service/visitHistoryService/v2/VhV2FocusStore';
 import { VhV2ReadmeWriter } from '../service/visitHistoryService/v2/VhV2ReadmeWriter';
+import { VhV3DurationStore } from '../service/visitHistoryService/v3/VhV3DurationStore';
+import { VhV3ReadmeWriter } from '../service/visitHistoryService/v3/VhV3ReadmeWriter';
+import { FocusDurationTracker } from '../focusDuration/FocusDurationTracker';
+import { VhV3DurationRecorder } from '../focusDuration/VhV3DurationRecorder';
+import { WindowActivityMonitor } from '../focusDuration/WindowActivityMonitor';
+import { VhV3FocusDurationListener } from '../focusTracker/listener/VhV3FocusDurationListener';
 import { VaultUtil, VaultUtilDefault } from '../util/vault/VaultUtil';
 import { IsTrackedProvider, IsTrackedProviderDefault } from "../util/vault/IsTrackedProvider";
 import { DocIdGeneratorDefault } from '../service/docId/DocIdGenerator';
@@ -22,7 +28,7 @@ import { DocIdFocusListener } from '../focusTracker/listener/DocIdFocusListener'
 import { DocIdBackfillService, DocIdBackfillServiceDefault } from '../service/docId/DocIdBackfillService';
 import { V1FocusFileRepoDefault } from '../service/migration/V1FocusFileRepo';
 import { VhV1ToV2MigrationService } from '../service/migration/VhV1ToV2MigrationService';
-import { VhV2StartupTasks } from './VhV2StartupTasks';
+import { VhStartupTasks } from './VhStartupTasks';
 
 // ── PluginFactory ─────────────────────────────────────────────────────────────
 // Constructs and wires all plugin dependencies.
@@ -35,7 +41,9 @@ export class PluginFactory {
   readonly docIdService: DocIdService;
   readonly docIdBackfillService: DocIdBackfillService;
   readonly isTrackedProvider: IsTrackedProvider;
-  readonly vhV2StartupTasks: VhV2StartupTasks;
+  readonly vhStartupTasks: VhStartupTasks;
+  /** V3 duration state machine — main.ts flushes it on unload (dispose()). */
+  readonly focusDurationTracker: FocusDurationTracker;
 
   constructor(plugin: VisitHistoryPlugin) {
     const app: App = plugin.app;
@@ -62,12 +70,21 @@ export class PluginFactory {
     );
     this.visitHistoryService = visitHistoryServiceV2;
 
+    // V3 (focus DURATIONS) is recorded alongside V2 — V2 stays the main history.
+    this.focusDurationTracker = new FocusDurationTracker(
+      new VhV3DurationRecorder(new VhV3DurationStore(hiddenFileUtil), deviceNameProvider),
+    );
+    new WindowActivityMonitor(plugin, this.focusDurationTracker);
+
     this.focusTracker = new FocusTracker(plugin, this.isTrackedProvider);
     // Doc id listener FIRST: assigning the id is the first thing that happens
     // when a file gains focus (listeners are dispatched in order).
     this.focusTracker.registerListener(new DocIdFocusListener(this.docIdService));
     this.focusTracker.registerListener(
       new VisitHistoryFocusListenerDefault(this.visitHistoryService),
+    );
+    this.focusTracker.registerListener(
+      new VhV3FocusDurationListener(this.docIdService, this.focusDurationTracker),
     );
 
     this.vaultUtil = new VaultUtilDefault(app, this.visitHistoryService, this.isTrackedProvider);
@@ -81,8 +98,9 @@ export class PluginFactory {
       this.docIdBackfillService,
       vhV2FocusStore,
     );
-    this.vhV2StartupTasks = new VhV2StartupTasks(
+    this.vhStartupTasks = new VhStartupTasks(
       new VhV2ReadmeWriter(hiddenFileUtil),
+      new VhV3ReadmeWriter(hiddenFileUtil),
       migrationService,
       visitHistoryServiceV2,
       this.userNotifier,

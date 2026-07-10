@@ -1,5 +1,6 @@
 import { UserNotifier } from '../util/userComm/UserNotifier';
 import { VhV2ReadmeWriter } from '../service/visitHistoryService/v2/VhV2ReadmeWriter';
+import { VhV3ReadmeWriter } from '../service/visitHistoryService/v3/VhV3ReadmeWriter';
 import { VisitHistoryServiceV2 } from '../service/visitHistoryService/v2/VisitHistoryServiceV2';
 import { VhV1Migration, VhV1MigrationResult } from '../service/migration/VhV1ToV2MigrationService';
 
@@ -7,11 +8,12 @@ import { VhV1Migration, VhV1MigrationResult } from '../service/migration/VhV1ToV
  * Deferred plugin-load work, run once from main.ts via onLayoutReady (the
  * vault index must be complete before migration resolves V1 backlinks).
  * Each step is error-isolated: a failing migration must not prevent the
- * README write and vice versa, and load never crashes the plugin.
+ * README writes and vice versa, and load never crashes the plugin.
  */
-export class VhV2StartupTasks {
+export class VhStartupTasks {
   constructor(
     private readonly vhV2ReadmeWriter: VhV2ReadmeWriter,
+    private readonly vhV3ReadmeWriter: VhV3ReadmeWriter,
     private readonly migrationService: VhV1Migration,
     private readonly visitHistoryServiceV2: VisitHistoryServiceV2,
     private readonly userNotifier: UserNotifier,
@@ -22,7 +24,13 @@ export class VhV2StartupTasks {
     try {
       await this.vhV2ReadmeWriter.writeReadme();
     } catch (error) {
-      console.error('[VHP][VhV2StartupTasks] README write failed', error);
+      console.error('[VHP][VhStartupTasks] V2 README write failed', error);
+    }
+
+    try {
+      await this.vhV3ReadmeWriter.writeReadme();
+    } catch (error) {
+      console.error('[VHP][VhStartupTasks] V3 README write failed', error);
     }
 
     try {
@@ -32,7 +40,7 @@ export class VhV2StartupTasks {
         this.notifyMigrationOutcome(result);
       }
     } catch (error) {
-      console.error('[VHP][VhV2StartupTasks] V1→V2 migration failed', error);
+      console.error('[VHP][VhStartupTasks] V1→V2 migration failed', error);
       this.userNotifier.showError('Visit history: V1 → V2 migration failed — V1 files were kept. See console.');
     }
   }

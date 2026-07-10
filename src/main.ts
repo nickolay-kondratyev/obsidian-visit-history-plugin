@@ -9,11 +9,14 @@ import { VisitHistorySettingTab } from './settingsTab/VisitHistorySettingTab';
 export default class VisitHistoryPlugin extends Plugin {
   settings!: VisitHistoryPluginSettings;
   userNotifier!: UserNotifier;
+  // Optional: onunload must not throw when onload failed before wiring.
+  private factory?: PluginFactory;
 
   async onload() {
     await this.loadSettings();
 
     const factory = new PluginFactory(this);
+    this.factory = factory;
     this.userNotifier = factory.userNotifier;
 
     this.initVaultTreeMapView(factory);
@@ -25,10 +28,11 @@ export default class VisitHistoryPlugin extends Plugin {
       this.userNotifier,
     ));
 
-    // Deferred: V2 format README write + V1→V2 auto migration. onLayoutReady
-    // — the vault index must be complete before migration resolves backlinks.
+    // Deferred: V2/V3 format README writes + V1→V2 auto migration.
+    // onLayoutReady — the vault index must be complete before migration
+    // resolves backlinks.
     this.app.workspace.onLayoutReady(() => {
-      void factory.vhV2StartupTasks.run();
+      void factory.vhStartupTasks.run();
     });
   }
 
@@ -70,6 +74,10 @@ export default class VisitHistoryPlugin extends Plugin {
   }
 
   onunload() {
+    // Best-effort flush of an in-progress V3 focus session. The append is
+    // async and unload cannot await it — on a hard app quit the last open
+    // session may be lost (accepted limitation).
+    this.factory?.focusDurationTracker.dispose();
   }
 
   async loadSettings() {

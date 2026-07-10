@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import { VhV2StartupTasks } from './VhV2StartupTasks';
+import { VhStartupTasks } from './VhStartupTasks';
 import { VhV1Migration, VhV1MigrationResult } from '../service/migration/VhV1ToV2MigrationService';
 import { VhV2ReadmeWriter } from '../service/visitHistoryService/v2/VhV2ReadmeWriter';
+import { VhV3ReadmeWriter } from '../service/visitHistoryService/v3/VhV3ReadmeWriter';
 import { VhV2Paths } from '../service/visitHistoryService/v2/VhV2Paths';
+import { VhV3Paths } from '../service/visitHistoryService/v3/VhV3Paths';
 import { VhV2FocusStore } from '../service/visitHistoryService/v2/VhV2FocusStore';
 import { VisitHistoryServiceV2 } from '../service/visitHistoryService/v2/VisitHistoryServiceV2';
 import { FakeHiddenFileUtil } from '../../testSupport/FakeHiddenFileUtil';
@@ -29,7 +31,7 @@ function successResult(overrides: Partial<VhV1MigrationResult> = {}): VhV1Migrat
 }
 
 interface Setup {
-  tasks: VhV2StartupTasks;
+  tasks: VhStartupTasks;
   hidden: FakeHiddenFileUtil;
   notifier: FakeUserNotifier;
 }
@@ -42,8 +44,9 @@ function setup(migrationOutcome: VhV1MigrationResult | null | Error): Setup {
     new VhV2FocusStore(hidden),
     new FixedDeviceNameProvider('mac'),
   );
-  const tasks = new VhV2StartupTasks(
+  const tasks = new VhStartupTasks(
     new VhV2ReadmeWriter(hidden),
+    new VhV3ReadmeWriter(hidden),
     new StubMigration(migrationOutcome),
     serviceV2,
     notifier,
@@ -51,7 +54,7 @@ function setup(migrationOutcome: VhV1MigrationResult | null | Error): Setup {
   return { tasks, hidden, notifier };
 }
 
-describe('VhV2StartupTasks', () => {
+describe('VhStartupTasks', () => {
   describe('run', () => {
     it('should write the V2 format README on every run', async () => {
       // GIVEN nothing to migrate
@@ -60,6 +63,15 @@ describe('VhV2StartupTasks', () => {
       await tasks.run();
       // THEN the README exists
       expect(hidden.getContent(VhV2Paths.README_PATH)).toContain('Visit History V2');
+    });
+
+    it('should write the V3 format README on every run', async () => {
+      // GIVEN nothing to migrate
+      const { tasks, hidden } = setup(null);
+      // WHEN
+      await tasks.run();
+      // THEN the README exists
+      expect(hidden.getContent(VhV3Paths.README_PATH)).toContain('Visit History V3');
     });
 
     it('should stay silent when there was nothing to migrate', async () => {

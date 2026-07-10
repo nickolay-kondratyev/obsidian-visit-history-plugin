@@ -63,6 +63,11 @@ export class FocusTracker {
     this.listeners.push(listener);
   }
 
+  /** Resolves once every leaf-change event received so far has been dispatched. */
+  whenIdle(): Promise<void> {
+    return this.dispatchChain;
+  }
+
   // ── private ───────────────────────────────────────────────────────────────
 
   private async handleLeafChange(leaf: WorkspaceLeaf | null): Promise<void> {
