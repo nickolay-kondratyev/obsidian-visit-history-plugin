@@ -9,6 +9,16 @@ body.vault-heatmap-active .status-bar {
   display: none;
 }
 
+/* Smart Connections (smart-env) renders its status widget in a floating
+   container that only MIMICS the status bar (`.status-bar-mobile`), so
+   hiding `.status-bar` alone leaves it visible. Target its own classes;
+   `.smart-env-status-container` is exclusive to that widget — the
+   Smart Environment sidebar view uses a different component. */
+body.vault-heatmap-active .smart-env-status-container,
+body.vault-heatmap-active .status-bar-mobile {
+  display: none;
+}
+
 .vault-heatmap-view {
   /* ── Theme variable mapping ─────────────────────────────── */
   --vt-bg:       var(--background-primary);
