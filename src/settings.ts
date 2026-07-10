@@ -1,10 +1,22 @@
-// Placeholder settings — no PERSISTED settings exist yet. The plumbing
-// (load/save in main.ts) is kept so future settings only need a field here.
-// The settings tab (src/settingsTab/) currently exposes one-off actions only.
+/**
+ * Seconds without any user interaction before the focused document's V3
+ * duration session is auto-closed (the recorded duration then ends at the
+ * last interaction). 3 minutes by default.
+ */
+export const DEFAULT_IDLE_TIMEOUT_SECONDS = 180;
+
+/**
+ * Floor for the idle timeout. Guards the duration state machine: a timeout
+ * of ~0 would close every session instantly at its last interaction.
+ */
+export const MIN_IDLE_TIMEOUT_SECONDS = 5;
+
+// Persisted via loadData()/saveData() in main.ts; edited in
+// src/settingsTab/VisitHistorySettingTab.ts.
 export interface VisitHistoryPluginSettings {
-  mySetting: string;
+  idleTimeoutSeconds: number;
 }
 
 export const DEFAULT_SETTINGS: VisitHistoryPluginSettings = {
-  mySetting: 'default',
+  idleTimeoutSeconds: DEFAULT_IDLE_TIMEOUT_SECONDS,
 };

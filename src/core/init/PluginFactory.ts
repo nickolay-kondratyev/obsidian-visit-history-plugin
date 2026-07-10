@@ -73,6 +73,8 @@ export class PluginFactory {
     // V3 (focus DURATIONS) is recorded alongside V2 — V2 stays the main history.
     this.focusDurationTracker = new FocusDurationTracker(
       new VhV3DurationRecorder(new VhV3DurationStore(hiddenFileUtil), deviceNameProvider),
+      // Live read: a settings-tab change applies without plugin reload.
+      () => plugin.settings.idleTimeoutSeconds * 1000,
     );
     new WindowActivityMonitor(plugin, this.focusDurationTracker);
 

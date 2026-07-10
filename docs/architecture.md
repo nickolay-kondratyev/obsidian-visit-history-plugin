@@ -37,7 +37,8 @@ core/init/PluginFactory ──── DI container: constructs & wires everything
    │
    ├── settingsTab/ ───────── VisitHistorySettingTab (Settings → Visit History):
    │                         "File modifying actions" → doc id backfill button
-   │                         (ConfirmModal gate); actions only, nothing persisted
+   │                         (ConfirmModal gate) + "Idle timeout (seconds)"
+   │                         (persisted setting, live-read by the V3 tracker)
    │
    ├── core/util ─────────── LinkUtil (wiki-link target resolution),
    │                         NoteFileUtil (vault file I/O),
@@ -91,7 +92,8 @@ user input events  ──► (idle detection)       │   main at load, popouts 
                                 │  Document object is its identity handle)
                                 │  session CLOSES on: navigate away, blur of
                                 │  the window HOSTING the doc (incl. popout →
-                                │  popout switches), 3-min idle (duration then
+                                │  popout switches), idle timeout (setting,
+                                │  default 180 s, live-read; duration then
                                 │  ends at the LAST interaction; also enforced
                                 │  retroactively — OS sleep never counts), or
                                 │  plugin unload flush; refocusing the doc's

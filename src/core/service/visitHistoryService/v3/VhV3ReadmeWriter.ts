@@ -24,10 +24,11 @@ const README_CONTENT = `<!--
   e.g. \`2026-07-09T22:02:15.745Z D:5600\`
 - A session ends (and its line is written) when the user navigates away from
   the document, when the Obsidian window HOSTING it loses focus (including
-  switching to another Obsidian popout window), or after 3 minutes without
-  any user interaction (idle) — the idle session's duration ends at the LAST
-  interaction, and OS sleep is never counted. Refocusing the document's
-  window or interacting again starts a new session for the same document.
+  switching to another Obsidian popout window), or after the configured idle
+  timeout without any user interaction (plugin setting, default 3 minutes) —
+  the idle session's duration ends at the LAST interaction, and OS sleep is
+  never counted. Refocusing the document's window or interacting again
+  starts a new session for the same document.
 - Per-device directories keep synced devices from ever writing the same file
   (no sync conflicts).
 - Documents whose id is not filename-safe cannot be tracked and are skipped.

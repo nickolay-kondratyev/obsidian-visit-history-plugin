@@ -4,6 +4,13 @@ export interface FocusDurationSink {
 }
 
 /**
+ * Supplies the CURRENT idle timeout in ms (user-configurable in settings,
+ * default 180 s). Read at every idle decision so settings changes apply live,
+ * without plugin reload.
+ */
+export type IdleTimeoutMsProvider = () => number;
+
+/**
  * Opaque identity of one Obsidian OS window (main or popout), compared by
  * reference. Callers use the window's `Document` object — stable for the
  * window's lifetime and reachable both from a leaf's `containerEl` and from
@@ -31,10 +38,11 @@ interface ActiveSession {
  *  - the user navigates to another doc (or to an untracked view),
  *  - the window HOSTING the doc loses OS focus (incl. switching to another
  *    Obsidian popout window),
- *  - IDLE_TIMEOUT_MS passes without any user interaction; the recorded
- *    duration then ends at the LAST interaction (owner decision — the idle
- *    tail is not counted). Enforced retroactively too (OS sleep suspends
- *    timers) — a session can never include a sleep/idle gap,
+ *  - the idle timeout (IdleTimeoutMsProvider) passes without any user
+ *    interaction; the recorded duration then ends at the LAST interaction
+ *    (owner decision — the idle tail is not counted). Enforced retroactively
+ *    too (OS sleep suspends timers) — a session can never include a
+ *    sleep/idle gap,
  *  - dispose() (plugin unload) — best-effort flush.
  *
  * After a window blur or idle close, the document stays "current": refocusing
@@ -47,8 +55,6 @@ interface ActiveSession {
  * of being reset per event.
  */
 export class FocusDurationTracker {
-  static readonly IDLE_TIMEOUT_MS = 3 * 60 * 1000;
-
   /** Doc shown in the active leaf — outlives sessions closed by blur/idle. */
   private currentDoc: CurrentDoc | null = null;
   /** OS-focused Obsidian windows. Multiple only transiently (event ordering). */
@@ -57,7 +63,10 @@ export class FocusDurationTracker {
   private lastActivityMs = 0;
   private idleTimer: ReturnType<typeof setTimeout> | null = null;
 
-  constructor(private readonly sink: FocusDurationSink) {
+  constructor(
+    private readonly sink: FocusDurationSink,
+    private readonly getIdleTimeoutMs: IdleTimeoutMsProvider,
+  ) {
   }
 
   onDocFocused(docId: string, windowHandle: WindowHandle): void {
@@ -103,7 +112,7 @@ export class FocusDurationTracker {
 
   onUserActivity(): void {
     const now = Date.now();
-    if (this.session !== null && now - this.lastActivityMs >= FocusDurationTracker.IDLE_TIMEOUT_MS) {
+    if (this.session !== null && now - this.lastActivityMs >= this.getIdleTimeoutMs()) {
       // The idle timeout elapsed without the timer firing (OS sleep suspends
       // timers): enforce the idle close retroactively before stamping this
       // interaction, or the sleep gap would count as focus time.
@@ -134,7 +143,7 @@ export class FocusDurationTracker {
     const now = Date.now();
     this.session = { docId, startMs: now };
     this.lastActivityMs = now;
-    this.armIdleTimer(FocusDurationTracker.IDLE_TIMEOUT_MS);
+    this.armIdleTimer(this.getIdleTimeoutMs());
   }
 
   /** Emits the sink record and clears the session; no-op when none is open. */
@@ -147,7 +156,7 @@ export class FocusDurationTracker {
     // (OS sleep suspends timers), apply the idle cutoff here — the session
     // ends at the last interaction, never counting the gap. Normal closes
     // (gap < timeout) are untouched.
-    const effectiveEndMs = endMs - this.lastActivityMs >= FocusDurationTracker.IDLE_TIMEOUT_MS
+    const effectiveEndMs = endMs - this.lastActivityMs >= this.getIdleTimeoutMs()
       ? this.lastActivityMs
       : endMs;
     const { docId, startMs } = this.session;
@@ -177,13 +186,15 @@ export class FocusDurationTracker {
     if (this.session === null) {
       return;
     }
+    // Read the CURRENT timeout — a settings change applies from this check on.
+    const idleTimeoutMs = this.getIdleTimeoutMs();
     const idleForMs = Date.now() - this.lastActivityMs;
-    if (idleForMs >= FocusDurationTracker.IDLE_TIMEOUT_MS) {
+    if (idleForMs >= idleTimeoutMs) {
       // currentDoc intentionally stays set — the next interaction or window
       // refocus starts a NEW session for the same document.
       this.endSession(this.lastActivityMs);
     } else {
-      this.armIdleTimer(FocusDurationTracker.IDLE_TIMEOUT_MS - idleForMs);
+      this.armIdleTimer(idleTimeoutMs - idleForMs);
     }
   }
 }

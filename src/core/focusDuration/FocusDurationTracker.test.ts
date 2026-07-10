@@ -2,7 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FocusDurationSink, FocusDurationTracker, WindowHandle } from './FocusDurationTracker';
 
 const T0 = Date.parse('2026-07-09T22:00:00.000Z');
-const IDLE_MS = FocusDurationTracker.IDLE_TIMEOUT_MS;
+// Test default mirroring DEFAULT_IDLE_TIMEOUT_SECONDS (3 minutes).
+const IDLE_MS = 180_000;
 
 // Window identity is by reference — named objects keep the tests readable.
 const MAIN_WIN: WindowHandle = { name: 'main-window' };
@@ -26,11 +27,14 @@ class RecordingSink implements FocusDurationSink {
 describe('FocusDurationTracker', () => {
   let sink: RecordingSink;
   let tracker: FocusDurationTracker;
+  // Mutable so tests can change the timeout mid-run (settings are live-read).
+  let idleTimeoutMs: number;
 
   beforeEach(() => {
     vi.useFakeTimers({ now: T0 });
     sink = new RecordingSink();
-    tracker = new FocusDurationTracker(sink);
+    idleTimeoutMs = IDLE_MS;
+    tracker = new FocusDurationTracker(sink, () => idleTimeoutMs);
     // Mirrors WindowActivityMonitor's hasFocus() seeding at plugin load.
     tracker.onWindowFocused(MAIN_WIN);
   });
@@ -317,6 +321,29 @@ describe('FocusDurationTracker', () => {
       tracker.onDocUnfocused();
       // THEN only the idle close was recorded
       expect(sink.records).toHaveLength(1);
+    });
+
+    it('should honor a custom (shorter) configured idle timeout', () => {
+      // GIVEN the idle timeout is configured to 10s
+      idleTimeoutMs = 10_000;
+      tracker.onDocFocused('A', MAIN_WIN);
+      // WHEN 10s pass without interaction
+      advanceMs(10_000);
+      // THEN the session was auto-closed already
+      expect(sink.records).toEqual([{ docId: 'A', focusStartEpochMs: T0, durationMs: 0 }]);
+    });
+
+    it('should apply a settings change to an ALREADY-RUNNING session (live read)', () => {
+      // GIVEN a session started under the default timeout, active 60s in
+      tracker.onDocFocused('A', MAIN_WIN);
+      advanceMs(60_000);
+      tracker.onUserActivity();
+      // WHEN the user shortens the timeout to 10s and goes idle
+      idleTimeoutMs = 10_000;
+      advanceMs(IDLE_MS);
+      // THEN the session still closed at the last interaction (idle enforced
+      // with the new threshold as soon as a timer check runs)
+      expect(sink.records).toEqual([{ docId: 'A', focusStartEpochMs: T0, durationMs: 60_000 }]);
     });
   });
 

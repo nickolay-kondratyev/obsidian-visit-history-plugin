@@ -1,25 +1,28 @@
 import { App, PluginSettingTab, Setting } from 'obsidian';
 import VisitHistoryPlugin from '../main';
+import { DEFAULT_IDLE_TIMEOUT_SECONDS, MIN_IDLE_TIMEOUT_SECONDS } from '../settings';
 import { DocIdBackfillResult, DocIdBackfillService } from '../core/service/docId/DocIdBackfillService';
 import { UserNotifier } from '../core/util/userComm/UserNotifier';
 import { ConfirmModal } from './ConfirmModal';
 
 /**
- * The plugin's settings tab (Settings → Visit History). Currently exposes
- * one-off actions only — no persisted settings (see src/settings.ts).
+ * The plugin's settings tab (Settings → Visit History): persisted settings
+ * (see src/settings.ts) plus one-off actions.
  */
 export class VisitHistorySettingTab extends PluginSettingTab {
   constructor(
     app: App,
-    plugin: VisitHistoryPlugin,
+    private readonly visitHistoryPlugin: VisitHistoryPlugin,
     private readonly docIdBackfillService: DocIdBackfillService,
     private readonly userNotifier: UserNotifier,
   ) {
-    super(app, plugin);
+    super(app, visitHistoryPlugin);
   }
 
   display(): void {
     this.containerEl.empty();
+
+    this.displayIdleTimeoutSetting();
 
     new Setting(this.containerEl)
       .setName('File modifying actions')
@@ -35,6 +38,29 @@ export class VisitHistorySettingTab extends PluginSettingTab {
       .addButton(btn => btn
         .setButtonText('Add ids')
         .onClick(() => this.confirmAndRunDocIdBackfill()));
+  }
+
+  private displayIdleTimeoutSetting(): void {
+    new Setting(this.containerEl)
+      .setName('Idle timeout (seconds)')
+      .setDesc('Seconds without any interaction before the focused note is '
+        + 'treated as idle: its visit-duration session is closed, ending at '
+        + `the last interaction. Minimum ${MIN_IDLE_TIMEOUT_SECONDS}; `
+        + `default ${DEFAULT_IDLE_TIMEOUT_SECONDS} (3 minutes). `
+        + 'Applies immediately.')
+      .addText(text => text
+        .setPlaceholder(String(DEFAULT_IDLE_TIMEOUT_SECONDS))
+        .setValue(String(this.visitHistoryPlugin.settings.idleTimeoutSeconds))
+        .onChange(async (value) => {
+          const seconds = Number(value);
+          // Invalid/too-small input is simply not persisted — the previous
+          // valid value stays in effect (and reappears when the tab reopens).
+          if (!Number.isInteger(seconds) || seconds < MIN_IDLE_TIMEOUT_SECONDS) {
+            return;
+          }
+          this.visitHistoryPlugin.settings.idleTimeoutSeconds = seconds;
+          await this.visitHistoryPlugin.saveSettings();
+        }));
   }
 
   private confirmAndRunDocIdBackfill(): void {
