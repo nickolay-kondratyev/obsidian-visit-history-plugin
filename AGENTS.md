@@ -31,7 +31,8 @@ format, heatmap view.
 ```
 src/
   main.ts                  # Plugin lifecycle (onload, onunload, register views/commands)
-  settings.ts              # Persisted settings: idleTimeoutSeconds (default 180, min 5)
+  settings.ts              # Persisted settings: idleTimeoutSeconds (default 180, min 5);
+                           # SettingsSanitizer validates loadData() at the boundary
   Constants.ts             # Tracked view types, file extensions, top-level dir names
 
   core/
@@ -40,7 +41,9 @@ src/
       VhStartupTasks.ts    # Deferred load work (onLayoutReady): V2+V3 README writes + V1→V2 migration
     focusTracker/
       FocusTracker.ts      # Listens to Obsidian active-leaf-change; dispatches to
-                           # FocusListeners (dispatch SERIALIZED — in-order delivery)
+                           # FocusListeners (dispatch SERIALIZED — in-order delivery;
+                           # tracks focused FILE, not leaf — unfocus fires on any
+                           # file change, incl. same-leaf nav to untracked views)
       listener/
         DocIdFocusListener.ts                # On focus → ensures doc id (registered first)
         VisitHistoryFocusListenerDefault.ts  # On focus → records V2 visit
@@ -101,7 +104,7 @@ src/
 - **VaultTreemapView** is the **only file** in `view/` that imports from `obsidian`. All React components are Obsidian-agnostic and receive data/callbacks as props.
 - **VH V2 files** live under `.visit_history/v2/focus_per_device/<device>/<doc-id>.vh_v2` — one ISO 8601 UTC ms stamp per line, sorted, deduped, newline-terminated. The doc id IS the filename (survives renames; no backlink indirection). `.visit_history` is a dot-folder — invisible to the Vault API/metadata cache — so ALL access goes through `HiddenFileUtil` (DataAdapter). Ids that are not filename-safe (`DocIdFilenameSafety.isFilenameSafeId`) are skipped with `console.error`.
 - **VH V3 (focus durations)** is recorded ALONGSIDE V2 under `.visit_history/v3/focus_duration_per_device/<device>/<doc-id>.vh_v3` — one completed session per line: `<ISO start stamp> D:<millis>`. `FocusDurationTracker` closes a session on navigation away, blur of the window HOSTING the doc, idle timeout (setting `idleTimeoutSeconds`, default 180 s, min 5 s, live-read — no reload needed; duration then ends at the LAST interaction — owner decision; also enforced retroactively so OS sleep is never counted; interaction after idle starts a NEW session), or unload flush (hard app quit can lose the last open session — accepted). Writes go through `VhV3DurationRecorder`'s single serialized chain.
-- **Popout windows are first-class for V3**: `WindowActivityMonitor` registers on every window (main + `window-open`/`window-close`); a window's `Document` object is its identity handle (`WindowHandle`), also carried by `FocusEvent.ownerDocument` from the leaf's `containerEl`. Switching popout→popout closes the left-behind doc's session; a tab dragged to a new window keeps its session.
+- **Popout windows are first-class for V3**: `WindowActivityMonitor` registers on every window (main + `window-open`/`window-close`; popouts already open at plugin load are discovered via leaf enumeration — their `window-open` fired before we loaded); a window's `Document` object is its identity handle (`WindowHandle`), also carried by `FocusEvent.ownerDocument` from the leaf's `containerEl`. Switching popout→popout closes the left-behind doc's session; a tab dragged to a new window keeps its session.
 - **FocusTracker dispatch is SERIALIZED** (promise chain): listeners await file IO, so rapid leaf-change events would otherwise interleave and deliver focus/unfocus out of order — stateful listeners (V3 durations) require in-order delivery.
 - **V1 → V2 auto migration** (`VhV1ToV2MigrationService`, from `VhStartupTasks` on layout-ready): doc id backfill → parse V1 files → merge per (device, doc id) into V2 → validate readback → only then PERMANENTLY delete `_visit_history/` (unmigratable files included — owner decision); any validation failure deletes nothing.
 - **Visit deduplication**: focus listeners use `InFlightDropGuard` (`core/util/async/`) — in-flight promise tracking with DROP semantics — to avoid duplicate writes on rapid focus events. `VisitHistoryServiceV2` additionally skips consecutive records to the same doc id — intentionally NOT time-window based, so A→B→A navigation pathways stay fully recorded (owner decision).

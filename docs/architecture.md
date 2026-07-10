@@ -14,7 +14,10 @@ core/init/PluginFactory ──── DI container: constructs & wires everything
    ├── core/focusTracker ─── FocusTracker listens to active-leaf-change,
    │      │                  dispatches FocusEvents to FocusListeners
    │      │                  (dispatch is SERIALIZED — events reach listeners
-   │      │                  in order even when handlers await file IO)
+   │      │                  in order even when handlers await file IO;
+   │      │                  tracks the focused FILE, not the leaf: unfocus is
+   │      │                  dispatched whenever the file changes — incl.
+   │      │                  same-leaf navigation to an untracked view)
    │      └── listener/ ──── DocIdFocusListener → ensures doc id (runs first)
    │                         VisitHistoryFocusListenerDefault → records V2 visits
    │                         VhV3FocusDurationListener → V3 duration sessions
@@ -86,7 +89,9 @@ active-leaf-change ──► VhV3FocusDurationListener (ensureDocId → docId
                        + hosting window via FocusEvent.ownerDocument)
 window blur/focus  ──► WindowActivityMonitor ─┐   registered on EVERY window:
 user input events  ──► (idle detection)       │   main at load, popouts via
-                                              │   'window-open'/'window-close'
+                                              │   'window-open'/'window-close';
+                                              │   popouts already open at load
+                                              │   found via leaf enumeration
                                               ▼
                               FocusDurationTracker (state machine; a window's
                                 │  Document object is its identity handle)
