@@ -1,127 +1,37 @@
 import { describe, expect, it, vi } from 'vitest';
 import { VhStartupTasks } from './VhStartupTasks';
-import { VhV1Migration, VhV1MigrationResult } from '../service/migration/VhV1ToV2MigrationService';
-import { VhV2ReadmeWriter } from '../service/visitHistoryService/v2/VhV2ReadmeWriter';
 import { VhV3ReadmeWriter } from '../service/visitHistoryService/v3/VhV3ReadmeWriter';
-import { VhV2Paths } from '../service/visitHistoryService/v2/VhV2Paths';
 import { VhV3Paths } from '../service/visitHistoryService/v3/VhV3Paths';
-import { VhV2FocusStore } from '../service/visitHistoryService/v2/VhV2FocusStore';
-import { VisitHistoryServiceV2 } from '../service/visitHistoryService/v2/VisitHistoryServiceV2';
+import { HiddenFileUtil } from '../util/file/hidden/HiddenFileUtil';
 import { FakeHiddenFileUtil } from '../../testSupport/FakeHiddenFileUtil';
-import { FakeDocIdService, FakeUserNotifier, FixedDeviceNameProvider } from '../../testSupport/fakes';
 
-class StubMigration implements VhV1Migration {
-  constructor(private readonly outcome: VhV1MigrationResult | null | Error) {
-  }
+const USER = 'alice';
 
-  async migrateIfV1Present(): Promise<VhV1MigrationResult | null> {
-    if (this.outcome instanceof Error) throw this.outcome;
-    return this.outcome;
-  }
-}
-
-function successResult(overrides: Partial<VhV1MigrationResult> = {}): VhV1MigrationResult {
-  return {
-    migratedV1FileCount: 3,
-    migratedDocFileCount: 2,
-    unmigratableV1FileCount: 0,
-    validationPassed: true,
-    ...overrides,
-  };
-}
-
-interface Setup {
-  tasks: VhStartupTasks;
-  hidden: FakeHiddenFileUtil;
-  notifier: FakeUserNotifier;
-}
-
-function setup(migrationOutcome: VhV1MigrationResult | null | Error): Setup {
-  const hidden = new FakeHiddenFileUtil();
-  const notifier = new FakeUserNotifier();
-  const serviceV2 = new VisitHistoryServiceV2(
-    new FakeDocIdService(),
-    new VhV2FocusStore(hidden, 'alice'),
-    new FixedDeviceNameProvider('mac'),
-  );
-  const tasks = new VhStartupTasks(
-    new VhV2ReadmeWriter(hidden, 'alice'),
-    new VhV3ReadmeWriter(hidden, 'alice'),
-    new StubMigration(migrationOutcome),
-    serviceV2,
-    notifier,
-  );
-  return { tasks, hidden, notifier };
+function setup(hidden: HiddenFileUtil = new FakeHiddenFileUtil()): VhStartupTasks {
+  return new VhStartupTasks(new VhV3ReadmeWriter(hidden, USER));
 }
 
 describe('VhStartupTasks', () => {
   describe('run', () => {
-    it('should write the V2 format README on every run', async () => {
-      // GIVEN nothing to migrate
-      const { tasks, hidden } = setup(null);
-      // WHEN
-      await tasks.run();
-      // THEN the README exists
-      expect(hidden.getContent(VhV2Paths.readmePath('alice'))).toContain('Visit History V2');
-    });
-
     it('should write the V3 format README on every run', async () => {
-      // GIVEN nothing to migrate
-      const { tasks, hidden } = setup(null);
-      // WHEN
-      await tasks.run();
+      // GIVEN a vault without the README
+      const hidden = new FakeHiddenFileUtil();
+      // WHEN startup tasks run
+      await setup(hidden).run();
       // THEN the README exists
-      expect(hidden.getContent(VhV3Paths.readmePath('alice'))).toContain('Visit History V3');
+      expect(hidden.getContent(VhV3Paths.readmePath(USER))).toContain('Visit History V3');
     });
 
-    it('should stay silent when there was nothing to migrate', async () => {
-      // GIVEN no V1 tree
-      const { tasks, notifier } = setup(null);
-      // WHEN
-      await tasks.run();
-      // THEN no notices
-      expect([...notifier.infos, ...notifier.errors]).toEqual([]);
-    });
-
-    it('should notify success with counts after a validated migration', async () => {
-      // GIVEN a successful migration
-      const { tasks, notifier } = setup(successResult());
-      // WHEN
-      await tasks.run();
-      // THEN the info notice carries the counts
-      expect(notifier.infos[0]).toContain('3 V1 files → 2 V2 files');
-    });
-
-    it('should mention deleted unmigratable files in the success notice', async () => {
-      // GIVEN a migration that dropped one orphaned file
-      const { tasks, notifier } = setup(successResult({ unmigratableV1FileCount: 1 }));
-      // WHEN
-      await tasks.run();
-      // THEN the loss is called out
-      expect(notifier.infos[0]).toContain('1 unmigratable V1 file(s) were deleted');
-    });
-
-    it('should show an error (not an info) when validation failed', async () => {
-      // GIVEN validation failed → V1 kept
-      const { tasks, notifier } = setup(successResult({ validationPassed: false }));
-      // WHEN
-      await tasks.run();
-      // THEN
-      expect({ errors: notifier.errors.length, infos: notifier.infos.length })
-        .toEqual({ errors: 1, infos: 0 });
-    });
-
-    it('should catch a migration crash, notify, and still have written the README', async () => {
-      // GIVEN a migration that throws
-      const { tasks, hidden, notifier } = setup(new Error('disk exploded'));
+    it('should not reject when the README write fails (plugin load must survive)', async () => {
+      // GIVEN a hidden-file layer whose writes fail
+      const failingHidden = new FakeHiddenFileUtil();
+      failingHidden.write = async () => {
+        throw new Error('disk exploded');
+      };
       const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-      // WHEN — run() must not reject (plugin load must survive)
-      await tasks.run();
-      // THEN error notice shown and README written before the crash
-      expect({
-        errors: notifier.errors.length,
-        readmeWritten: hidden.getContent(VhV2Paths.readmePath('alice')) !== undefined,
-      }).toEqual({ errors: 1, readmeWritten: true });
+      // WHEN startup tasks run
+      // THEN run() resolves (error is logged, not thrown)
+      await expect(setup(failingHidden).run()).resolves.toBeUndefined();
       errorSpy.mockRestore();
     });
   });

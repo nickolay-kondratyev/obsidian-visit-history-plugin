@@ -7,8 +7,11 @@ import { VhUserPaths } from '../user/VhUserPaths';
  *   .visit_history/user/<user-name>/v3/README__generated__vh_v3_format.md
  *   .visit_history/user/<user-name>/v3/focus_duration_per_device/<device-name>/<doc-id>.vh_v3
  *
- * Same user level (VhUserPaths) and doc-id-as-filename keying as V2. V3 is
- * recorded ALONGSIDE V2 — V2 stays the main history.
+ * User level owned by VhUserPaths (dot-folder rationale there). The doc id
+ * IS the filename (survives renames; no backlink indirection). Every method
+ * takes the user name explicitly: writes always target the CURRENT user,
+ * while reads aggregate across ALL user dirs (owner decision — the heatmap
+ * shows whole-vault activity).
  */
 export class VhV3Paths {
   static readonly FOCUS_DURATION_FILE_EXTENSION = '.vh_v3';

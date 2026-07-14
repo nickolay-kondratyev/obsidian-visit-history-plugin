@@ -1,6 +1,11 @@
 export const TRACKED_VIEW_TYPES = new Set(['markdown', 'canvas', 'excalidraw']);
 export const TRACKED_EXTENSIONS = new Set(["md", "canvas", "excalidraw"]);
 
+/**
+ * LEGACY V1 visit-history dir. No longer read or written (owner decision:
+ * old data is left on disk untouched), but its files are still excluded from
+ * tracking and the heatmap — see IsTrackedProvider.
+ */
 export const VISIT_HISTORY_TOP_DIR = "_visit_history";
 
 /**

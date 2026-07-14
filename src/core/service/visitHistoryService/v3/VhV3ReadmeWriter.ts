@@ -11,7 +11,7 @@ const README_CONTENT = `<!--
 \`\`\`
 .visit_history/
   user/
-    <user-name>/                          # OS user name on desktop; see the V2 README for mobile
+    <user-name>/                          # OS user name on desktop; see the user bullet for mobile
       v3/
         README__generated__vh_v3_format.md    # this file
         focus_duration_per_device/
@@ -19,8 +19,14 @@ const README_CONTENT = `<!--
             <doc-id>.vh_v3                    # one duration file per (device, document)
 \`\`\`
 
-- V3 is recorded ALONGSIDE V2 (V2 stays the main visit history). The filename
-  is the document's persistent id — same keying as V2.
+- V3 is the ONLY visit history the plugin reads and writes. The filename is
+  the document's persistent id. Any \`v2/\` folder — under \`.visit_history/\`
+  or under a \`user/<user-name>/\` dir — and any top-level \`_visit_history/\`
+  folder is legacy data from older plugin versions — no longer read or
+  written, left untouched.
+- Per-user directories keep the histories of different people syncing one
+  vault apart. Mobile devices adopt the single existing user name when there
+  is exactly one, otherwise fall back to a persisted \`mobile-user-XXXXXXXX\`.
 - Each \`.vh_v3\` line is one COMPLETED focus session, newline-terminated:
   \`<ISO 8601 UTC ms stamp of focus start> D:<millis spent in focus>\`
   e.g. \`2026-07-09T22:02:15.745Z D:5600\`

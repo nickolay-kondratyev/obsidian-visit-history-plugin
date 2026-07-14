@@ -119,7 +119,7 @@ export class VaultTreemapView extends ItemView {
   private async refresh(): Promise<void> {
     const vaultUtil = this.pluginFactory.vaultUtil;
     // Single vault walk: visit stamps ride along on TrackedFile (LRU-cached
-    // per file inside VisitHistoryService).
+    // per doc id inside VisitHistoryServiceV3).
     const trackedFiles = await vaultUtil.getTrackedFiles();
     const data = buildVaultTree(vaultUtil.getName(), trackedFiles);
 
