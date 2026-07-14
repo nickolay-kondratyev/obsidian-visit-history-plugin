@@ -5,8 +5,7 @@ import { FocusDurationTracker } from '../../focusDuration/FocusDurationTracker';
 
 /**
  * V3 bridge from focus events to the duration tracker: resolves the focused
- * file to its doc id and forwards focus/unfocus. Recorded ALONGSIDE V2 —
- * the V2 listener stays untouched.
+ * file to its doc id and forwards focus/unfocus.
  *
  * No InFlightDropGuard here: FocusTracker serializes dispatch, and the
  * tracker itself ignores duplicate focus events for the same doc.
