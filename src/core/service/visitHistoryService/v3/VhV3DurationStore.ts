@@ -65,8 +65,14 @@ export class VhV3DurationStore {
     const sessionsPerUser = await Promise.all(
       userNames.map(userName => this.readAllDeviceSessionsForUser(userName, docId)),
     );
-    const allStartsMs = sessionsPerUser.flat().map(session => session.focusStartEpochMs);
-    return allStartsMs.length > 0 ? Math.max(...allStartsMs) : null;
+    // reduce, not Math.max(...spread): spreading a years-long history
+    // (100k+ sessions) can blow the call stack and kill the whole heatmap refresh.
+    return sessionsPerUser
+      .flat()
+      .reduce<number | null>(
+        (maxMs, session) => (maxMs === null ? session.focusStartEpochMs : Math.max(maxMs, session.focusStartEpochMs)),
+        null,
+      );
   }
 
   // ── private ─────────────────────────────────────────────────────────────
