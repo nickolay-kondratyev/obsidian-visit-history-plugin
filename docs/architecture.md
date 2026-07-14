@@ -8,8 +8,8 @@ main.ts (Plugin lifecycle)
    ▼
 core/init/PluginFactory ──── DI container: constructs & wires everything once
    │
-   ├── core/init ─────────── VhStartupTasks: deferred load work (V2 + V3 README
-   │                         writes, V1→V2 migration) run via onLayoutReady
+   ├── core/init ─────────── VhStartupTasks: deferred load work (V3 README
+   │                         write) run via onLayoutReady
    │
    ├── core/focusTracker ─── FocusTracker listens to active-leaf-change,
    │      │                  dispatches FocusEvents to FocusListeners
@@ -19,36 +19,36 @@ core/init/PluginFactory ──── DI container: constructs & wires everything
    │      │                  dispatched whenever the file changes — incl.
    │      │                  same-leaf navigation to an untracked view)
    │      └── listener/ ──── DocIdFocusListener → ensures doc id (runs first)
-   │                         VisitHistoryFocusListenerDefault → records V2 visits
    │                         VhV3FocusDurationListener → V3 duration sessions
    │
    ├── core/focusDuration ── FocusDurationTracker (V3 session state machine),
-   │                         VhV3DurationRecorder (serialized store appends),
+   │                         VhV3DurationRecorder (serialized store appends +
+   │                         LastVisitCache write-through),
    │                         WindowActivityMonitor (DOM boundary: window
    │                         blur/focus, visibility, user-input events)
    │
-   ├── core/service ──────── VisitHistoryServiceV2: record visit / last-visit stamp
-   │                         (VhV2FocusStore owns the .vh_v2 format;
-   │                          VhV2ReadmeWriter generates the in-vault format doc)
-   │                         VhV3DurationStore owns the .vh_v3 duration format
-   │                         (+ VhV3Paths, VhV3ReadmeWriter;
-   │                          DocIdFilenameSafety shared by V2 + V3)
+   ├── core/service ──────── VhV3DurationStore owns the .vh_v3 duration format
+   │                         (append + read; VhV3SessionLineParser parses the
+   │                          session line; VhV3Paths layout; VhV3ReadmeWriter
+   │                          generates the in-vault format doc;
+   │                          DocIdFilenameSafety validates id-as-filename)
    │                         user/: VhUserPaths (.visit_history/user/<user-name>/)
    │                         + UserNameProvider (resolves + persists the user name)
+   │                         LastVisitProvider (read-only interface) ←
+   │                         VisitHistoryServiceV3: last-visit stamp for the
+   │                         heatmap (LastVisitCache, LRU keyed by doc id)
    │                         DocIdService: ensure per-document id on focus
    │                         DocIdBackfillService: vault-wide doc id backfill
-   │                         migration/: VhV1ToV2MigrationService + V1FocusFileRepo
-   │                         + V1FocusFileParser (legacy V1 → V2, then V1 deleted)
-   │                         + VhUserScopeMigrationService (pre-user-scoped
-   │                         v2/v3 dirs → user/<user-name>/; drop after 2026-Oct)
+   │                         migration/: VhUserScopeMigrationService
+   │                         (pre-user-scoped v2/v3 dirs → user/<user-name>/;
+   │                         drop after 2026-Oct)
    │
    ├── settingsTab/ ───────── VisitHistorySettingTab (Settings → Visit History):
    │                         "File modifying actions" → doc id backfill button
    │                         (ConfirmModal gate) + "Idle timeout (seconds)"
    │                         (persisted setting, live-read by the V3 tracker)
    │
-   ├── core/util ─────────── LinkUtil (wiki-link target resolution),
-   │                         NoteFileUtil (vault file I/O),
+   ├── core/util ─────────── NoteFileUtil (vault file I/O),
    │                         HiddenFileUtil (DataAdapter I/O for dot-folders —
    │                         the Vault API cannot see `.visit_history/`),
    │                         VaultUtil (tracked files), IsTrackedProvider,
@@ -68,26 +68,11 @@ core/init/PluginFactory ──── DI container: constructs & wires everything
 - **`view/VaultTreemapView.tsx` is the only file in `view/` importing
   `obsidian`.** React components receive data + callbacks as props and stay
   Obsidian-agnostic (this is why they are unit-testable).
-- **Depend on interfaces** (`LinkUtil`, `NoteFileUtil`, `VisitHistoryService`,
+- **Depend on interfaces** (`NoteFileUtil`, `LastVisitProvider`,
   `IsTrackedProvider`, `IFileOpener`); `*Default` classes are the Obsidian
   implementations.
 
-## Recording flow
-
-```
-active-leaf-change
-  → FocusTracker (filters via IsTrackedProvider, isolates listener errors)
-  → VisitHistoryFocusListenerDefault (in-flight DROP guard per note path)
-  → VisitHistoryServiceV2.recordVisitNowOnFocus
-       (ensureDocId → skip filename-unsafe ids;
-        dedup: skip if last record went to the same doc id — keeps full
-        A→B→A navigation pathways, drops same-note event bursts)
-  → VhV2FocusStore.appendVisit
-  → HiddenFileUtil.append
-      (.visit_history/user/<user>/v2/focus_per_device/<device>/<id>.vh_v2)
-```
-
-## V3 duration flow (recorded ALONGSIDE V2 — V2 stays the main history)
+## V3 duration flow (the only recording flow)
 
 ```
 active-leaf-change ──► VhV3FocusDurationListener (ensureDocId → docId
@@ -111,7 +96,9 @@ user input events  ──► (idle detection)       │   main at load, popouts 
                                 │  session; a tab DRAGGED to another window
                                 │  keeps its session
                                 ▼
-                              VhV3DurationRecorder (one serialized write chain)
+                              VhV3DurationRecorder (one serialized write chain;
+                                │  writes each session start through to
+                                │  LastVisitCache after a successful append)
                                 ▼
                               VhV3DurationStore.appendFocusDuration
                                 (.visit_history/user/<user>/v3/
@@ -120,7 +107,21 @@ user input events  ──► (idle detection)       │   main at load, popouts 
 ```
 
 Known limitation (owner-accepted): a hard app quit can lose the last open
-session (unload cannot await the write).
+session (unload cannot await the write). A visit becomes visible to the
+heatmap only once its session closes.
+
+## Heatmap read flow
+
+```
+VaultTreemapView.refresh
+  → VaultUtilDefault.getTrackedFiles (single vault walk)
+  → VisitHistoryServiceV3.getLastVisitStamp (LastVisitProvider)
+       (READ-ONLY DocIdService.getDocId — bulk reads never write into user
+        files; LastVisitCache hit → done)
+  → VhV3DurationStore.getLastFocusStartMsAcrossUsersAndDevices
+       (max session START across ALL users' device dirs — the heatmap shows
+        whole-vault activity; writes go to the current user only)
+```
 
 ## Doc id flow
 
@@ -157,36 +158,40 @@ The settings tab button "Add ids to all eligible files" runs
 I/O), per-file errors collected without aborting the run, concurrent calls
 JOIN the in-flight run.
 
-## Startup flow (user name + migrations)
+## Startup flow (user name + legacy-layout move)
 
 `main.ts#onload` first resolves the user name (`UserNameProvider` — cached in
 device-scoped localStorage) and moves any pre-user-scoped `v2`/`v3` dirs under
 `user/<user-name>/` (`VhUserScopeMigrationService`) BEFORE wiring
 `PluginFactory`, so focus tracking can never write to the legacy location.
 
-`main.ts` then schedules `VhStartupTasks.run()` via `onLayoutReady` (vault index
-must be complete before backlink resolution): rewrite the generated V2 and V3
-format READMEs, then run `VhV1ToV2MigrationService.migrateIfV1Present()` — see
-[visit-history-format.md](visit-history-format.md) for the exact steps and the
-validation-gated permanent deletion of `_visit_history/`. After a migration,
-the last-visit cache is invalidated (values cached mid-migration would be
-stale).
+`main.ts` then schedules `VhStartupTasks.run()` via `onLayoutReady` (keeps
+file IO off the load path): rewrite the generated V3 format README.
+
 
 ## Caching (all LRU, instance-scoped)
 
 | Cache | Where | Why safe |
 |-------|-------|----------|
-| note path → last visit stamp (10k) | VisitHistoryServiceV2 | Write-through on record; invalidated after migration; refreshed on plugin reload |
+| doc id → last visit stamp (10k, `LastVisitCache`) | shared by VisitHistoryServiceV3 (read) and VhV3DurationRecorder (write-through) | Write-through after each successful session append (max-merge, so a racing cache-miss read cannot clobber it); refreshed on plugin reload |
 
 Known limitation: visits synced in from another device are not seen until the
 stamp cache entry is evicted or the plugin reloads.
 
 ## Error philosophy
 
-- One bad VH file must never break aggregation: stamp parsing
-  (`StampLineParser`, `VhV2FocusStore`, `V1FocusFileParser`) skips unparseable
-  lines instead of throwing.
+- One bad VH file must never break aggregation: session parsing
+  (`VhV3SessionLineParser` via `StampLineParser`) skips unparseable lines
+  instead of throwing.
 - One throwing FocusListener must not block others: FocusTracker catches per
   listener and logs via `console.error`.
-- Startup tasks are error-isolated: a failed migration notifies the user and
-  never crashes plugin load; the V1 tree is only deleted after validation.
+- Startup tasks are error-isolated: a failed README write is logged and never
+  crashes plugin load.
+
+## Legacy data
+
+v2 focus stamps (under `.visit_history/v2/` or, after the legacy-layout
+move, `.visit_history/user/<user-name>/v2/`) and `_visit_history/` (V1) are
+formats from older plugin versions — no longer read or written, content left
+untouched (owner decision). `_visit_history/` files stay excluded from
+tracking via `IsTrackedProvider`.

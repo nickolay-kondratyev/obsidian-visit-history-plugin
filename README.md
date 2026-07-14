@@ -7,12 +7,12 @@ Fully offline and local: no network calls, no telemetry. Everything stays inside
 ## Features
 
 ### Visit history recording
-Every time a note, canvas, or Excalidraw drawing gains focus, a timestamp is appended to a per-document, per-device log under the hidden `.visit_history/` folder:
+Every focus session on a note, canvas, or Excalidraw drawing is logged to a per-user, per-document, per-device file under the hidden `.visit_history/` folder:
 
-- **Visits (V2)** — one ISO 8601 UTC timestamp per focus, at `.visit_history/v2/focus_per_device/<device>/<doc-id>.vh_v2`.
-- **Focus durations (V3)** — recorded alongside V2: one completed session per line (`<start stamp> D:<milliseconds>`). A session closes when you navigate away, the window loses focus, or you go idle (configurable idle timeout — see Settings). Popout windows are fully supported.
+- **Focus durations (V3)** — one completed session per line (`<ISO 8601 UTC start stamp> D:<milliseconds>`) at `.visit_history/user/<user-name>/v3/focus_duration_per_device/<device>/<doc-id>.vh_v3`. A session closes when you navigate away, the window loses focus, or you go idle (configurable idle timeout — see Settings). Popout windows are fully supported.
+- **Per-user folders** keep the histories of different people syncing one vault apart (the user name is your OS account name on desktop; a stable generated id on mobile). The heatmap still shows whole-vault activity across all users.
 - Logs are keyed by a **persistent doc id** (stored in the note's frontmatter / canvas metadata, assigned on first focus), so history survives file renames and moves.
-- Legacy `_visit_history/` (V1) data from older versions of this plugin is **auto-migrated** to V2 on load.
+- Legacy v2 and `_visit_history/` (V1) data from older versions of this plugin is no longer read or written — its content is left untouched (a pre-user-scoped `.visit_history/v2|v3` layout is moved under your user folder once, on load).
 
 Each `.visit_history` subfolder contains a generated README describing its format.
 
