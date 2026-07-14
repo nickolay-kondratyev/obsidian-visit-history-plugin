@@ -1,38 +1,7 @@
 import { TFile } from 'obsidian';
-import { LinkUtil } from '../core/util/linkUtil/LinkUtil';
-import { UserNotifier } from '../core/util/userComm/UserNotifier';
 import { DeviceNameProvider } from '../core/util/env/DeviceNameProvider';
 import { TrackedFile, VaultUtil } from '../core/util/vault/VaultUtil';
 import { DocIdService } from '../core/service/docId/DocIdService';
-import { makeTFile } from './fileFactory';
-
-export class FakeLinkUtil implements LinkUtil {
-  private readonly targetByLinkText = new Map<string, TFile>();
-
-  /** Registers a resolvable link target (returned file has path === linkText). */
-  seedLinkTarget(linkText: string): TFile {
-    const file = makeTFile({ path: linkText });
-    this.targetByLinkText.set(linkText, file);
-    return file;
-  }
-
-  resolveLinkTarget(linkText: string, _sourcePath: string): TFile | null {
-    return this.targetByLinkText.get(linkText) ?? null;
-  }
-}
-
-export class FakeUserNotifier implements UserNotifier {
-  readonly errors: string[] = [];
-  readonly infos: string[] = [];
-
-  showError(msg: string): void {
-    this.errors.push(msg);
-  }
-
-  showInfo(msg: string): void {
-    this.infos.push(msg);
-  }
-}
 
 /** VaultUtil fake serving a fixed file list as tracked files (never-visited). */
 export class FakeVaultUtil implements VaultUtil {
@@ -76,7 +45,7 @@ export class FakeDocIdService implements DocIdService {
     if (!this.isEligible(file)) return null;
     const existing = this.idByPath.get(file.path);
     if (existing !== undefined) return existing;
-    // Deterministic per path, filename-safe (V2 uses ids as filenames).
+    // Deterministic per path, filename-safe (VH uses ids as filenames).
     const generated = `docid-for-${file.path.replace(/[^A-Za-z0-9._-]/g, '_')}`;
     this.idByPath.set(file.path, generated);
     return generated;

@@ -4,8 +4,9 @@ export interface DeviceNameProvider {
 
 /**
  * Resolves a stable per-device name. Desktop → OS hostname; mobile → random
- * id persisted on first use. The name keys the `_visit_history/v1/focus/<device>/`
- * directory, so it MUST stay stable for a device across restarts and vaults.
+ * id persisted on first use. The name keys the per-device VH directories
+ * (`.visit_history/user/<user>/v3/focus_duration_per_device/<device>/`), so it MUST stay
+ * stable for a device across restarts and vaults.
  */
 export class DeviceNameProviderDefault implements DeviceNameProvider {
   private static readonly STORAGE_KEY = "obsidian-device-name";

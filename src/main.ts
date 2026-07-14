@@ -45,9 +45,8 @@ export default class VisitHistoryPlugin extends Plugin {
       this.userNotifier,
     ));
 
-    // Deferred: V2/V3 format README writes + V1→V2 auto migration.
-    // onLayoutReady — the vault index must be complete before migration
-    // resolves backlinks.
+    // Deferred: V3 format README write — onLayoutReady keeps file IO off
+    // the load path.
     this.app.workspace.onLayoutReady(() => {
       void factory.vhStartupTasks.run();
     });

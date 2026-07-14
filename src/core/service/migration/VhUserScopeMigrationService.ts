@@ -17,8 +17,12 @@ import { VhUserPaths } from '../visitHistoryService/user/VhUserPaths';
  * LEFT IN PLACE and an error is logged — this migration never merges and
  * never deletes.
  *
- * NOTE: legacy V1 lives under `_visit_history/` and has its own migration
- * (VhV1ToV2MigrationService), which now lands directly in the user-scoped V2.
+ * Both legacy version dirs are moved — v2 data is dormant (V3 is the only
+ * history read or written) but still gets organized under the user tree
+ * (owner decision); its content is never touched.
+ *
+ * NOTE: legacy V1 lives under `_visit_history/` and is NOT migrated — it
+ * stays on disk untouched (excluded from tracking via IsTrackedProvider).
  *
  * TODO(cleanup): such one-shot layout migrations should be cleaned up after
  * 2026-October — delete this class (and its wiring in main.ts) then.
