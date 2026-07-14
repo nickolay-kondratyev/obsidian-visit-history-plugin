@@ -61,6 +61,11 @@ export class VhV3DurationStore {
    * stamp — it matches the old V2 semantics of stamping at focus time.
    */
   async getLastFocusStartMsAcrossUsersAndDevices(docId: string): Promise<number | null> {
+    // Guard up front: an unsafe id has no file anywhere — skip the
+    // per-user/per-device dir listings entirely.
+    if (!DocIdFilenameSafety.isFilenameSafeId(docId)) {
+      return null;
+    }
     const userNames = await this.hiddenFileUtil.listSubfolderNames(VhUserPaths.USERS_DIR);
     const sessionsPerUser = await Promise.all(
       userNames.map(userName => this.readAllDeviceSessionsForUser(userName, docId)),
