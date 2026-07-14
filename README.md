@@ -14,7 +14,7 @@ Every focus session on a note, canvas, or Excalidraw drawing is logged to a per-
 - Logs are keyed by a **persistent doc id** (stored in the note's frontmatter / canvas metadata, assigned on first focus), so history survives file renames and moves.
 - Legacy v2 and `_visit_history/` (V1) data from older versions of this plugin is no longer read or written — its content is left untouched (a pre-user-scoped `.visit_history/v2|v3` layout is moved under your user folder once, on load).
 
-The `.visit_history/v3/` folder contains a generated README describing the format.
+The `.visit_history/user/<user-name>/v3/` folder contains a generated README describing the format.
 
 ### Vault heatmap
 A treemap of your whole vault where cell size = file size (weighted per file type) and color = file activity.

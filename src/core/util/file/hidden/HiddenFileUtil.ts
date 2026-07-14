@@ -7,7 +7,7 @@
  * Keeping it as a seam lets everything above stay Obsidian-agnostic and
  * unit-testable (FakeHiddenFileUtil).
  *
- * All paths are vault-relative (e.g. ".visit_history/v2/...").
+ * All paths are vault-relative (e.g. ".visit_history/user/<user>/v3/...").
  */
 export interface HiddenFileUtil {
   /** File content, or null when the file does not exist. */

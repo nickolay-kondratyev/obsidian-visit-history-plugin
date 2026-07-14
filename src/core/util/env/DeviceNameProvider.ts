@@ -5,7 +5,7 @@ export interface DeviceNameProvider {
 /**
  * Resolves a stable per-device name. Desktop → OS hostname; mobile → random
  * id persisted on first use. The name keys the per-device VH directories
- * (`.visit_history/v3/focus_duration_per_device/<device>/`), so it MUST stay
+ * (`.visit_history/user/<user>/v3/focus_duration_per_device/<device>/`), so it MUST stay
  * stable for a device across restarts and vaults.
  */
 export class DeviceNameProviderDefault implements DeviceNameProvider {
