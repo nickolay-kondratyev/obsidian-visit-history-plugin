@@ -24,6 +24,10 @@ describe('HeatmapConfigSanitizer', () => {
           canvas: { value: 0.5, min: 0.05, max: 2 },
           excalidraw: { value: 0.2, min: 0.05, max: 2 },
         },
+        filterTerms: [
+          { kind: 'path', text: 'projects' },
+          { kind: 'content', text: 'TODO' },
+        ],
       };
       // WHEN sanitizing
       const config = HeatmapConfigSanitizer.sanitize(persisted);
@@ -102,6 +106,83 @@ describe('HeatmapConfigSanitizer', () => {
       });
       // THEN the missing entry gets its default
       expect(config.scales['excalidraw']).toEqual(DEFAULT_HEATMAP_CONFIG.scales['excalidraw']);
+    });
+
+    it('should default filterTerms to an empty list when missing', () => {
+      // GIVEN a persisted config from a plugin version without filters
+      const config = HeatmapConfigSanitizer.sanitize({});
+      // THEN no filter terms exist
+      expect(config.filterTerms).toEqual([]);
+    });
+
+    it('should coerce a non-array filterTerms to an empty list', () => {
+      // GIVEN a hand-edited scalar where the term list should be
+      const config = HeatmapConfigSanitizer.sanitize({ filterTerms: 'projects' });
+      // THEN the corrupt value is discarded
+      expect(config.filterTerms).toEqual([]);
+    });
+
+    it('should keep valid terms of both kinds unchanged', () => {
+      // GIVEN one path and one content term
+      const terms = [
+        { kind: 'path', text: 'alpha' },
+        { kind: 'content', text: 'TODO' },
+      ];
+      // WHEN sanitizing
+      const config = HeatmapConfigSanitizer.sanitize({ filterTerms: terms });
+      // THEN both pass through as-is
+      expect(config.filterTerms).toEqual(terms);
+    });
+
+    it('should drop malformed term entries', () => {
+      // GIVEN terms with an unknown kind, non-string/empty/whitespace text,
+      // and non-object shapes
+      const config = HeatmapConfigSanitizer.sanitize({
+        filterTerms: [
+          { kind: 'regex', text: 'a.*' },
+          { kind: 'path', text: 42 },
+          { kind: 'path', text: '' },
+          { kind: 'content', text: '   ' },
+          'just-a-string',
+          null,
+          { kind: 'path', text: 'keep-me' },
+        ],
+      });
+      // THEN only the well-formed term survives
+      expect(config.filterTerms).toEqual([{ kind: 'path', text: 'keep-me' }]);
+    });
+
+    it('should trim term text', () => {
+      // GIVEN a term with surrounding whitespace
+      const config = HeatmapConfigSanitizer.sanitize({
+        filterTerms: [{ kind: 'path', text: '  alpha  ' }],
+      });
+      // THEN the stored text is trimmed
+      expect(config.filterTerms).toEqual([{ kind: 'path', text: 'alpha' }]);
+    });
+
+    it('should collapse case-insensitive same-kind duplicates to the first', () => {
+      // GIVEN the same path term in two casings
+      const config = HeatmapConfigSanitizer.sanitize({
+        filterTerms: [
+          { kind: 'path', text: 'Alpha' },
+          { kind: 'path', text: 'alpha' },
+        ],
+      });
+      // THEN only the first occurrence survives
+      expect(config.filterTerms).toEqual([{ kind: 'path', text: 'Alpha' }]);
+    });
+
+    it('should keep identical text on DIFFERENT kinds (dedupe is per kind)', () => {
+      // GIVEN a path term and a content term with the same text
+      const terms = [
+        { kind: 'path', text: 'alpha' },
+        { kind: 'content', text: 'alpha' },
+      ];
+      // WHEN sanitizing
+      const config = HeatmapConfigSanitizer.sanitize({ filterTerms: terms });
+      // THEN both survive
+      expect(config.filterTerms).toEqual(terms);
     });
 
     it('should drop unknown extra scale keys', () => {
