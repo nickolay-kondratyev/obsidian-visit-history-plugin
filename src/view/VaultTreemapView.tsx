@@ -134,6 +134,7 @@ export class VaultTreemapView extends ItemView {
         fileOpener={fileOpener}
         initialFolderPath={this.folderPath}
         configStore={this.pluginFactory.heatmapConfigStore}
+        contentTermMatcher={this.pluginFactory.contentTermMatcher}
       />,
     );
   }

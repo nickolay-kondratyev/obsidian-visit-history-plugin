@@ -6,6 +6,7 @@ import {
   type GradientKey,
   type HeatField,
 } from '../view/constants';
+import { FilterTermOps } from './FilterTermOps';
 
 // ── Heatmap config model ─────────────────────────────────────────────────────
 // The full state of the heatmap config panel. Persisted in the plugin's
@@ -22,6 +23,22 @@ export interface BoundedValue {
   max: number;
 }
 
+// ── Filter terms ─────────────────────────────────────────────────────────────
+
+export const FILTER_TERM_KINDS = ['path', 'content'] as const;
+export type FilterTermKind = (typeof FILTER_TERM_KINDS)[number];
+
+/**
+ * One include-filter term for the heatmap. Terms combine with OR semantics:
+ * a file is shown when it matches ANY term (include-only, no exclusions).
+ * - `path`: case-insensitive substring of the file's FULL vault path.
+ * - `content`: case-insensitive substring of the file's content.
+ */
+export interface FilterTerm {
+  kind: FilterTermKind;
+  text: string;
+}
+
 export interface HeatmapConfig {
   colorMode: ColorMode;
   gradKey: GradientKey;
@@ -32,6 +49,8 @@ export interface HeatmapConfig {
   coldDays: BoundedValue;
   /** Per-file-type cell area multipliers, keyed by TYPE_C keys (md/canvas/…). */
   scales: Record<string, BoundedValue>;
+  /** Include-filter terms (OR across all). Empty = no filtering. */
+  filterTerms: FilterTerm[];
 }
 
 /** Absolute floor for a scale slider's min bound — 0 would zero cell areas. */
@@ -51,6 +70,7 @@ export const DEFAULT_HEATMAP_CONFIG: HeatmapConfig = {
     canvas: { value: 0.3, min: 0.05, max: 2 },
     excalidraw: { value: 0.2, min: 0.05, max: 2 },
   },
+  filterTerms: [],
 };
 
 // ── Boundary validation ──────────────────────────────────────────────────────
@@ -72,6 +92,7 @@ export class HeatmapConfigSanitizer {
       hotDays: HeatmapConfigSanitizer.sanitizeBounded(r.hotDays, d.hotDays, DAYS_HARD_MIN),
       coldDays: HeatmapConfigSanitizer.sanitizeBounded(r.coldDays, d.coldDays, DAYS_HARD_MIN),
       scales: HeatmapConfigSanitizer.sanitizeScales(r.scales),
+      filterTerms: HeatmapConfigSanitizer.sanitizeFilterTerms(r.filterTerms),
     };
     // Cross-invariant: hot must stay strictly below cold or the gradient
     // interpolation range collapses. Reset both rather than guessing intent.
@@ -110,6 +131,24 @@ export class HeatmapConfigSanitizer {
       scales[type] = HeatmapConfigSanitizer.sanitizeBounded(r[type], fallback, SCALE_HARD_MIN);
     }
     return scales;
+  }
+
+  /**
+   * Keeps only shape-valid entries (known kind + string text) and folds them
+   * through {@link FilterTermOps.add} — the single owner of the normalization
+   * rule (trim, non-empty, per-kind ci-dedupe first-wins, key-separator ban).
+   * Everything malformed is dropped silently (per-field fallback style).
+   */
+  private static sanitizeFilterTerms(raw: unknown): FilterTerm[] {
+    if (!Array.isArray(raw)) return [];
+    let terms: FilterTerm[] = [];
+    for (const item of raw) {
+      const r = (item ?? {}) as Partial<Record<keyof FilterTerm, unknown>>;
+      const kind = FILTER_TERM_KINDS.find(k => k === r.kind);
+      if (kind === undefined || typeof r.text !== 'string') continue;
+      terms = FilterTermOps.add(terms, kind, r.text);
+    }
+    return terms;
   }
 
   private static isFinite(value: unknown): value is number {

@@ -12,6 +12,10 @@ export class FakeVaultUtil implements VaultUtil {
     return 'test-vault';
   }
 
+  getTrackedTFiles(): TFile[] {
+    return [...this.files];
+  }
+
   async getTrackedFiles(): Promise<TrackedFile[]> {
     return this.files.map(file => ({
       file,

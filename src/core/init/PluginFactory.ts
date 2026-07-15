@@ -24,6 +24,7 @@ import { DocIdFocusListener } from '../focusTracker/listener/DocIdFocusListener'
 import { DocIdBackfillService, DocIdBackfillServiceDefault } from '../service/docId/DocIdBackfillService';
 import { VhStartupTasks } from './VhStartupTasks';
 import { HeatmapConfigStore, PluginHeatmapConfigStore } from '../../viewModel/HeatmapConfigStore';
+import { ContentTermMatcher, ContentTermMatcherDefault } from '../../viewModel/ContentTermMatcher';
 
 // ── PluginFactory ─────────────────────────────────────────────────────────────
 // Constructs and wires all plugin dependencies.
@@ -40,6 +41,8 @@ export class PluginFactory {
   readonly focusDurationTracker: FocusDurationTracker;
   /** Persists the heatmap view's config panel state across restarts. */
   readonly heatmapConfigStore: HeatmapConfigStore;
+  /** Resolves the heatmap's CONTENT filter terms to matching file paths. */
+  readonly contentTermMatcher: ContentTermMatcher;
 
   /** userName: resolved once in main.ts (UserNameProvider) before wiring. */
   constructor(plugin: VisitHistoryPlugin, userName: string) {
@@ -89,6 +92,7 @@ export class PluginFactory {
     );
     this.vaultUtil = new VaultUtilDefault(app, lastVisitProvider, this.isTrackedProvider);
     this.docIdBackfillService = new DocIdBackfillServiceDefault(this.vaultUtil, this.docIdService);
+    this.contentTermMatcher = new ContentTermMatcherDefault(this.vaultUtil, noteFileUtil);
 
     this.vhStartupTasks = new VhStartupTasks(new VhV3ReadmeWriter(hiddenFileUtil, userName));
   }

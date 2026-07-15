@@ -1,20 +1,12 @@
 import {
-  FIELD_LABELS,
-  FIELD_SUBS,
+  FIELD_OPTIONS,
   GRADIENTS,
   GRADIENT_KEYS,
-  HEAT_FIELDS,
   type GradientKey,
 } from '../../constants';
 import { DAYS_HARD_MIN, type BoundedValue, type HeatmapConfig } from '../../../viewModel/heatmapConfig';
 import { RadioGroup } from './RadioGroup';
 import { RangeSlider } from './RangeSlider';
-
-const FIELD_OPTIONS = HEAT_FIELDS.map(f => ({
-  value: f,
-  label: FIELD_LABELS[f],
-  sub: FIELD_SUBS[f],
-}));
 
 interface HeatmapOptionsProps {
   config: HeatmapConfig;

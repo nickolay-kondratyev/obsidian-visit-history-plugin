@@ -1,0 +1,97 @@
+# IMPLEMENTATION — PRIVATE memory (heatmap-filter-ui)
+
+## State: COMPLETE
+All 6 plan phases implemented on branch `heatmap-filter-ui`.
+Commits: 87404e7 (P1), 47d6e17 (P2), 04541ec (P3), db4492e (P4+5), 9be8e9e (P6 docs),
+then a commit adding the PUBLIC/PRIVATE output files.
+Final gates: 333/333 tests (39 files), lint 0 errors (2 pre-existing main.ts
+prefer-active-doc warnings), build clean.
+
+## Environment gotchas (WILL bite a fresh clone)
+- `node`/`npm` on PATH are broken nvm shims → ALWAYS use `/usr/local/bin/npm`.
+  Documented in docs/tickets/dev-env-broken-nvm-node-shim.md. `_git.save` hangs
+  (tty prompt) — use plain git.
+- Shell profile spews noise into every Bash result; redirect real output to
+  `.tmp/*.log` and grep/tail the log.
+- `CLAUDE.md` is a SYMLINK to `AGENTS.md` — Edit tool refuses the symlink path;
+  edit `AGENTS.md` directly.
+- Twice the Write/Edit tool turned my typed `'\u0000'` escape into a LITERAL NUL
+  byte in the file (App.tsx const + PUBLIC report). Fixed with a python byte
+  replace. If touching `CONTENT_TERMS_KEY_SEP`, check with `od -c`.
+
+## Key implementation facts (for a future clone)
+- `filterVaultTree(root, {pathTerms, contentMatchedPaths})`:
+  identity (===) return when `pathTerms.length===0 && contentMatchedPaths===undefined`.
+  EMPTY set ≠ undefined (empty = active-but-no-hits/pending).
+- `FilterTermOps.add` returns SAME array reference on no-op — App uses ref
+  equality to skip a save. Dedupe is per (kind, lowercase(text)).
+- App effect deps: `[contentTermsKey, data, contentTermMatcher]`;
+  contentTermsKey = content term texts joined by NUL. Path-term-only changes do
+  NOT re-scan the vault (that's why the key exists, not the array).
+- Nav: `folderSegments: string[]` state; `trail` memo via findFolderTrail;
+  handleFolderClick/back rebase on RESOLVED trail (`trail.map(n=>n.name)`), not
+  raw prev — deliberate deviation, documented in PUBLIC #1.
+- TreemapViz leaves guard: `root.leaves().filter(d => !d.data.children)` —
+  d3 returns childless root as a leaf. Folder VaultNodes have `children: []`
+  after filtering; file leaves have `children === undefined`.
+- FolderNode now passes the HierarchyRectangularNode (was d.data);
+  TreemapViz.handleFolderNodeClick converts: ancestors().reverse().slice(1).
+- Header exports `type HeaderPanel = 'filter'|'field'|'info'|'config'`;
+  App owns `openPanel: HeaderPanel | null`; toggle = same→null else panel.
+- Popovers: always-rendered siblings of #header, `.hdr-pop` + `.open`;
+  `--left {left:14px}` (filter+field), `--right {right:0}` (info); config panel
+  (#config) untouched. Field trigger uses `.header-btn` (has text), icon
+  triggers use `.hdr-icon-btn` (+ `.active` when their panel open).
+- Chips: `.filter-chip--path` blue tint + `/` glyph; `--content` orange + `≡`;
+  glyph colors via --vt-md-fg / --vt-cn-fg; ✕ button `.filter-chip-x`.
+- ContentTermMatcher.ts has NO obsidian import (TFile type flows via inference
+  from VaultUtil.getTrackedTFiles) — keep it that way.
+- VaultUtil.test.ts stubs App as `{vault:{getName,getFiles}} as unknown as App`
+  (boundary cast, fine in tests only).
+- FakeNoteFileUtil gained `cachedReadCallCount`; FakeVaultUtil gained
+  `getTrackedTFiles()` returning a copy.
+- heatmapConfig.test "keeps valid config as-is" now includes filterTerms — any
+  future HeatmapConfig field must be added there too or it fails toEqual.
+
+## Remaining threads / not done (deliberate)
+- No React harness → panel exclusion, chip flows, latest-wins effect,
+  empty-state are manual-verify. Tickets filed:
+  heatmap-filter-exclusion-terms, heatmap-content-match-performance,
+  heatmap-popover-dismissal, react-component-test-harness.
+- Mount flash: persisted content-only terms show empty-state until first scan
+  resolves (accepted MINOR from plan review).
+- `.ai_out/.../TOP_LEVEL_AGENT.md` shows as modified in git status — NOT mine;
+  left uncommitted... (check `git status` — I only committed my own outputs).
+- Field popover unreachable in 'type' colorMode (trigger hidden) — matches old
+  ts-indicator behavior; openPanel can't get stuck (switching mode requires
+  config panel open, which closed any other panel).
+
+## If asked for follow-ups
+- Manual QA checklist lives in PUBLIC "For reviewers to scrutinize".
+- Light-theme chip legibility flagged for review (fixed-hex rgba tints).
+
+## ITERATION (post-review, commit af11371) — state
+Review APPROVED with 4 MINOR findings; all 4 FIXED (none rejected):
+1. FilterPopover: Enter guarded with `!e.nativeEvent.isComposing` (IME).
+2. DRY: sanitizeFilterTerms now shape-validates then folds through
+   FilterTermOps.add — normalization rule lives ONCE in FilterTermOps.
+   Cycle note: FilterTermOps imports heatmapConfig types via `import type`
+   (erased), heatmapConfig value-imports FilterTermOps — NO runtime cycle.
+   Do not turn that back into a value import.
+3. `FILTER_TERM_KEY_SEP` ('\u0000') now EXPORTED from FilterTermOps.ts;
+   add() rejects text containing it (no-op same-reference). App.tsx lost its
+   local CONTENT_TERMS_KEY_SEP const and imports the shared one. So the
+   "no NUL in terms" invariant is enforced at BOTH UI and data.json boundary.
+   Only the separator is banned — NOT all control chars (deliberate; a term
+   with e.g. a tab is legal and harmless).
+4. Field button: `.active` class when openPanel==='field'; styles.css hover
+   rule extended to `.header-btn:hover, .header-btn.active` (review wrongly
+   said the recipe already existed — it did not).
+Tests +2 (FilterTermOps separator rejection; sanitizer drop) — both build the
+test string FROM the imported constant, avoiding raw \u0000 escapes in
+sources. The Write/Edit tool AGAIN turned a typed \u0000 escape into a
+literal NUL byte (FilterTermOps.ts) — fixed via python byte replace; verify
+future NUL-adjacent edits with `grep -rlP '\x00' src/` (must find nothing).
+Gates: 335/335 tests (39 files), lint 0 errors (2 pre-existing main.ts
+warnings), build clean. Outputs: IMPLEMENTATION_ITERATION__PUBLIC.md written.
+Status: READY TO MERGE.
