@@ -17,24 +17,62 @@ bar to whatever state other plugins/themes gave it.
 VaultTreemapView (Obsidian ItemView — the only obsidian import in view/)
   ├─ VaultUtil.getTrackedFiles()      one vault walk; visit stamps included
   ├─ buildVaultTree(name, files)      TrackedFile[] → VaultNode tree
-  └─ React root ← <App data fileOpener initialFolderPath>
+  └─ React root ← <App data fileOpener configStore
+                        contentTermMatcher initialFolderPath>
                                           re-rendered on vault
                                           create/delete/rename (500 ms debounce)
 ```
 
 Folder targeting: the `file-menu` handler (`main.ts`) opens the view with
-`{ folderPath }` in its view state (persisted via `getState`). `App` resolves
-it to an ancestor trail with `viewModel/folderTrail.ts` and seeds the nav
-stack; the App is keyed by folder path so re-targeting remounts fresh.
+`{ folderPath }` in its view state (persisted via `getState`). It seeds
+`App`'s nav state; the App is keyed by folder path so re-targeting remounts
+fresh.
+
+Drill-down nav is PATH-based: `App` stores only `folderSegments` (vault-
+relative folder path) and derives the ancestor trail / current root from the
+canonical tree each render (`viewModel/folderTrail.ts`). WHY: TreemapViz
+renders pruned/filtered COPIES — storing clicked nodes would pin navigation
+to a stale copy (filter removals could never restore files; vault refreshes
+would keep showing old subtrees). Folder clicks append the clicked node's
+root-relative segments; "back" drops the last segment (one level at a time);
+an unresolvable path falls back to the vault root.
 
 Archive hiding: folders named `_archive` are hidden below the current view
 root — `viewModel/pruneArchiveFolders.ts` prunes them (and folders left
 empty by the prune) inside `TreemapViz` before layout. Scoping INTO an
 archive (its file-tree context menu → "Open heatmap for folder") shows its
 contents; backing out hides it again. While the view root is at or under an
-`_archive` (`isWithinArchive` on App's nav stack), pruning is skipped
+`_archive` (`isWithinArchive` on App's derived trail), pruning is skipped
 entirely — nested archives stay visible, so moving one archive under
 another never loses visibility into it.
+
+## Filtering
+
+Include-only filter with two term kinds, OR across ALL terms
+(`viewModel/heatmapConfig.ts`: `FilterTerm`):
+
+- **path** — case-insensitive substring of the file's FULL vault path
+  (folder names included).
+- **content** — case-insensitive substring of file content. Resolved at the
+  Obsidian boundary by `ContentTermMatcher`
+  (`viewModel/ContentTermMatcher.ts`, wired in `PluginFactory`, injected
+  into `App` as a prop): one pass over `VaultUtil.getTrackedTFiles()` with
+  `cachedRead` per content-term-set change (no index; a failed read logs and
+  counts as non-match). `App` runs a latest-wins effect (deps: content term
+  set AND `data`, so renames re-resolve; file EDITS are accepted-stale like
+  the rest of the tree) producing `contentMatchedPaths` — `undefined` means
+  content filtering is inactive, an EMPTY set means "terms exist, nothing
+  matched (or scan pending)".
+
+The tree filter itself is pure: `viewModel/filterVaultTree.ts` (mirrors
+`pruneArchiveFolders` — copy, drop non-matching leaves, prune emptied
+folders, identity fast-path when inactive), composed AFTER archive pruning
+in TreemapViz's `treeRoot` memo, so stats/legend automatically reflect the
+filtered view. A zero-match active filter shows a centered empty-state
+message. Terms persist in `HeatmapConfig.filterTerms` (data.json) — sticky
+across restarts and drill-down. `FilterTermOps` normalizes UI adds (trim,
+per-kind case-insensitive dedupe); `HeatmapConfigSanitizer` enforces the
+same rules at the data.json boundary.
 
 `VaultNode` is a dual-purpose tree node: folders have `children`; leaves have
 `path`, `type` (`md`/`canvas`/`excalidraw`), `size`, and the three timestamps.
@@ -43,19 +81,30 @@ another never loses visibility into it.
 
 ```
 App                     state owner: HeatmapConfig (color mode, gradient,
- │                      heat field, hot/cold thresholds, per-type scales —
- │                      all as value+bounds), folder drill-down
- │                      (currentRoot + navStack)
- ├─ Header              stats, breadcrumb + back, legend, config toggle
+ │                      heat field, hot/cold thresholds, per-type scales,
+ │                      filter terms), folder drill-down (folderSegments),
+ │                      openPanel ('filter'|'field'|'info'|'config'|null —
+ │                      at most ONE popover/panel open), contentMatchedPaths
+ ├─ Header              actions only: breadcrumb + back, FilterGroup
+ │   └─ FilterGroup     filter icon trigger + removable term chips
+ │                      (kind = glyph + tint + title, never color alone)
+ ├─ FilterPopover       kind SegmentedToggle + Enter-to-add input
+ ├─ FieldPopover        heat-field RadioGroup (SAME FIELD_OPTIONS as the
+ │                      config panel — extracted to view/constants.ts)
+ ├─ InfoPopover         title + stats + Legend (the collapsed header info)
  ├─ ConfigPanel         SegmentedToggle (color mode), HeatmapOptions
  │                      (field RadioGroup, gradient dropdown,
  │                      hot/cold RangeSliders), per-type scale RangeSliders
  └─ TreemapViz          d3 treemap layout (useMemo), @visx/zoom pan/zoom,
-     │                  hover + edge-flipping tooltip
-     ├─ FolderNode      click → drill into subtree
+     │                  hover + edge-flipping tooltip, filter empty-state
+     ├─ FolderNode      click → drill into subtree (root-relative segments)
      ├─ LeafNode        click → IFileOpener.openFile(path)
      └─ Tooltip
 ```
+
+Popovers are always-rendered siblings of `#header` (it clips overflow),
+shown via an `.open` class — the ConfigPanel pattern. No click-outside/Esc
+dismissal (consistent with ConfigPanel; wholesale follow-up ticket).
 
 - Props drilling by design (small app, no context).
 - Types are compile-time-safe unions: `ColorMode` (`type | heatmap`),

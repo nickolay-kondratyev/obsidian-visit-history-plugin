@@ -93,8 +93,11 @@ src/
 
   view/                     # React UI (Obsidian-agnostic except VaultTreemapView)
     VaultTreemapView.tsx    # Obsidian ItemView boundary — mounts React, handles vault events
-    components/             # App (config state owner), TreemapViz (SVG treemap + zoom),
-                            # Header, ConfigPanel/ (SegmentedToggle, RadioGroup,
+    components/             # App (config + nav + filter state owner), TreemapViz
+                            # (SVG treemap + zoom, filter empty-state),
+                            # Header (actions-only), header/ (FilterGroup chips,
+                            # FilterPopover, FieldPopover, InfoPopover),
+                            # ConfigPanel/ (SegmentedToggle, RadioGroup,
                             # RangeSlider w/ editable bounds), FolderNode, LeafNode,
                             # Tooltip, Legend
     constants.ts, utils.ts  # Palettes + ColorMode/HeatField/GradientKey unions; pure helpers
@@ -104,7 +107,14 @@ src/
     pruneArchiveFolders.ts  # Hides _archive folders below the heatmap view root
                             # (scope into an archive via its folder context menu)
     heatmapConfig.ts        # HeatmapConfig model (BoundedValue = value + editable slider
-                            # min/max) + HeatmapConfigSanitizer (data.json boundary)
+                            # min/max; FilterTerm path|content include-terms)
+                            # + HeatmapConfigSanitizer (data.json boundary)
+    filterVaultTree.ts      # Pure include-filter over the VaultNode tree
+                            # (OR across terms; mirrors pruneArchiveFolders)
+    FilterTermOps.ts        # FilterTerm add/remove/query (trim + per-kind ci-dedupe)
+    ContentTermMatcher.ts   # ContentTermMatcher interface + Default impl (content
+                            # substring search via VaultUtil.getTrackedTFiles +
+                            # cachedRead; wired in PluginFactory → App prop)
     HeatmapConfigStore.ts   # HeatmapConfigStore interface + PluginHeatmapConfigStore
                             # (debounced saveData; flush on unload)
     FileOpener.ts           # IFileOpener interface + ObsidianFileOpener impl
@@ -113,7 +123,9 @@ src/
 ### Key design decisions
 
 - **PluginFactory** is the DI container. `main.ts` calls it once. All dependencies are constructor-injected — no service locators, no global state.
-- **`_archive` folders are hidden in the heatmap** below the current view root: `pruneArchiveFolders` (applied in `TreemapViz` before layout) drops them plus folders they leave empty. Viewing an archive = scoping into it (folder context menu → "Open heatmap for folder"); backing out hides it again. When the view root is at/under an `_archive` (`isWithinArchive` on the nav stack), pruning is skipped — nested archives stay visible (an archive moved under another archive must not lose visibility — owner decision).
+- **`_archive` folders are hidden in the heatmap** below the current view root: `pruneArchiveFolders` (applied in `TreemapViz` before layout) drops them plus folders they leave empty. Viewing an archive = scoping into it (folder context menu → "Open heatmap for folder"); backing out hides it again. When the view root is at/under an `_archive` (`isWithinArchive` on the derived trail), pruning is skipped — nested archives stay visible (an archive moved under another archive must not lose visibility — owner decision).
+- **Heatmap filtering** is include-only OR over `HeatmapConfig.filterTerms` (`path` = ci-substring of the FULL vault path; `content` = ci-substring of file content). Pure `filterVaultTree` composes AFTER archive pruning in TreemapViz, so stats/legend reflect the filtered view. Content terms resolve at the Obsidian boundary via `ContentTermMatcher` (PluginFactory → App prop); `App`'s latest-wins effect depends on the content-term set AND `data` (renames re-resolve; file edits accepted-stale). `undefined` matched-set = content filtering inactive; EMPTY set = terms matched nothing/scan pending. Terms persist like all heatmap config (sticky across restarts + drill-down).
+- **Heatmap drill-down nav is PATH-based**: `App` stores only vault-relative `folderSegments`; trail/current root/breadcrumb derive from the canonical tree each render — clicked nodes are never stored (TreemapViz renders pruned/filtered COPIES; storing nodes would pin nav to stale copies). Header popovers (filter/field/info/config) share a single `openPanel` state — at most one open; no click-outside/Esc dismissal (consistent with ConfigPanel; ticketed).
 - **VaultTreemapView** is the **only file** in `view/` that imports from `obsidian`. All React components are Obsidian-agnostic and receive data/callbacks as props.
 - **Heatmap config is sticky**: `App` owns a single `HeatmapConfig` and writes every change through `HeatmapConfigStore` into `settings.heatmap` (data.json) — saves debounced (slider drags), flushed on unload, sanitized on load. Every slider is a `BoundedValue`: its min/max bounds are user-editable and persist too.
 - **VH V3 (focus durations)** is the only history read/written, under `.visit_history/user/<user>/v3/focus_duration_per_device/<device>/<doc-id>.vh_v3` — one completed session per line: `<ISO start stamp> D:<millis>`. The doc id IS the filename (survives renames; no backlink indirection). `.visit_history` is a dot-folder — invisible to the Vault API/metadata cache — so ALL access goes through `HiddenFileUtil` (DataAdapter). Ids that are not filename-safe (`DocIdFilenameSafety.isFilenameSafeId`) are skipped with `console.error`. `FocusDurationTracker` closes a session on navigation away, blur of the window HOSTING the doc, idle timeout (setting `idleTimeoutSeconds`, default 180 s, min 5 s, live-read — no reload needed; duration then ends at the LAST interaction — owner decision; also enforced retroactively so OS sleep is never counted; interaction after idle starts a NEW session), or unload flush (hard app quit can lose the last open session — accepted). Writes go through `VhV3DurationRecorder`'s single serialized chain.
