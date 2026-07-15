@@ -38,7 +38,7 @@ Approaches considered:
 - `contentMatchedPaths: ReadonlySet<string> | undefined` in `App`. `undefined` ⇔ NO content terms exist ⇔ content filtering inactive.
 - When content terms exist but the current search hasn't resolved: keep the PREVIOUS resolved set (stale-but-close); on first activation (incl. persisted terms at mount) use the EMPTY set — results appear when resolved (monotonic fill, no "everything flashes then vanishes").
 - Effect cleanup flag (or request counter) discards out-of-order resolutions — latest term set wins.
-- Staleness note: file EDITS don't re-trigger matching (matching re-runs on term change and on vault-refresh re-render). Same staleness class as the existing tree (sizes/mtimes also only refresh on create/delete/rename) — consistent, accepted.
+- Staleness note: the matching effect's deps are the content-term set AND `data` [PLAN_REVIEWER: made deps explicit — a re-render alone re-runs no effect; `data` must be a dep so vault refreshes (create/delete/RENAME rebuild `data`) re-run matching — otherwise a renamed matched file's stale OLD path would drop it from the filtered view until the next term change]. File EDITS don't re-trigger matching (no refresh event fires on modify) — same staleness class as the existing tree (sizes/mtimes also only refresh on create/delete/rename) — consistent, accepted.
 
 ### 2.2 Pure tree filter (mirrors `pruneArchiveFolders`)
 
@@ -68,7 +68,7 @@ Today `navStack`/`currentRoot` store **node objects from a pruned COPY** of the 
 **Fix — make nav state path-based and DERIVE nodes from canonical `data`:**
 - `App` state: `folderSegments: string[]` (vault-relative folder path segments) instead of `navStack: VaultNode[]`.
 - Derived per render (useMemo): `trail = findFolderTrail(data, folderSegments.join('/')) ?? []` (existing, tested helper); `currentRoot = trail.at(-1) ?? null`; `breadcrumb`/`showArchived` derive from `trail` (not from raw segments), so an unresolvable path (folder deleted) safely falls back to root with no ghost breadcrumb.
-- Drill-down click: `FolderNode` passes its `HierarchyRectangularNode` (it already holds `d`); `TreemapViz` maps it to segments via `d.ancestors().reverse().slice(1).map(a => a.data.name)` and calls `onFolderClick(segments)`. Folder names never contain `/` (they come from splitting paths on `/`), so segments are unambiguous.
+- Drill-down click: `FolderNode` passes its `HierarchyRectangularNode` (it already holds `d`); `TreemapViz` maps it to segments via `d.ancestors().reverse().slice(1).map(a => a.data.name)` and calls `onFolderClick(segments)`. **[PLAN_REVIEWER] CORRECTNESS FIX: the d3 hierarchy is built over `treeRoot = currentRoot ?? data`, so when drilled in, `d.ancestors()` stops at the CURRENT root — the segments are RELATIVE to the rendered root, not vault-relative. `App.handleFolderClick(relativeSegments)` must APPEND: `setFolderSegments(prev => [...prev, ...relativeSegments])` (at vault root `prev` is `[]`, so the two cases unify).** Folder names never contain `/` (they come from splitting paths on `/`), so segments are unambiguous.
 - `handleBack` pops the last segment. Initial seeding: `initialFolderPath.split('/')`.
 
 **TRANSPARENT behavior call-outs** (both improvements, aligned with the already-approved seeded-trail behavior):
@@ -145,7 +145,7 @@ Verification: unit tests green; `npm run build` clean.
 ### Phase 3 — canonical path-based drill-down
 Files: `src/view/components/App.tsx`, `TreemapViz.tsx`, `FolderNode.tsx`.
 1. Replace `navStack: VaultNode[]` with `folderSegments: string[]`; derive `trail`/`currentRoot`/`breadcrumb`/`showArchived` per §2.3.
-2. `FolderNode.onClick` passes `d`; `TreemapViz` converts to segments; `App.handleFolderClick(segments)` just sets state.
+2. `FolderNode.onClick` passes `d`; `TreemapViz` converts to root-relative segments; `App.handleFolderClick(relativeSegments)` APPENDS them to the current `folderSegments` [PLAN_REVIEWER: append, not replace — see §2.3 correctness fix].
 Verification: manual drill/back incl. deep-folder click (breadcrumb now full path), context-menu folder open, archive scoping; `findFolderTrail` tests already cover resolution — add a test there only if a gap appears (e.g. empty-string path → confirm current behavior and codify).
 
 ### Phase 4 — header rework: icons, info popover, field popover
