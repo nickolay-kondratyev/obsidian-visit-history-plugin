@@ -49,7 +49,9 @@ export function FilterPopover({ open, onAddTerm }: FilterPopoverProps) {
         value={text}
         onChange={e => setText(e.target.value)}
         onKeyDown={e => {
-          if (e.key === 'Enter') submit();
+          // isComposing: during IME (e.g. CJK) input, Enter confirms the
+          // composition — adding then would commit a half-typed term.
+          if (e.key === 'Enter' && !e.nativeEvent.isComposing) submit();
         }}
       />
       <div className="filter-pop-hint">{KIND_HINTS[kind]}</div>

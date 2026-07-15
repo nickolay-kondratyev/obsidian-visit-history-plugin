@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FilterTermOps } from './FilterTermOps';
+import { FILTER_TERM_KEY_SEP, FilterTermOps } from './FilterTermOps';
 import type { FilterTerm } from './heatmapConfig';
 
 describe('FilterTermOps', () => {
@@ -41,6 +41,15 @@ describe('FilterTermOps', () => {
       const next = FilterTermOps.add(terms, 'content', 'alpha');
       // THEN both kinds coexist
       expect(next).toHaveLength(2);
+    });
+
+    it('should return the SAME reference when text contains the reserved key separator', () => {
+      // GIVEN any list
+      const terms: FilterTerm[] = [];
+      // WHEN adding text containing the separator reserved for key encoding
+      const next = FilterTermOps.add(terms, 'content', `foo${FILTER_TERM_KEY_SEP}bar`);
+      // THEN the term is rejected — reference equality signals the no-op
+      expect(next).toBe(terms);
     });
 
     it('should not mutate the input list', () => {

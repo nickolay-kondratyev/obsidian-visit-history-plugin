@@ -59,7 +59,7 @@ export function Header({
       />
       {colorMode === 'heatmap' && (
         <button
-          className="header-btn"
+          className={'header-btn' + (openPanel === 'field' ? ' active' : '')}
           onClick={() => onPanelToggle('field')}
           title="Change timestamp field"
           aria-expanded={openPanel === 'field'}

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_HEATMAP_CONFIG, HeatmapConfigSanitizer } from './heatmapConfig';
+import { FILTER_TERM_KEY_SEP } from './FilterTermOps';
 
 describe('HeatmapConfigSanitizer', () => {
   describe('sanitize', () => {
@@ -150,6 +151,19 @@ describe('HeatmapConfigSanitizer', () => {
       });
       // THEN only the well-formed term survives
       expect(config.filterTerms).toEqual([{ kind: 'path', text: 'keep-me' }]);
+    });
+
+    it('should drop a term whose text contains the reserved key separator', () => {
+      // GIVEN a hand-edited data.json term containing the NUL separator that
+      // App.tsx uses to encode content-term lists into one effect key
+      const config = HeatmapConfigSanitizer.sanitize({
+        filterTerms: [
+          { kind: 'content', text: `foo${FILTER_TERM_KEY_SEP}bar` },
+          { kind: 'content', text: 'keep-me' },
+        ],
+      });
+      // THEN the unsplittable term is dropped
+      expect(config.filterTerms).toEqual([{ kind: 'content', text: 'keep-me' }]);
     });
 
     it('should trim term text', () => {

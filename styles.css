@@ -131,7 +131,8 @@ body.vault-heatmap-active .status-bar-mobile {
   flex-shrink: 0;
 }
 
-.vault-heatmap-view .header-btn:hover {
+.vault-heatmap-view .header-btn:hover,
+.vault-heatmap-view .header-btn.active {
   color: var(--vt-text);
   border-color: var(--vt-border2);
 }

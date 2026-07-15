@@ -6,6 +6,7 @@ import {
   type GradientKey,
   type HeatField,
 } from '../view/constants';
+import { FilterTermOps } from './FilterTermOps';
 
 // ── Heatmap config model ─────────────────────────────────────────────────────
 // The full state of the heatmap config panel. Persisted in the plugin's
@@ -133,24 +134,19 @@ export class HeatmapConfigSanitizer {
   }
 
   /**
-   * Keeps only well-formed terms: known kind + non-empty trimmed text.
-   * Case-insensitive (kind, text) duplicates collapse to the FIRST occurrence;
-   * everything malformed is dropped silently (per-field fallback style).
+   * Keeps only shape-valid entries (known kind + string text) and folds them
+   * through {@link FilterTermOps.add} — the single owner of the normalization
+   * rule (trim, non-empty, per-kind ci-dedupe first-wins, key-separator ban).
+   * Everything malformed is dropped silently (per-field fallback style).
    */
   private static sanitizeFilterTerms(raw: unknown): FilterTerm[] {
     if (!Array.isArray(raw)) return [];
-    const seen = new Set<string>();
-    const terms: FilterTerm[] = [];
+    let terms: FilterTerm[] = [];
     for (const item of raw) {
       const r = (item ?? {}) as Partial<Record<keyof FilterTerm, unknown>>;
       const kind = FILTER_TERM_KINDS.find(k => k === r.kind);
       if (kind === undefined || typeof r.text !== 'string') continue;
-      const text = r.text.trim();
-      if (text.length === 0) continue;
-      const dedupeKey = `${kind}:${text.toLowerCase()}`;
-      if (seen.has(dedupeKey)) continue;
-      seen.add(dedupeKey);
-      terms.push({ kind, text });
+      terms = FilterTermOps.add(terms, kind, r.text);
     }
     return terms;
   }

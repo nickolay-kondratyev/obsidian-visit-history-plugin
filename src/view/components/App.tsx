@@ -10,16 +10,10 @@ import type { IFileOpener } from '../../viewModel/FileOpener';
 import type { FilterTerm, FilterTermKind, HeatmapConfig } from '../../viewModel/heatmapConfig';
 import type { HeatmapConfigStore } from '../../viewModel/HeatmapConfigStore';
 import type { ContentTermMatcher } from '../../viewModel/ContentTermMatcher';
-import { FilterTermOps } from '../../viewModel/FilterTermOps';
+import { FILTER_TERM_KEY_SEP, FilterTermOps } from '../../viewModel/FilterTermOps';
 import type { HeatmapTreeFilter } from '../../viewModel/filterVaultTree';
 import { findFolderTrail } from '../../viewModel/folderTrail';
 import { isWithinArchive } from '../../viewModel/pruneArchiveFolders';
-
-/**
- * Joins the content-term list into one effect-dependency key. Terms are
- * trimmed non-empty strings, so NUL can never occur in them.
- */
-const CONTENT_TERMS_KEY_SEP = '\u0000';
 
 interface AppProps {
   data: VaultNode;
@@ -86,7 +80,7 @@ export function App({
   // Single string key so the (expensive) content-matching effect re-runs only
   // when the CONTENT term set changes — not when a path term is added.
   const contentTermsKey = useMemo(
-    () => FilterTermOps.textsOfKind(config.filterTerms, 'content').join(CONTENT_TERMS_KEY_SEP),
+    () => FilterTermOps.textsOfKind(config.filterTerms, 'content').join(FILTER_TERM_KEY_SEP),
     [config.filterTerms],
   );
 
@@ -108,7 +102,7 @@ export function App({
     // vault refresh) is discarded via the cleanup flag.
     let cancelled = false;
     contentTermMatcher
-      .findPathsMatchingAnyTerm(contentTermsKey.split(CONTENT_TERMS_KEY_SEP))
+      .findPathsMatchingAnyTerm(contentTermsKey.split(FILTER_TERM_KEY_SEP))
       .then(paths => {
         if (!cancelled) setContentMatchedPaths(paths);
       })
