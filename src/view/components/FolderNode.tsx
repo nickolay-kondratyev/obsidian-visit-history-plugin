@@ -4,8 +4,12 @@ import type { VaultNode } from '../../core/data/VaultNode';
 
 interface FolderNodeProps {
   d: HierarchyRectangularNode<VaultNode>;
-  /** Called when the user clicks the folder rect. Receives the VaultNode subtree. */
-  onClick?: (folder: VaultNode) => void;
+  /**
+   * Called when the user clicks the folder rect. Receives the HIERARCHY node
+   * (not just the VaultNode) so the caller can derive the folder's position
+   * relative to the rendered root via d.ancestors().
+   */
+  onClick?: (d: HierarchyRectangularNode<VaultNode>) => void;
 }
 
 /**
@@ -31,7 +35,7 @@ export function FolderNode({ d, onClick }: FolderNodeProps) {
       overflow="hidden"
       className={interactive ? 'folder-node--interactive' : undefined}
       style={interactive ? { cursor: 'pointer' } : undefined}
-      onClick={interactive ? () => onClick(d.data) : undefined}
+      onClick={interactive ? () => onClick(d) : undefined}
     >
       <rect
         width={w}

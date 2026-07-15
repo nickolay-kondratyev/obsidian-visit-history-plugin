@@ -35,8 +35,12 @@ interface TreemapVizProps {
   coldDays: number;
   scales: Record<string, number>;
   onStatsChange: (stats: { files: number; folders: number; size: string }) => void;
-  /** Called when the user clicks a folder to drill into its subtree. */
-  onFolderClick: (folder: VaultNode) => void;
+  /**
+   * Called when the user clicks a folder to drill into its subtree.
+   * Receives the folder's path segments RELATIVE to the rendered root
+   * (App appends them to its vault-relative nav path).
+   */
+  onFolderClick: (relativeSegments: string[]) => void;
   fileOpener: IFileOpener;
 }
 
@@ -230,6 +234,16 @@ export function TreemapViz({
     setTooltip(null);
   }, []);
 
+  const handleFolderNodeClick = useCallback(
+    (d: HierarchyRectangularNode<VaultNode>) => {
+      // ancestors() walks up to the hierarchy root — which is the RENDERED
+      // root — so slice(1) yields root-RELATIVE segments (folder names never
+      // contain '/', they come from splitting vault paths on '/').
+      onFolderClick(d.ancestors().reverse().slice(1).map(a => a.data.name));
+    },
+    [onFolderClick],
+  );
+
   // ── Render ────────────────────────────────────────────────────────────
 
   return (
@@ -258,7 +272,7 @@ export function TreemapViz({
           >
             <g transform={zoom.toString()}>
               {folders.map((d, i) => (
-                <FolderNode key={'f' + i} d={d} onClick={onFolderClick} />
+                <FolderNode key={'f' + i} d={d} onClick={handleFolderNodeClick} />
               ))}
               {leaves.map((d, i) => (
                 <LeafNode

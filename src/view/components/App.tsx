@@ -34,10 +34,14 @@ interface AppProps {
  * Stats bubble up from TreemapViz via onStatsChange.
  *
  * Folder drill-down:
- * - `currentRoot` is the subtree currently displayed (null = full vault).
- * - `navStack` is the history of ancestor nodes for "go back" navigation.
- * - Drilling into a folder pushes the previous root onto the stack.
- * - "Back" pops the stack — the popped item becomes the new currentRoot.
+ * - `folderSegments` (vault-relative folder path) is the ONLY nav state;
+ *   the ancestor trail / current root derive from it against the canonical
+ *   `data` tree each render. WHY path-based: TreemapViz renders pruned/filtered
+ *   COPIES of the tree — storing clicked nodes would pin nav to a stale copy
+ *   (files removed by a filter could never come back; vault refreshes would
+ *   keep showing the old subtree).
+ * - Drilling appends the clicked folder's root-relative segments; "back"
+ *   drops the last segment — walking up one level at a time.
  */
 export function App({ data, fileOpener, configStore, initialFolderPath }: AppProps) {
   const [config, setConfig] = useState<HeatmapConfig>(() => configStore.load());
@@ -58,48 +62,47 @@ export function App({ data, fileOpener, configStore, initialFolderPath }: AppPro
     [config.scales],
   );
 
-  // ── Folder drill-down state ──────────────────────────────────────────────
+  // ── Folder drill-down state (path-based — see component doc) ────────────
 
-  /**
-   * History of ancestor nodes for "go back". Each entry is a parent we can return to.
-   * Seeded with the full ancestor trail when opened on a folder (file-tree context
-   * menu), so "back" walks up parent-by-parent to the vault root.
-   */
-  const [navStack, setNavStack] = useState<VaultNode[]>(
-    () => (initialFolderPath ? findFolderTrail(data, initialFolderPath) : null) ?? [],
-  );
-  /** Currently drilled-into folder subtree, or null to show full vault. */
-  const [currentRoot, setCurrentRoot] = useState<VaultNode | null>(
-    // Lazy initializer runs during the first render — navStack already holds
-    // its seeded initial value, and its last entry IS the current root.
-    () => (navStack.length > 0 ? navStack[navStack.length - 1]! : null),
+  /** Vault-relative folder path segments of the view root ([] = full vault). */
+  const [folderSegments, setFolderSegments] = useState<string[]>(
+    () => (initialFolderPath ? initialFolderPath.split('/') : []),
   );
 
-  const handleFolderClick = useCallback((folder: VaultNode) => {
-    setNavStack(prev => [...prev, folder]);
-    setCurrentRoot(folder);
-  }, []);
+  // Ancestor trail derived against the canonical tree; an unresolvable path
+  // (folder deleted/renamed) falls back to the vault root — no ghost breadcrumb.
+  const trail = useMemo(
+    () =>
+      folderSegments.length > 0
+        ? (findFolderTrail(data, folderSegments.join('/')) ?? [])
+        : [],
+    [data, folderSegments],
+  );
+  const currentRoot: VaultNode | null =
+    trail.length > 0 ? trail[trail.length - 1]! : null;
+
+  const handleFolderClick = useCallback(
+    (relativeSegments: string[]) => {
+      // Clicked segments are RELATIVE to the RENDERED root (TreemapViz builds
+      // its hierarchy over currentRoot ?? data). Append to the RESOLVED trail
+      // rather than raw state so a stale unresolvable path cannot poison the
+      // next click (trail is [] then — the click resolves from vault root).
+      setFolderSegments([...trail.map(n => n.name), ...relativeSegments]);
+    },
+    [trail],
+  );
 
   const handleBack = useCallback(() => {
-    setNavStack(prev => {
-      if (prev.length === 0) return prev;
-      // The last item in the stack IS our currentRoot — we want its parent.
-      // Pop the last item; the new last (if any) becomes currentRoot.
-      const next = prev.slice(0, -1);
-      setCurrentRoot(next.length > 0 ? next[next.length - 1]! : null);
-      return next;
-    });
-  }, []);
+    setFolderSegments(trail.slice(0, -1).map(n => n.name));
+  }, [trail]);
 
-  // Derive breadcrumb path segments from the nav stack for the Header display.
-  const breadcrumb = useMemo(
-    () => navStack.map(n => n.name),
-    [navStack],
-  );
+  // Breadcrumb derives from the RESOLVED trail (not raw segments) so it
+  // always names what is actually rendered.
+  const breadcrumb = useMemo(() => trail.map(n => n.name), [trail]);
 
   // Within an archive ALL archived content is visible (nested archives
   // included) — TreemapViz skips its _archive pruning then.
-  const showArchived = useMemo(() => isWithinArchive(navStack), [navStack]);
+  const showArchived = useMemo(() => isWithinArchive(trail), [trail]);
 
   return (
     <>
@@ -110,7 +113,7 @@ export function App({ data, fileOpener, configStore, initialFolderPath }: AppPro
         stats={stats}
         onConfigToggle={() => setConfigOpen(o => !o)}
         breadcrumb={breadcrumb}
-        onBack={navStack.length > 0 ? handleBack : undefined}
+        onBack={breadcrumb.length > 0 ? handleBack : undefined}
       />
       <ConfigPanel
         open={configOpen}
