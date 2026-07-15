@@ -6,6 +6,7 @@ import type { VaultNode } from '../../core/data/VaultNode';
 import type { IFileOpener } from '../../viewModel/FileOpener';
 import type { HeatmapConfig } from '../../viewModel/heatmapConfig';
 import type { HeatmapConfigStore } from '../../viewModel/HeatmapConfigStore';
+import type { ContentTermMatcher } from '../../viewModel/ContentTermMatcher';
 import { findFolderTrail } from '../../viewModel/folderTrail';
 import { isWithinArchive } from '../../viewModel/pruneArchiveFolders';
 
@@ -14,6 +15,8 @@ interface AppProps {
   fileOpener: IFileOpener;
   /** Loads the initial config and persists every change (sticky settings). */
   configStore: HeatmapConfigStore;
+  /** Resolves CONTENT filter terms to matching file paths (async, Obsidian-backed). */
+  contentTermMatcher: ContentTermMatcher;
   /**
    * Vault folder path to start drilled into (e.g. from the file-tree context
    * menu). Read once on mount; the host remounts App (via React key) when it

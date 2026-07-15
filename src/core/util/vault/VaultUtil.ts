@@ -6,6 +6,13 @@ import { IsTrackedProvider } from "./IsTrackedProvider";
 export interface VaultUtil {
   getName(): string;
 
+  /**
+   * Tracked files WITHOUT time/visit metadata — cheap sync enumeration.
+   * Use when last-visit stamps (doc-id reads) are not needed, e.g. content
+   * matching (ContentTermMatcher).
+   */
+  getTrackedTFiles(): TFile[];
+
   getTrackedFiles(): Promise<TrackedFile[]>;
 }
 
@@ -30,11 +37,13 @@ export class VaultUtilDefault implements VaultUtil {
     return this.app.vault.getName();
   }
 
-  async getTrackedFiles(): Promise<TrackedFile[]> {
-    const rawFiles = this.app.vault.getFiles()
+  getTrackedTFiles(): TFile[] {
+    return this.app.vault.getFiles()
       .filter(f => this.isTrackedProvider.isTrackedFile(f));
+  }
 
-    const promises = rawFiles.map(f =>
+  async getTrackedFiles(): Promise<TrackedFile[]> {
+    const promises = this.getTrackedTFiles().map(f =>
       this.lastVisitProvider.getLastVisitStamp(f).then(visitedMs => ({
         file: f,
         timeMetadata: {
