@@ -64,6 +64,19 @@ describe('CanvasDocIdStore', () => {
       expect(await store.getId(file)).toBeNull();
       errorSpy.mockRestore();
     });
+
+    it('should return null for an empty canvas file without writing or logging', async () => {
+      // GIVEN an empty file (brand-new canvas) on the READ-ONLY path
+      const { store, noteFileUtil } = setup();
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      const file = noteFileUtil.seedNote('boards/new.canvas', '');
+      // WHEN
+      const id = await store.getId(file);
+      // THEN no id, file untouched, no error noise (empty is NOT malformed)
+      expect({ id, content: noteFileUtil.getContent('boards/new.canvas'), errorCalls: errorSpy.mock.calls.length })
+        .toEqual({ id: null, content: '', errorCalls: 0 });
+      errorSpy.mockRestore();
+    });
   });
 
   describe('ensureId', () => {
@@ -161,17 +174,41 @@ describe('CanvasDocIdStore', () => {
       consoleError.mockRestore();
     });
 
-    it('should return null for an empty canvas file without throwing or writing', async () => {
-      // GIVEN an empty file (e.g. canvas just being created)
+    it('should treat an empty canvas file as {} and write a generated id', async () => {
+      // GIVEN an empty file (a brand-new canvas as created by Obsidian)
       const { store, noteFileUtil } = setup();
       const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
       const file = noteFileUtil.seedNote('boards/new.canvas', '');
       // WHEN
       const id = await store.ensureId(file);
-      // THEN
-      expect({ id, content: noteFileUtil.getContent('boards/new.canvas') })
-        .toEqual({ id: null, content: '' });
+      // THEN id returned, JSON written, and no "malformed canvas" error noise
+      expect({ id, canvas: parseContent(noteFileUtil, 'boards/new.canvas'), errorCalls: consoleError.mock.calls.length })
+        .toEqual({ id: GENERATED_ID, canvas: { metadata: { frontmatter: { id: GENERATED_ID } } }, errorCalls: 0 });
       consoleError.mockRestore();
+    });
+
+    it('should treat whitespace-only canvas content as {} and write a generated id', async () => {
+      // GIVEN whitespace-only content
+      const { store, noteFileUtil } = setup();
+      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      const file = noteFileUtil.seedNote('boards/new.canvas', '  \n\t');
+      // WHEN
+      const id = await store.ensureId(file);
+      // THEN same as the empty-string case
+      expect({ id, canvas: parseContent(noteFileUtil, 'boards/new.canvas'), errorCalls: consoleError.mock.calls.length })
+        .toEqual({ id: GENERATED_ID, canvas: { metadata: { frontmatter: { id: GENERATED_ID } } }, errorCalls: 0 });
+      consoleError.mockRestore();
+    });
+
+    it('should write a generated id into an empty-object canvas', async () => {
+      // GIVEN a canvas whose content is an empty JSON object
+      const { store, noteFileUtil } = setup();
+      const file = noteFileUtil.seedNote('boards/new.canvas', '{}');
+      // WHEN
+      await store.ensureId(file);
+      // THEN
+      expect(parseContent(noteFileUtil, 'boards/new.canvas'))
+        .toEqual({ metadata: { frontmatter: { id: GENERATED_ID } } });
     });
 
     it('should return null when the canvas root is not an object', async () => {

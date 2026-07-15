@@ -10,6 +10,8 @@ const CANVAS_JSON_INDENT = '\t';
 /**
  * Doc id store for .canvas files: the id lives in the canvas JSON under
  * metadata.frontmatter.id. Missing metadata/frontmatter objects are created.
+ * Empty/whitespace-only content is treated as an empty canvas ({}) — a
+ * brand-new canvas is a 0-byte file and gets an id on first focus.
  * Malformed canvas JSON never throws — returns null (one bad file must not
  * break focus handling).
  */
@@ -57,6 +59,12 @@ export class CanvasDocIdStore implements DocIdStore {
   // ── private ─────────────────────────────────────────────────────────────────
 
   private parseCanvas(content: string, path: string): Record<string, unknown> | null {
+    // A brand-new canvas is created by Obsidian as an EMPTY file — treat
+    // empty/whitespace-only content as an empty canvas object so it can
+    // receive a doc id on first focus (not as malformed JSON).
+    if (content.trim() === '') {
+      return {};
+    }
     try {
       const parsed: unknown = JSON.parse(content);
       if (this.isRecord(parsed)) {
