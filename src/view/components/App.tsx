@@ -1,14 +1,25 @@
-import { useState, useCallback, useMemo } from 'react';
-import { Header } from './Header';
+import { useState, useCallback, useEffect, useMemo } from 'react';
+import { Header, type HeaderPanel } from './Header';
 import { ConfigPanel } from './ConfigPanel';
 import { TreemapViz } from './TreemapViz';
+import { FilterPopover } from './header/FilterPopover';
+import { FieldPopover } from './header/FieldPopover';
+import { InfoPopover } from './header/InfoPopover';
 import type { VaultNode } from '../../core/data/VaultNode';
 import type { IFileOpener } from '../../viewModel/FileOpener';
-import type { HeatmapConfig } from '../../viewModel/heatmapConfig';
+import type { FilterTerm, FilterTermKind, HeatmapConfig } from '../../viewModel/heatmapConfig';
 import type { HeatmapConfigStore } from '../../viewModel/HeatmapConfigStore';
 import type { ContentTermMatcher } from '../../viewModel/ContentTermMatcher';
+import { FilterTermOps } from '../../viewModel/FilterTermOps';
+import type { HeatmapTreeFilter } from '../../viewModel/filterVaultTree';
 import { findFolderTrail } from '../../viewModel/folderTrail';
 import { isWithinArchive } from '../../viewModel/pruneArchiveFolders';
+
+/**
+ * Joins the content-term list into one effect-dependency key. Terms are
+ * trimmed non-empty strings, so NUL can never occur in them.
+ */
+const CONTENT_TERMS_KEY_SEP = '\u0000';
 
 interface AppProps {
   data: VaultNode;
@@ -43,9 +54,16 @@ interface AppProps {
  * - Drilling appends the clicked folder's root-relative segments; "back"
  *   drops the last segment — walking up one level at a time.
  */
-export function App({ data, fileOpener, configStore, initialFolderPath }: AppProps) {
+export function App({
+  data,
+  fileOpener,
+  configStore,
+  contentTermMatcher,
+  initialFolderPath,
+}: AppProps) {
   const [config, setConfig] = useState<HeatmapConfig>(() => configStore.load());
-  const [configOpen, setConfigOpen] = useState(false);
+  /** The single open header panel — at most one popover/panel at a time. */
+  const [openPanel, setOpenPanel] = useState<HeaderPanel | null>(null);
   const [stats, setStats] = useState({ files: 0, folders: 0, size: '—' });
 
   /** Applies a config change AND writes it through to the persistent store. */
@@ -53,6 +71,69 @@ export function App({ data, fileOpener, configStore, initialFolderPath }: AppPro
     const next = { ...config, ...partial };
     setConfig(next);
     configStore.save(next);
+  }
+
+  const handlePanelToggle = useCallback((panel: HeaderPanel) => {
+    setOpenPanel(prev => (prev === panel ? null : panel));
+  }, []);
+
+  // ── Filter terms → tree filter ───────────────────────────────────────────
+
+  const pathTerms = useMemo(
+    () => FilterTermOps.textsOfKind(config.filterTerms, 'path'),
+    [config.filterTerms],
+  );
+  // Single string key so the (expensive) content-matching effect re-runs only
+  // when the CONTENT term set changes — not when a path term is added.
+  const contentTermsKey = useMemo(
+    () => FilterTermOps.textsOfKind(config.filterTerms, 'content').join(CONTENT_TERMS_KEY_SEP),
+    [config.filterTerms],
+  );
+
+  /** undefined ⇔ no content terms exist ⇔ content filtering inactive. */
+  const [contentMatchedPaths, setContentMatchedPaths] = useState<
+    ReadonlySet<string> | undefined
+  >(undefined);
+
+  useEffect(() => {
+    if (contentTermsKey === '') {
+      setContentMatchedPaths(undefined);
+      return;
+    }
+    // First activation (incl. persisted terms at mount): EMPTY set until the
+    // scan resolves — results fill in monotonically, no flash-then-vanish.
+    // Later term changes keep the PREVIOUS set meanwhile (stale-but-close).
+    setContentMatchedPaths(prev => prev ?? new Set());
+    // Latest-wins: a stale resolution arriving after a newer term change (or
+    // vault refresh) is discarded via the cleanup flag.
+    let cancelled = false;
+    contentTermMatcher
+      .findPathsMatchingAnyTerm(contentTermsKey.split(CONTENT_TERMS_KEY_SEP))
+      .then(paths => {
+        if (!cancelled) setContentMatchedPaths(paths);
+      })
+      .catch(error => console.error('heatmap content filter: matching failed', error));
+    return () => {
+      cancelled = true;
+    };
+    // `data` IS a dep: vault refreshes (create/delete/RENAME) rebuild it, and
+    // a renamed matched file's stale OLD path must not linger in the set.
+    // File EDITS don't rebuild `data` — same accepted staleness as the tree.
+  }, [contentTermsKey, data, contentTermMatcher]);
+
+  const treeFilter = useMemo<HeatmapTreeFilter>(
+    () => ({ pathTerms, contentMatchedPaths }),
+    [pathTerms, contentMatchedPaths],
+  );
+
+  function addFilterTerm(kind: FilterTermKind, text: string): void {
+    const next = FilterTermOps.add(config.filterTerms, kind, text);
+    // Same reference = no-op add (blank or duplicate) — skip the save.
+    if (next !== config.filterTerms) updateConfig({ filterTerms: next });
+  }
+
+  function removeFilterTerm(term: FilterTerm): void {
+    updateConfig({ filterTerms: FilterTermOps.remove(config.filterTerms, term) });
   }
 
   // TreemapViz consumes plain per-type factors — strip the slider bounds.
@@ -108,15 +189,33 @@ export function App({ data, fileOpener, configStore, initialFolderPath }: AppPro
     <>
       <Header
         colorMode={config.colorMode}
-        gradKey={config.gradKey}
         field={config.field}
-        stats={stats}
-        onConfigToggle={() => setConfigOpen(o => !o)}
+        filterTerms={config.filterTerms}
+        openPanel={openPanel}
+        onPanelToggle={handlePanelToggle}
+        onRemoveTerm={removeFilterTerm}
         breadcrumb={breadcrumb}
         onBack={breadcrumb.length > 0 ? handleBack : undefined}
       />
+      {/* Popovers are SIBLINGS of the header (it clips overflow); at most one
+          is open (openPanel), so the shared left/right anchors never collide. */}
+      <FilterPopover
+        open={openPanel === 'filter'}
+        onAddTerm={addFilterTerm}
+      />
+      <FieldPopover
+        open={openPanel === 'field'}
+        field={config.field}
+        onFieldChange={field => updateConfig({ field })}
+      />
+      <InfoPopover
+        open={openPanel === 'info'}
+        stats={stats}
+        colorMode={config.colorMode}
+        gradKey={config.gradKey}
+      />
       <ConfigPanel
-        open={configOpen}
+        open={openPanel === 'config'}
         config={config}
         onConfigChange={updateConfig}
       />
@@ -124,6 +223,7 @@ export function App({ data, fileOpener, configStore, initialFolderPath }: AppPro
         data={data}
         currentRoot={currentRoot}
         showArchived={showArchived}
+        filter={treeFilter}
         colorMode={config.colorMode}
         gradKey={config.gradKey}
         field={config.field}

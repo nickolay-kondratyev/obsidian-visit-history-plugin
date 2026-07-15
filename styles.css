@@ -70,38 +70,16 @@ body.vault-heatmap-active .status-bar-mobile {
   overflow: hidden;
 }
 
-.vault-heatmap-view #title {
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
+/* Stats rows — now shown inside the ⓘ info popover. */
 .vault-heatmap-view .stats {
   display: flex;
   gap: 16px;
   font-size: 10px;
   color: var(--vt-text-dim);
-  border-left: 1px solid var(--vt-border);
-  padding-left: 14px;
   flex-shrink: 0;
 }
 
 .vault-heatmap-view .stat strong {
-  color: var(--vt-text);
-}
-
-.vault-heatmap-view .ts-indicator {
-  font-size: 10px;
-  color: var(--vt-text-dim);
-  border-left: 1px solid var(--vt-border);
-  padding-left: 14px;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.vault-heatmap-view .ts-indicator strong {
   color: var(--vt-text);
 }
 
@@ -158,6 +136,31 @@ body.vault-heatmap-active .status-bar-mobile {
   border-color: var(--vt-border2);
 }
 
+.vault-heatmap-view .header-btn strong {
+  color: var(--vt-text);
+}
+
+/* Square icon variant of .header-btn (filter / info / config triggers). */
+.vault-heatmap-view .hdr-icon-btn {
+  font-family: inherit;
+  font-size: 11px;
+  line-height: 1;
+  background: none;
+  border: 1px solid var(--vt-border);
+  color: var(--vt-text-dim);
+  padding: 4px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+}
+
+.vault-heatmap-view .hdr-icon-btn:hover,
+.vault-heatmap-view .hdr-icon-btn.active {
+  color: var(--vt-text);
+  border-color: var(--vt-border2);
+}
+
 /* ── Breadcrumb navigation ─────────────────────────────── */
 .vault-heatmap-view .breadcrumb {
   display: flex;
@@ -191,6 +194,154 @@ body.vault-heatmap-active .status-bar-mobile {
   color: var(--vt-text-dim);
   letter-spacing: 0.04em;
   white-space: nowrap;
+}
+
+/* ── Filter group (icon trigger + term chips) ───────────── */
+.vault-heatmap-view .filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-left: 1px solid var(--vt-border);
+  padding-left: 14px;
+  /* The ONE header child allowed to shrink — chips scroll, header stays 42px. */
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+/* The left-most header child needs no left separator. */
+.vault-heatmap-view #header > .breadcrumb:first-child,
+.vault-heatmap-view #header > .filter-group:first-child {
+  border-left: none;
+  padding-left: 0;
+}
+
+.vault-heatmap-view .filter-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none; /* chips scroll on wheel/drag; a bar would break the 42px row */
+}
+
+.vault-heatmap-view .filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  padding: 2px 3px 2px 8px;
+  border: 1px solid;
+  border-radius: 10px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Kind tints echo the type palette: path → md blue, content → canvas orange.
+   Kind is ALSO signaled by the prefix glyph and title — never color alone. */
+.vault-heatmap-view .filter-chip--path {
+  border-color: rgba(96, 112, 232, 0.5);
+  background: rgba(74, 94, 212, 0.14);
+}
+
+.vault-heatmap-view .filter-chip--path .filter-chip-kind {
+  color: var(--vt-md-fg);
+}
+
+.vault-heatmap-view .filter-chip--content {
+  border-color: rgba(212, 136, 50, 0.5);
+  background: rgba(190, 114, 32, 0.14);
+}
+
+.vault-heatmap-view .filter-chip--content .filter-chip-kind {
+  color: var(--vt-cn-fg);
+}
+
+.vault-heatmap-view .filter-chip-kind {
+  font-weight: 600;
+}
+
+.vault-heatmap-view .filter-chip-text {
+  color: var(--vt-text);
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vault-heatmap-view .filter-chip-x {
+  font-family: inherit;
+  font-size: 10px;
+  line-height: 1;
+  background: none;
+  border: none;
+  color: var(--vt-text-dim);
+  padding: 3px 5px;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.vault-heatmap-view .filter-chip-x:hover {
+  color: var(--vt-text);
+}
+
+/* ── Header popovers (filter / field / info) ─────────────── */
+/* Same recipe as #config; anchored left (triggers in the left cluster) or
+   right (info). Only one popover is ever open (App's single openPanel). */
+.vault-heatmap-view .hdr-pop {
+  position: absolute;
+  top: 42px;
+  width: 236px;
+  background: var(--vt-surface);
+  border: 1px solid var(--vt-border);
+  border-top: none;
+  padding: 14px;
+  z-index: 99;
+  overflow-y: auto;
+  max-height: calc(100% - 42px);
+  display: none;
+}
+
+.vault-heatmap-view .hdr-pop.open {
+  display: block;
+}
+
+.vault-heatmap-view .hdr-pop--left {
+  left: 14px;
+}
+
+.vault-heatmap-view .hdr-pop--right {
+  right: 0;
+}
+
+.vault-heatmap-view .filter-pop-input {
+  width: 100%;
+  background: var(--vt-bg);
+  border: 1px solid var(--vt-border);
+  color: var(--vt-text);
+  font-family: inherit;
+  font-size: 10px;
+  padding: 5px 6px;
+  margin-bottom: 8px;
+}
+
+.vault-heatmap-view .filter-pop-input:focus {
+  outline: none;
+  border-color: var(--vt-border2);
+}
+
+.vault-heatmap-view .filter-pop-hint {
+  font-size: 9px;
+  color: var(--vt-text-dim);
+}
+
+/* Info popover: stats stack vertically; legend wraps in the narrow panel. */
+.vault-heatmap-view .hdr-pop .stats {
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.vault-heatmap-view .hdr-pop .legend {
+  flex-wrap: wrap;
 }
 
 /* ── Config panel ───────────────────────────────────────── */
@@ -468,6 +619,19 @@ body.vault-heatmap-active .status-bar-mobile {
 
 .vault-heatmap-view #viz svg.drag {
   cursor: grabbing;
+}
+
+/* Centered empty state when an active filter matches nothing. */
+.vault-heatmap-view .viz-empty-msg {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 11px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--vt-text-dim);
+  pointer-events: none;
 }
 
 .vault-heatmap-view #hint {

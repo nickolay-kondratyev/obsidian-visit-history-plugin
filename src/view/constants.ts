@@ -97,3 +97,20 @@ export const FIELD_SUBS: Record<HeatField, string> = {
   createdAt: 'file created time',
   lastVisitedAt: 'your visit history',
 };
+
+export interface HeatFieldOption {
+  value: HeatField;
+  label: string;
+  sub: string;
+}
+
+/**
+ * Field-selection radio options — shared by the config panel (HeatmapOptions)
+ * and the header's field popover (FieldPopover) so both always offer the
+ * SAME choices.
+ */
+export const FIELD_OPTIONS: readonly HeatFieldOption[] = HEAT_FIELDS.map(f => ({
+  value: f,
+  label: FIELD_LABELS[f],
+  sub: FIELD_SUBS[f],
+}));

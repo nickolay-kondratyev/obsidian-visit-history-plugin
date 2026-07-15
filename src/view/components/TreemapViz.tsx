@@ -12,6 +12,7 @@ import type { ColorMode, GradientKey, HeatField } from '../constants';
 import type { VaultNode } from '../../core/data/VaultNode';
 import type { IFileOpener } from '../../viewModel/FileOpener';
 import { pruneArchiveFolders } from '../../viewModel/pruneArchiveFolders';
+import { filterVaultTree, isFilterActive, type HeatmapTreeFilter } from '../../viewModel/filterVaultTree';
 
 // ── Props ───────────────────────────────────────────────────────────────────
 
@@ -28,6 +29,8 @@ interface TreemapVizProps {
    * pruning is skipped then (within an archive ALL archived content shows).
    */
   showArchived: boolean;
+  /** Include-filter applied to the rendered subtree (OR across terms). */
+  filter: HeatmapTreeFilter;
   colorMode: ColorMode;
   gradKey: GradientKey;
   field: HeatField;
@@ -72,6 +75,7 @@ export function TreemapViz({
   data,
   currentRoot,
   showArchived,
+  filter,
   colorMode,
   gradKey,
   field,
@@ -135,8 +139,10 @@ export function TreemapViz({
   // and within one, nothing is pruned (showArchived).
   const treeRoot = useMemo(() => {
     const root = currentRoot ?? data;
-    return showArchived ? root : pruneArchiveFolders(root);
-  }, [data, currentRoot, showArchived]);
+    // Filter composes AFTER archive pruning — both are pure tree copies; the
+    // stats/legend automatically reflect the result (they derive from layout).
+    return filterVaultTree(showArchived ? root : pruneArchiveFolders(root), filter);
+  }, [data, currentRoot, showArchived, filter]);
 
   const { folders, leaves } = useMemo(() => {
     const { w, h } = dims;
@@ -158,7 +164,9 @@ export function TreemapViz({
       folders: root.descendants().filter(
         d => d.depth > 0 && d.children,
       ) as HierarchyRectangularNode<VaultNode>[],
-      leaves: root.leaves() as HierarchyRectangularNode<VaultNode>[],
+      // d3's leaves() returns a childless ROOT as its own leaf — a filter can
+      // empty the tree, and that folder node must not render as a file cell.
+      leaves: root.leaves().filter(d => !d.data.children) as HierarchyRectangularNode<VaultNode>[],
     };
   }, [treeRoot, scales, dims]);
 
@@ -300,6 +308,9 @@ export function TreemapViz({
       </Zoom>
       {tooltip && (
         <Tooltip x={tooltip.x} y={tooltip.y} node={tooltip.node} scales={scales} />
+      )}
+      {isFilterActive(filter) && leaves.length === 0 && (
+        <div className="viz-empty-msg">No files match the current filters</div>
       )}
       <div id="hint">
         scroll · zoom &nbsp;|&nbsp; drag · pan &nbsp;|&nbsp; dbl-click · reset
