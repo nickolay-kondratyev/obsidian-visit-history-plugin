@@ -10,10 +10,22 @@ Feature: heatmap filter UI | Branch: `heatmap-filter-ui` | Dir: `.ai_out/heatmap
 | DETAILED_PLANNING | DONE | DETAILED_PLANNING__PUBLIC.md |
 | DETAILED_PLAN_REVIEW | DONE — APPROVED w/ inline adjustments (2 MAJOR fixed inline, 3 MINOR informational) | DETAILED_PLAN_REVIEW__PUBLIC.md |
 | PLAN_ITERATION | SKIPPED (reviewer signaled skip-eligible) | — |
-| IMPLEMENTATION | IN_PROGRESS (bg agent) | 1_IMPLEMENTATION_FROM_PLAN__PUBLIC.md |
-| IMPLEMENTATION_REVIEW | pending | IMPLEMENTATION_REVIEW__PUBLIC.md |
-| IMPLEMENTATION_ITERATION | pending | IMPLEMENTATION_ITERATION__PUBLIC.md |
-| PARETO_COMPLEXITY_ANALYSIS | pending | — |
+| IMPLEMENTATION | DONE (333/333 tests, lint 0, build clean) | 1_IMPLEMENTATION_FROM_PLAN__PUBLIC.md |
+| IMPLEMENTATION_REVIEW | DONE — APPROVED (0 BLOCKER/MAJOR, 4 MINOR; independent verify) | IMPLEMENTATION_REVIEW__PUBLIC.md |
+| IMPLEMENTATION_ITERATION | DONE — 4/4 MINOR fixed; 335/335 tests; READY | IMPLEMENTATION_ITERATION__PUBLIC.md |
+| PARETO_COMPLEXITY_ANALYSIS | DONE — JUSTIFIED (all hotspots) | PARETO_COMPLEXITY_ANALYSIS__PUBLIC.md |
+
+## CHANGE LOG (single entry for entire flow)
+**2026-07-15 — Heatmap filter UI + header rework** (branch `heatmap-filter-ui`)
+Added include-only OR filtering to the vault heatmap: persistent `filterTerms` (path = ci-substring
+of full vault path; content = ci-substring of file content via new Obsidian-boundary
+`ContentTermMatcher` seam), pure `filterVaultTree` composed after archive pruning (stats/legend
+reflect filtered view). Header reworked to be action-focused: filter icon + kind-distinguished
+removable chips (icon left-most), ⓘ info popover (title/stats/legend), clickable field selector
+(created/modified/visited, DRY with config panel), ⚙ config icon; single `openPanel` state.
+Drill-down nav refactored to path-segment state (fixes filter-removal irrecoverability + two latent
+nav bugs). Tests 298 → 335; lint 0; build clean. Follow-up tickets: popover dismissal,
+content-match perf, exclusion terms, React test harness, `_git.save` non-interactive hang.
 
 ## Key scope (from CLARIFICATION)
 - Filter group in header: 🔍 icon left-most + removable chips; popover input; TWO term kinds (path / content), visually distinct; OR; include-only; persisted in HeatmapConfig + across drill-down.
