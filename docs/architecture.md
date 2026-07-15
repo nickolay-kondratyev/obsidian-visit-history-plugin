@@ -142,6 +142,8 @@ Rules:
   the file is then NOT modified (no mtime churn, no sync noise).
 - An id slot occupied by an unusable value (e.g. a nested mapping) is never
   overwritten; ensure returns null.
+- Empty/whitespace-only canvas content (a brand-new canvas) is treated as an
+  empty canvas `{}` — an id is written on first focus (and by backfill).
 - Writes are atomic `Vault.process` transforms for both md and canvas (id
   re-checked inside the transform).
 - md writes are targeted raw-text edits that only add/fill the single id
