@@ -67,6 +67,11 @@ Notes:
   callback anyway, and `writeId` mutates whatever object THAT parse returned before
   stringifying — no shared-state concern.
 - No new constants needed (no magic values introduced).
+- BOM edge case (covered for free): `String.prototype.trim()` strips U+FEFF (it is
+  ECMAScript whitespace), so a BOM-only file counts as empty and gets an id;
+  BOM-prefixed JSON (`'﻿{...}'`) still fails `JSON.parse` → `null` — pre-existing
+  behavior, unchanged. A JSON `'null'` literal parses but fails the `isRecord` check
+  ("root is not an object") — also unchanged.
 
 **(b)** Update the class doc comment (currently "Malformed canvas JSON never throws — returns
 null...") to also state: empty/whitespace-only content is treated as an empty canvas (`{}`) —
