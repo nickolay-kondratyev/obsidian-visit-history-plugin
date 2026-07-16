@@ -55,6 +55,25 @@ body.vault-heatmap-active .status-bar-mobile {
   background: var(--vt-bg);
 }
 
+/* Obsidian styles native <button> heavily (interactive background, input
+   box-shadow, fixed --input-height). Every button in this view is fully
+   custom-styled, so strip the host chrome ONCE here instead of each
+   component re-fighting it — the seg-toggle switch segments were showing
+   Obsidian's rectangular shadowed button through the pill.
+   height deliberately NOT reset on :hover — component heights (e.g. the
+   28px .hdr-icon-btn) would lose to the higher-specificity hover rule. */
+.vault-heatmap-view button {
+  appearance: none;
+  background-color: transparent;
+  box-shadow: none;
+  height: auto;
+}
+
+.vault-heatmap-view button:hover {
+  background-color: transparent;
+  box-shadow: none;
+}
+
 /* ── Header ─────────────────────────────────────────────── */
 .vault-heatmap-view #header {
   position: absolute;
@@ -463,6 +482,7 @@ body.vault-heatmap-active .status-bar-mobile {
   text-transform: uppercase;
   background: none;
   border: none;
+  border-radius: 999px; /* focus ring / residual paint follows the pill */
   color: var(--vt-text-dim);
   padding: 5px 4px;
   cursor: pointer;
