@@ -68,8 +68,9 @@ describe('FocusDurationTracker', () => {
       // GIVEN doc A focused for 5600ms
       tracker.onDocFocused('A', MAIN_WIN);
       advanceMs(5600);
-      // WHEN the user navigates away
+      // WHEN the user navigates away and the unfocus grace resolves
       tracker.onDocUnfocused();
+      expireGrace();
       // THEN one session is recorded with the focus-start stamp and duration
       expect(sink.records).toEqual([{ docId: 'A', focusStartEpochMs: T0, durationMs: 5600 }]);
     });
@@ -92,6 +93,7 @@ describe('FocusDurationTracker', () => {
       tracker.onDocFocused('A', MAIN_WIN);
       advanceMs(1000);
       tracker.onDocUnfocused();
+      expireGrace();
       // THEN a single unfragmented session covers the whole time
       expect(sink.records).toEqual([{ docId: 'A', focusStartEpochMs: T0, durationMs: 2000 }]);
     });
@@ -106,8 +108,9 @@ describe('FocusDurationTracker', () => {
       tracker.onDocUnfocused();
       tracker.onDocFocused('A', MAIN_WIN);
       advanceMs(300);
-      // WHEN the last doc is unfocused
+      // WHEN the last doc is unfocused and the grace resolves
       tracker.onDocUnfocused();
+      expireGrace();
       // THEN all three sessions are recorded
       expect(sink.records.map(r => `${r.docId}:${r.durationMs}`)).toEqual(['A:100', 'B:200', 'A:300']);
     });
@@ -134,6 +137,7 @@ describe('FocusDurationTracker', () => {
       tracker.onWindowFocused(MAIN_WIN);
       advanceMs(2000);
       tracker.onDocUnfocused();
+      expireGrace();
       // THEN a second session exists, starting at the refocus moment
       expect(sink.records[1]).toEqual({ docId: 'A', focusStartEpochMs: T0 + 13_000, durationMs: 2000 });
     });
@@ -154,6 +158,7 @@ describe('FocusDurationTracker', () => {
       tracker.onWindowFocused(MAIN_WIN);
       advanceMs(1000);
       tracker.onDocUnfocused();
+      expireGrace();
       // THEN there is still exactly one unfragmented session
       expect(sink.records).toEqual([{ docId: 'A', focusStartEpochMs: T0, durationMs: 2000 }]);
     });
@@ -178,6 +183,7 @@ describe('FocusDurationTracker', () => {
       tracker.onWindowFocused(MAIN_WIN);
       advanceMs(700);
       tracker.onDocUnfocused();
+      expireGrace();
       // THEN the session covers only the window-focused stretch
       expect(sink.records).toEqual([{ docId: 'A', focusStartEpochMs: T0 + 5000, durationMs: 700 }]);
     });
@@ -207,6 +213,7 @@ describe('FocusDurationTracker', () => {
       tracker.onDocFocused('Y', POPOUT_2);
       advanceMs(2500);
       tracker.onDocUnfocused();
+      expireGrace();
       // THEN exactly [X, Y] — no spurious X session at the switch moment
       expect(sink.records.map(r => `${r.docId}:${r.durationMs}`)).toEqual(['X:4000', 'Y:2500']);
     });
@@ -236,6 +243,7 @@ describe('FocusDurationTracker', () => {
       tracker.onWindowFocused(POPOUT_1);
       advanceMs(600);
       tracker.onDocUnfocused();
+      expireGrace();
       // THEN a second X session starts at the popout's refocus
       expect(sink.records[1]).toEqual({ docId: 'X', focusStartEpochMs: T0 + 10_000, durationMs: 600 });
     });
@@ -251,6 +259,7 @@ describe('FocusDurationTracker', () => {
       tracker.onWindowBlurred(MAIN_WIN);
       advanceMs(2000);
       tracker.onDocUnfocused();
+      expireGrace();
       // THEN one continuous session — the main window's blur did not cut it
       expect(sink.records).toEqual([{ docId: 'A', focusStartEpochMs: T0, durationMs: 3000 }]);
     });
@@ -301,8 +310,9 @@ describe('FocusDurationTracker', () => {
         advanceMs(2 * 60_000);
         tracker.onUserActivity();
       }
-      // WHEN the doc is unfocused after 10 minutes
+      // WHEN the doc is unfocused after 10 minutes and the grace resolves
       tracker.onDocUnfocused();
+      expireGrace();
       // THEN a single 10-minute session was recorded (idle never fired)
       expect(sink.records).toEqual([{ docId: 'A', focusStartEpochMs: T0, durationMs: 10 * 60_000 }]);
     });
@@ -315,6 +325,7 @@ describe('FocusDurationTracker', () => {
       tracker.onUserActivity();
       advanceMs(30_000);
       tracker.onDocUnfocused();
+      expireGrace();
       // THEN the resumed session starts at the interaction moment
       expect(sink.records[1]).toEqual({ docId: 'A', focusStartEpochMs: T0 + IDLE_MS, durationMs: 30_000 });
     });
@@ -385,6 +396,7 @@ describe('FocusDurationTracker', () => {
       tracker.onUserActivity();
       advanceMs(30_000);
       tracker.onDocUnfocused();
+      expireGrace();
       // THEN the resumed session starts at the wake interaction
       expect(sink.records[1]).toEqual({ docId: 'A', focusStartEpochMs: wakeMs, durationMs: 30_000 });
     });
@@ -397,6 +409,7 @@ describe('FocusDurationTracker', () => {
       sleepMs(8 * 60 * 60_000);
       // WHEN the first post-wake event is navigation away (no interaction first)
       tracker.onDocUnfocused();
+      expireGrace();
       // THEN the sleep gap is NOT counted
       expect(sink.records).toEqual([{ docId: 'A', focusStartEpochMs: T0, durationMs: 45_000 }]);
     });
