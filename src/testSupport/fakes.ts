@@ -1,7 +1,7 @@
 import { TFile } from 'obsidian';
 import { DeviceNameProvider } from '../core/util/env/DeviceNameProvider';
 import { TrackedFile, VaultUtil } from '../core/util/vault/VaultUtil';
-import { DocIdService } from '../core/service/docId/DocIdService';
+import { DocIdService } from 'obsidian-id-lib';
 
 /** VaultUtil fake serving a fixed file list as tracked files (never-visited). */
 export class FakeVaultUtil implements VaultUtil {

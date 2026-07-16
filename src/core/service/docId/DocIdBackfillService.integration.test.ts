@@ -1,10 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 import { TFile } from 'obsidian';
 import { DocIdBackfillServiceDefault } from './DocIdBackfillService';
-import { DocIdServiceDefault } from './DocIdService';
-import { FrontmatterDocIdStore } from './FrontmatterDocIdStore';
-import { CanvasDocIdStore } from './CanvasDocIdStore';
-import { DocIdGeneratorDefault } from './DocIdGenerator';
+import {
+  CanvasDocIdStore,
+  CrossPluginPathLock,
+  DocIdGeneratorDefault,
+  DocIdServiceDefault,
+  FrontmatterDocIdStore,
+} from 'obsidian-id-lib';
 import { FakeNoteFileUtil } from '../../../testSupport/FakeNoteFileUtil';
 import { FakeVaultUtil } from '../../../testSupport/fakes';
 
@@ -13,10 +16,12 @@ const DOC_ID_REGEX = /^docid_[0-9a-z]{24}_e$/;
 const FRONTMATTER_WITH_DOC_ID_REGEX = /^---\nid: (docid_[0-9a-z]{24}_e)\n/;
 
 /**
- * Integration: real DocIdBackfillServiceDefault → DocIdServiceDefault →
- * Frontmatter/CanvasDocIdStore → DocIdGeneratorDefault. Faked only at the
+ * Integration: real DocIdBackfillServiceDefault → REAL obsidian-id-lib classes
+ * (DocIdServiceDefault → Frontmatter/CanvasDocIdStore → DocIdGeneratorDefault)
+ * imported through the 'obsidian-id-lib' package boundary. Faked only at the
  * Obsidian boundary (NoteFileUtil, VaultUtil) — proves the backfill actually
- * mutates file content the same way focus does.
+ * mutates file content the same way focus does, and that the plugin consumes
+ * the library seam correctly.
  */
 interface Setup {
   service: DocIdBackfillServiceDefault;
@@ -30,9 +35,13 @@ function setup(vaultContent: Record<string, string>): Setup {
     .map(([path, content]) => noteFileUtil.seedNote(path, content));
 
   const docIdGenerator = new DocIdGeneratorDefault();
+  // FakeNoteFileUtil structurally satisfies the lib's FileContentAccess
+  // (same cachedRead/process signatures). Fresh {} registry host isolates
+  // the lock from other tests.
   const docIdService = new DocIdServiceDefault(
     new FrontmatterDocIdStore(noteFileUtil, docIdGenerator),
     new CanvasDocIdStore(noteFileUtil, docIdGenerator),
+    new CrossPluginPathLock({}),
   );
   const service = new DocIdBackfillServiceDefault(new FakeVaultUtil(files), docIdService);
   return { service, noteFileUtil };

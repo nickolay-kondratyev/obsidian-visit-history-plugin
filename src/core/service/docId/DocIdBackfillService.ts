@@ -1,5 +1,5 @@
 import { TFile } from 'obsidian';
-import { DocIdService } from './DocIdService';
+import { DocIdService } from 'obsidian-id-lib';
 import { VaultUtil } from '../../util/vault/VaultUtil';
 
 /** Outcome of a vault-wide doc id backfill run. */
