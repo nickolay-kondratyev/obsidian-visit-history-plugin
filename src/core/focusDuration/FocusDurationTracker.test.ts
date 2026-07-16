@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { FocusDurationSink, FocusDurationTracker, WindowHandle } from './FocusDurationTracker';
+import {
+  FocusDurationSink,
+  FocusDurationTracker,
+  UNFOCUS_GRACE_MS,
+  WindowHandle,
+} from './FocusDurationTracker';
 
 const T0 = Date.parse('2026-07-09T22:00:00.000Z');
 // Test default mirroring DEFAULT_IDLE_TIMEOUT_SECONDS (3 minutes).
@@ -46,6 +51,16 @@ describe('FocusDurationTracker', () => {
   /** Advances both the mocked clock and pending timers. */
   function advanceMs(ms: number): void {
     vi.advanceTimersByTime(ms);
+  }
+
+  /** Lets a pending unfocus close resolve (grace expiry). */
+  function expireGrace(): void {
+    advanceMs(UNFOCUS_GRACE_MS);
+  }
+
+  /** Simulates suspend: the clock jumps but NO timers fire during the gap. */
+  function sleepMs(ms: number): void {
+    vi.setSystemTime(Date.now() + ms);
   }
 
   describe('navigation', () => {
@@ -348,11 +363,6 @@ describe('FocusDurationTracker', () => {
   });
 
   describe('OS sleep (clock jumps past the idle timer without it firing)', () => {
-    /** Simulates suspend: the clock jumps but NO timers fire during the gap. */
-    function sleepMs(ms: number): void {
-      vi.setSystemTime(Date.now() + ms);
-    }
-
     it('should end the pre-sleep session at the last interaction when the user interacts after waking', () => {
       // GIVEN doc A focused, last interaction 60s in, then the machine sleeps 8h
       tracker.onDocFocused('A', MAIN_WIN);
@@ -389,6 +399,24 @@ describe('FocusDurationTracker', () => {
       tracker.onDocUnfocused();
       // THEN the sleep gap is NOT counted
       expect(sink.records).toEqual([{ docId: 'A', focusStartEpochMs: T0, durationMs: 45_000 }]);
+    });
+  });
+
+  describe('unfocus grace period', () => {
+    it('should record ONE session spanning the blip when the same doc refocuses within grace', () => {
+      // GIVEN doc A focused for 5s
+      tracker.onDocFocused('A', MAIN_WIN);
+      advanceMs(5000);
+      // WHEN a transient unfocus/refocus blip occurs (canvas "add note" UI)
+      // and A stays focused for 3 more seconds before a real navigation away
+      tracker.onDocUnfocused();
+      advanceMs(2000);
+      tracker.onDocFocused('A', MAIN_WIN);
+      advanceMs(3000);
+      tracker.onDocUnfocused();
+      expireGrace();
+      // THEN exactly one session spans the blip, gap counted as focus
+      expect(sink.records).toEqual([{ docId: 'A', focusStartEpochMs: T0, durationMs: 10_000 }]);
     });
   });
 

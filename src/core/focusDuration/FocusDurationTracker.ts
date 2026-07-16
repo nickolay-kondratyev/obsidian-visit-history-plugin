@@ -11,6 +11,16 @@ export interface FocusDurationSink {
 export type IdleTimeoutMsProvider = () => number;
 
 /**
+ * Grace before an unfocus becomes a session close. In-canvas UI (card picker,
+ * "add note") fires a transient active-leaf-change(null|untracked) → unfocus →
+ * refocus; a same-doc refocus within this window continues the session instead
+ * of splitting it. A close that does happen is stamped at the ORIGINAL unfocus
+ * moment, so the grace can never inflate a duration. Fixed (no user setting —
+ * owner decision).
+ */
+export const UNFOCUS_GRACE_MS = 10_000;
+
+/**
  * Opaque identity of one Obsidian OS window (main or popout), compared by
  * reference. Callers use the window's `Document` object — stable for the
  * window's lifetime and reachable both from a leaf's `containerEl` and from
