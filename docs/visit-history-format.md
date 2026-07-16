@@ -55,7 +55,11 @@ It is the only history the plugin reads and writes.
   `<ISO 8601 UTC ms stamp of focus start> D:<millis spent in focus>`,
   newline-terminated. Appended when a session ends, in session-start order
   (sessions on one device never overlap) → naturally ascending.
-- A session closes on the first of: navigation away from the doc, blur of the
+- A session closes on the first of: navigation away from the doc (after a
+  fixed 10 s grace — a same-doc refocus within grace continues the session,
+  so transient canvas-UI blips don't split it; the record is appended when
+  the close FINALIZES, ≤ 10 s after the unfocus, with the end stamped at the
+  unfocus moment), blur of the
   Obsidian window HOSTING it (main or popout — switching between popout
   windows closes the left-behind doc's session), the idle timeout elapsing
   without user interaction (settings → "Idle timeout (seconds)", default

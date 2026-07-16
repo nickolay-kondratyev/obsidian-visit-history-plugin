@@ -88,7 +88,10 @@ user input events  ──► (idle detection)       │   main at load, popouts 
                                               ▼
                               FocusDurationTracker (state machine; a window's
                                 │  Document object is its identity handle)
-                                │  session CLOSES on: navigate away, blur of
+                                │  session CLOSES on: navigate away (10 s
+                                │  grace: same-doc refocus within it continues
+                                │  the session; close is stamped at the
+                                │  original unfocus time), blur of
                                 │  the window HOSTING the doc (incl. popout →
                                 │  popout switches), idle timeout (setting,
                                 │  default 180 s, live-read; duration then
