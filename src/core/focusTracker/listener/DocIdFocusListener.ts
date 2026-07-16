@@ -1,5 +1,5 @@
 import { FocusEvent, FocusListener } from '../FocusTracker';
-import { DocIdService } from '../../service/docId/DocIdService';
+import { DocIdService } from 'obsidian-id-lib';
 import { InFlightDropGuard } from '../../util/async/InFlightDropGuard';
 
 /**

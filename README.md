@@ -35,7 +35,8 @@ Folders named `_archive` are **hidden from the heatmap** — archived content do
 
 ### Build the plugin
 - In your vault, go to `.obsidian/plugins/`
-- `git clone https://github.com/nickolay-kondratyev/obsidian-visit-history-plugin.git`
+- `git clone --recurse-submodules https://github.com/nickolay-kondratyev/obsidian-visit-history-plugin.git`
+  (already cloned without submodules? run `git submodule update --init`)
 - `cd obsidian-visit-history-plugin`
 - `npm install && npm run build`
 

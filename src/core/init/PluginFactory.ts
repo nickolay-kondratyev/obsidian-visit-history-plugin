@@ -16,10 +16,7 @@ import { WindowActivityMonitor } from '../focusDuration/WindowActivityMonitor';
 import { VhV3FocusDurationListener } from '../focusTracker/listener/VhV3FocusDurationListener';
 import { VaultUtil, VaultUtilDefault } from '../util/vault/VaultUtil';
 import { IsTrackedProvider, IsTrackedProviderDefault } from "../util/vault/IsTrackedProvider";
-import { DocIdGeneratorDefault } from '../service/docId/DocIdGenerator';
-import { DocIdService, DocIdServiceDefault } from '../service/docId/DocIdService';
-import { FrontmatterDocIdStore } from '../service/docId/FrontmatterDocIdStore';
-import { CanvasDocIdStore } from '../service/docId/CanvasDocIdStore';
+import { DocIdService, DocIdServices } from 'obsidian-id-lib';
 import { DocIdFocusListener } from '../focusTracker/listener/DocIdFocusListener';
 import { DocIdBackfillService, DocIdBackfillServiceDefault } from '../service/docId/DocIdBackfillService';
 import { VhStartupTasks } from './VhStartupTasks';
@@ -56,11 +53,9 @@ export class PluginFactory {
     const deviceNameProvider = new DeviceNameProviderDefault();
     this.isTrackedProvider = new IsTrackedProviderDefault();
 
-    const docIdGenerator = new DocIdGeneratorDefault();
-    this.docIdService = new DocIdServiceDefault(
-      new FrontmatterDocIdStore(noteFileUtil, docIdGenerator),
-      new CanvasDocIdStore(noteFileUtil, docIdGenerator),
-    );
+    // obsidian-id-lib default wiring: generator + stores + the cross-plugin
+    // per-path window lock guarding ensureDocId.
+    this.docIdService = DocIdServices.createDefault(app.vault);
 
     // Shared by the V3 read path (heatmap last-visit lookups) and the write
     // path (recorder write-through on every recorded session).

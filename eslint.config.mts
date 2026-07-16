@@ -20,6 +20,10 @@ export default tseslint.config(
 		// AI tooling scratch + test screenshots (gitignored, never shipped).
 		'.tmp',
 		'.out',
+		// Git submodules are foreign repos with their own tooling — the
+		// plugin's eslint must not lint them (obsidian-id-lib is consumed
+		// as a file: dependency).
+		'submodules',
 	]),
 	{
 		languageOptions: {

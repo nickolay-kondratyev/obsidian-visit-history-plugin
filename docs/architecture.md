@@ -37,7 +37,10 @@ core/init/PluginFactory ──── DI container: constructs & wires everything
    │                         LastVisitProvider (read-only interface) ←
    │                         VisitHistoryServiceV3: last-visit stamp for the
    │                         heatmap (LastVisitCache, LRU keyed by doc id)
-   │                         DocIdService: ensure per-document id on focus
+   │                         DocIdService (obsidian-id-lib): ensure
+   │                         per-document id on focus — generator/stores/
+   │                         service/lock live in submodules/obsidian-id-lib
+   │                         (git submodule, bundled via file: dep)
    │                         DocIdBackfillService: vault-wide doc id backfill
    │                         migration/: VhUserScopeMigrationService
    │                         (pre-user-scoped v2/v3 dirs → user/<user-name>/;
@@ -127,12 +130,21 @@ VaultTreemapView.refresh
 
 Every focused document gets a persistent id: `docid_{24 base36 chars}_e`
 (lowercase; 36^24 ≈ 2.2e37 keeps the random space above UUID v4's 2^122).
+The id machinery lives in the `obsidian-id-lib` git submodule
+(`submodules/obsidian-id-lib`, bundled from raw TS via the `file:`
+dependency) so a second plugin can share it; the plugin wires it in
+`PluginFactory` via `DocIdServices.createDefault(app.vault)`.
 
 ```
 active-leaf-change
   → FocusTracker
   → DocIdFocusListener (registered FIRST; in-flight DROP guard per path)
-  → DocIdService (dispatch by extension)
+  → DocIdService (obsidian-id-lib; dispatch by extension)
+  → CrossPluginPathLock — per-path cross-plugin window lock around the whole
+       read-decide-write (registry on the versioned globalThis key
+       __obsidian_id_lib_path_lock_registry_v1__, so two plugins bundling
+       the lib serialize id creation; getDocId stays lock-free)
+  → store
        md      → FrontmatterDocIdStore: YAML frontmatter key 'id'
                  (covers .excalidraw.md — extension is 'md')
        canvas  → CanvasDocIdStore: JSON metadata.frontmatter.id

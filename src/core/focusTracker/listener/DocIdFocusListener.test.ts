@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { TFile } from 'obsidian';
 import { DocIdFocusListener } from './DocIdFocusListener';
-import { DocIdService } from '../../service/docId/DocIdService';
+import { DocIdService } from 'obsidian-id-lib';
 import { FocusEvent } from '../FocusTracker';
 import { makeTFile } from '../../../testSupport/fileFactory';
 
