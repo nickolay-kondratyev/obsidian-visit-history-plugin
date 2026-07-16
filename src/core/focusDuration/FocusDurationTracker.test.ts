@@ -431,6 +431,289 @@ describe('FocusDurationTracker', () => {
       // THEN exactly one session spans the blip, gap counted as focus
       expect(sink.records).toEqual([{ docId: 'A', focusStartEpochMs: T0, durationMs: 10_000 }]);
     });
+
+    it('should close at the ORIGINAL unfocus time when grace expires without a refocus', () => {
+      // GIVEN doc A focused for 5s
+      tracker.onDocFocused('A', MAIN_WIN);
+      advanceMs(5000);
+      // WHEN the doc is unfocused and the grace expires with no refocus
+      tracker.onDocUnfocused();
+      expireGrace();
+      // THEN the session ends at the unfocus moment — the grace is NOT counted
+      expect(sink.records).toEqual([{ docId: 'A', focusStartEpochMs: T0, durationMs: 5000 }]);
+    });
+
+    it('should not emit the record before the grace resolves', () => {
+      // GIVEN doc A focused for 5s
+      tracker.onDocFocused('A', MAIN_WIN);
+      advanceMs(5000);
+      // WHEN the doc is unfocused and the grace has not yet expired
+      tracker.onDocUnfocused();
+      advanceMs(UNFOCUS_GRACE_MS - 1);
+      // THEN nothing is recorded yet (sink write deferred ≤ grace — accepted tradeoff)
+      expect(sink.records).toEqual([]);
+    });
+
+    it('should keep a single session across multiple blips within grace', () => {
+      // GIVEN doc A focused for 5s
+      tracker.onDocFocused('A', MAIN_WIN);
+      advanceMs(5000);
+      // WHEN two unfocus/refocus blips occur, then a real navigation away
+      tracker.onDocUnfocused();
+      advanceMs(2000);
+      tracker.onDocFocused('A', MAIN_WIN);
+      advanceMs(3000);
+      tracker.onDocUnfocused();
+      advanceMs(2000);
+      tracker.onDocFocused('A', MAIN_WIN);
+      advanceMs(3000);
+      tracker.onDocUnfocused();
+      expireGrace();
+      // THEN one session spans everything
+      expect(sink.records).toEqual([{ docId: 'A', focusStartEpochMs: T0, durationMs: 15_000 }]);
+    });
+
+    it('should ignore a redundant second unfocus while a close is pending (first unfocus time wins)', () => {
+      // GIVEN doc A focused for 5s, then unfocused
+      tracker.onDocFocused('A', MAIN_WIN);
+      advanceMs(5000);
+      tracker.onDocUnfocused();
+      // WHEN a second unfocus arrives during grace (listener id-failure path)
+      advanceMs(3000);
+      tracker.onDocUnfocused();
+      expireGrace();
+      // THEN the session ends at the FIRST unfocus time
+      expect(sink.records).toEqual([{ docId: 'A', focusStartEpochMs: T0, durationMs: 5000 }]);
+    });
+
+    it('should close the previous session at its original unfocus time when a DIFFERENT doc focuses during grace', () => {
+      // GIVEN doc A focused for 5s, then unfocused
+      tracker.onDocFocused('A', MAIN_WIN);
+      advanceMs(5000);
+      tracker.onDocUnfocused();
+      // WHEN doc B focuses 2s into the grace
+      advanceMs(2000);
+      tracker.onDocFocused('B', MAIN_WIN);
+      // THEN A's record is written immediately (no grace wait), ending at A's unfocus
+      expect(sink.records).toEqual([{ docId: 'A', focusStartEpochMs: T0, durationMs: 5000 }]);
+    });
+
+    it('should start the new doc\'s session at its own focus time after a pending close', () => {
+      // GIVEN doc A's pending close was resolved by doc B focusing 2s into grace
+      tracker.onDocFocused('A', MAIN_WIN);
+      advanceMs(5000);
+      tracker.onDocUnfocused();
+      advanceMs(2000);
+      tracker.onDocFocused('B', MAIN_WIN);
+      // WHEN B runs 4s and is unfocused
+      advanceMs(4000);
+      tracker.onDocUnfocused();
+      expireGrace();
+      // THEN B's session starts at B's focus moment, not A's unfocus
+      expect(sink.records[1]).toEqual({ docId: 'B', focusStartEpochMs: T0 + 7000, durationMs: 4000 });
+    });
+
+    it('should keep the pinned unfocus end when the hosting window blurs during grace', () => {
+      // GIVEN doc A focused for 5s, then unfocused
+      tracker.onDocFocused('A', MAIN_WIN);
+      advanceMs(5000);
+      tracker.onDocUnfocused();
+      // WHEN the hosting window blurs during grace and the grace expires
+      advanceMs(1000);
+      tracker.onWindowBlurred(MAIN_WIN);
+      expireGrace();
+      // THEN exactly one record, ending at the unfocus moment (no drift, no double)
+      expect(sink.records).toEqual([{ docId: 'A', focusStartEpochMs: T0, durationMs: 5000 }]);
+    });
+
+    it('should survive a blip that also blurs and refocuses the window', () => {
+      // GIVEN doc A focused for 5s
+      tracker.onDocFocused('A', MAIN_WIN);
+      advanceMs(5000);
+      // WHEN a native-surface blip unfocuses the doc AND blurs the window,
+      // then window + doc refocus 2s later, with a real unfocus 3s after that
+      tracker.onDocUnfocused();
+      tracker.onWindowBlurred(MAIN_WIN);
+      advanceMs(2000);
+      tracker.onWindowFocused(MAIN_WIN);
+      tracker.onDocFocused('A', MAIN_WIN);
+      advanceMs(3000);
+      tracker.onDocUnfocused();
+      expireGrace();
+      // THEN one session spans the blip
+      expect(sink.records).toEqual([{ docId: 'A', focusStartEpochMs: T0, durationMs: 10_000 }]);
+    });
+
+    it('should not revive the doc on window refocus after the grace close finalized', () => {
+      // GIVEN doc A's session closed via grace expiry
+      tracker.onDocFocused('A', MAIN_WIN);
+      advanceMs(5000);
+      tracker.onDocUnfocused();
+      expireGrace();
+      // WHEN the window blurs and refocuses afterwards
+      tracker.onWindowBlurred(MAIN_WIN);
+      tracker.onWindowFocused(MAIN_WIN);
+      // THEN still exactly one record — the doc is gone after the finalize
+      expect(sink.records).toEqual([{ docId: 'A', focusStartEpochMs: T0, durationMs: 5000 }]);
+    });
+
+    it('should adopt the new window when the same doc refocuses from a DIFFERENT window within grace', () => {
+      // GIVEN doc A focused in the main window
+      tracker.onDocFocused('A', MAIN_WIN);
+      advanceMs(1000);
+      // WHEN a blip moves A to a popout (unfocus → refocus from the popout),
+      // the main window blurs, and A is unfocused 2s later
+      tracker.onDocUnfocused();
+      tracker.onWindowFocused(POPOUT_1);
+      tracker.onDocFocused('A', POPOUT_1);
+      tracker.onWindowBlurred(MAIN_WIN);
+      advanceMs(2000);
+      tracker.onDocUnfocused();
+      expireGrace();
+      // THEN one continuous session — the main window's blur did not cut it
+      expect(sink.records).toEqual([{ docId: 'A', focusStartEpochMs: T0, durationMs: 3000 }]);
+    });
+
+    it('should idle-close at the last real activity when the same doc refocuses into a still-blurred window', () => {
+      // GIVEN doc A focused, last interaction 5s in, then a blip unfocuses the
+      // doc and blurs the window
+      tracker.onDocFocused('A', MAIN_WIN);
+      advanceMs(5000);
+      tracker.onUserActivity();
+      tracker.onDocUnfocused();
+      tracker.onWindowBlurred(MAIN_WIN);
+      // WHEN A refocuses while the window is STILL blurred, then the user goes idle
+      advanceMs(2000);
+      tracker.onDocFocused('A', MAIN_WIN);
+      advanceMs(2 * IDLE_MS);
+      // THEN the continued session idle-closes at the last interaction — the
+      // blurred stretch never inflates it
+      expect(sink.records).toEqual([{ docId: 'A', focusStartEpochMs: T0, durationMs: 5000 }]);
+    });
+
+    it('should not extend the pinned end when user activity occurs during grace', () => {
+      // GIVEN doc A focused for 5s, then unfocused
+      tracker.onDocFocused('A', MAIN_WIN);
+      advanceMs(5000);
+      tracker.onDocUnfocused();
+      // WHEN activity happens 2s into the grace and the grace expires
+      advanceMs(2000);
+      tracker.onUserActivity();
+      expireGrace();
+      // THEN the session still ends at the unfocus moment
+      expect(sink.records).toEqual([{ docId: 'A', focusStartEpochMs: T0, durationMs: 5000 }]);
+    });
+
+    it('should not start a session from user activity after the grace close finalized', () => {
+      // GIVEN doc A's session closed via grace expiry
+      tracker.onDocFocused('A', MAIN_WIN);
+      advanceMs(5000);
+      tracker.onDocUnfocused();
+      expireGrace();
+      // WHEN the user is active afterwards and the plugin later unloads
+      tracker.onUserActivity();
+      advanceMs(3000);
+      tracker.dispose();
+      // THEN still exactly one record — no phantom session for the gone doc
+      expect(sink.records).toHaveLength(1);
+    });
+
+    it('should finalize the pending close at the original unfocus time when the idle timeout fires during grace', () => {
+      // GIVEN a 12s idle timeout and doc A focused with no interaction
+      idleTimeoutMs = 12_000;
+      tracker.onDocFocused('A', MAIN_WIN);
+      advanceMs(5000);
+      // WHEN the doc unfocuses and the idle timer fires inside the grace
+      tracker.onDocUnfocused();
+      advanceMs(7000);
+      // THEN the session closed at the unfocus moment (pinned end wins)
+      expect(sink.records).toEqual([{ docId: 'A', focusStartEpochMs: T0, durationMs: 5000 }]);
+    });
+
+    it('should start a NEW session on same-doc refocus after the idle close finalized the pending close', () => {
+      // GIVEN doc A's pending close was finalized by an idle fire during grace
+      idleTimeoutMs = 12_000;
+      tracker.onDocFocused('A', MAIN_WIN);
+      advanceMs(5000);
+      tracker.onDocUnfocused();
+      advanceMs(7000);
+      // WHEN A refocuses at T0+13s and is unfocused 3s later
+      advanceMs(1000);
+      tracker.onDocFocused('A', MAIN_WIN);
+      advanceMs(3000);
+      tracker.onDocUnfocused();
+      expireGrace();
+      // THEN the second session starts at the refocus moment
+      expect(sink.records[1]).toEqual({ docId: 'A', focusStartEpochMs: T0 + 13_000, durationMs: 3000 });
+    });
+
+    it('should finalize at the original unfocus time when the same doc refocuses after a sleep longer than grace', () => {
+      // GIVEN doc A focused for 5s, unfocused, then the machine sleeps 8h
+      tracker.onDocFocused('A', MAIN_WIN);
+      advanceMs(5000);
+      tracker.onDocUnfocused();
+      sleepMs(8 * 60 * 60_000);
+      // WHEN A refocuses on wake (before the suspended grace timer fires)
+      tracker.onDocFocused('A', MAIN_WIN);
+      // THEN the pre-sleep session closed at its unfocus — no session spans the sleep
+      expect(sink.records[0]).toEqual({ docId: 'A', focusStartEpochMs: T0, durationMs: 5000 });
+    });
+
+    it('should start a fresh session at the post-sleep refocus', () => {
+      // GIVEN doc A unfocused, an 8h sleep, and a same-doc refocus on wake
+      tracker.onDocFocused('A', MAIN_WIN);
+      advanceMs(5000);
+      tracker.onDocUnfocused();
+      sleepMs(8 * 60 * 60_000);
+      const wakeMs = Date.now();
+      tracker.onDocFocused('A', MAIN_WIN);
+      // WHEN the refocused doc runs 3s and is unfocused
+      advanceMs(3000);
+      tracker.onDocUnfocused();
+      expireGrace();
+      // THEN the second session starts at the wake refocus
+      expect(sink.records[1]).toEqual({ docId: 'A', focusStartEpochMs: wakeMs, durationMs: 3000 });
+    });
+
+    it('should preserve the pre-unfocus sleep cutoff even when activity occurs during grace', () => {
+      // GIVEN doc A focused, last interaction 60s in, then the machine sleeps 8h
+      tracker.onDocFocused('A', MAIN_WIN);
+      advanceMs(60_000);
+      tracker.onUserActivity();
+      sleepMs(8 * 60 * 60_000);
+      // WHEN the doc unfocuses at wake, activity follows during grace, grace expires
+      tracker.onDocUnfocused();
+      advanceMs(1000);
+      tracker.onUserActivity();
+      expireGrace();
+      // THEN the session ends at the pre-sleep interaction — the sleep gap
+      // never counts (end snapshotted at unfocus)
+      expect(sink.records).toEqual([{ docId: 'A', focusStartEpochMs: T0, durationMs: 60_000 }]);
+    });
+
+    it('should finalize the pending close on the first post-wake interaction (retroactive idle)', () => {
+      // GIVEN doc A focused for 5s, unfocused, then the machine sleeps 8h
+      tracker.onDocFocused('A', MAIN_WIN);
+      advanceMs(5000);
+      tracker.onDocUnfocused();
+      sleepMs(8 * 60 * 60_000);
+      // WHEN the first post-wake event is a user interaction
+      tracker.onUserActivity();
+      // THEN the session closed at its unfocus time and did NOT reopen
+      expect(sink.records).toEqual([{ docId: 'A', focusStartEpochMs: T0, durationMs: 5000 }]);
+    });
+
+    it('should flush the pending close at the original unfocus time on dispose', () => {
+      // GIVEN doc A focused for 5s, then unfocused
+      tracker.onDocFocused('A', MAIN_WIN);
+      advanceMs(5000);
+      tracker.onDocUnfocused();
+      // WHEN the plugin unloads 3s into the grace
+      advanceMs(3000);
+      tracker.dispose();
+      // THEN the pending session is flushed, ending at the unfocus moment
+      expect(sink.records).toEqual([{ docId: 'A', focusStartEpochMs: T0, durationMs: 5000 }]);
+    });
   });
 
   describe('dispose', () => {
