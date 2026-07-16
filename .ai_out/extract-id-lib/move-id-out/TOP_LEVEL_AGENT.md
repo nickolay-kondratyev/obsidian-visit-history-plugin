@@ -14,10 +14,10 @@ Lib repo needs concise README. Commits in BOTH repos.
 - [x] DETAILED_PLANNING — plan approved
 - [x] DETAILED_PLAN_REVIEW — 0 MAJOR, 3 minor inline edits
 - [x] PLAN_ITERATION — SKIPPED (reviewer signal: only minor inline edits)
-- [ ] IMPLEMENTATION
-- [ ] IMPLEMENTATION_REVIEW
-- [ ] IMPLEMENTATION_ITERATION
-- [ ] PARETO_COMPLEXITY_ANALYSIS
+- [x] IMPLEMENTATION — done, all green (lib: a867be8→85d9ed5; parent: 9a24c64, 2726a18, c34aa58). CAVEAT: submodule main NOT pushed — push before sharing parent branch
+- [x] IMPLEMENTATION_REVIEW — READY, 0 blocking/major, 3 minor (follow-up candidates)
+- [x] IMPLEMENTATION_ITERATION — SKIPPED (reviewer signal READY; independent verification all green)
+- [~] PARETO_COMPLEXITY_ANALYSIS (running, background)
 - [ ] Final: change log entry (single, by TOP_LEVEL), tickets, callouts table
 
 ## Notes
