@@ -1,7 +1,7 @@
 import { FIELD_LABELS, type ColorMode, type HeatField } from '../constants';
 import type { FilterTerm } from '../../viewModel/heatmapConfig';
 import { FilterGroup } from './header/FilterGroup';
-import { InfoIcon, SettingsIcon } from './icons';
+import { InfoIcon, SettingsIcon, ZoomResetIcon } from './icons';
 
 /**
  * Header popover/panel identifiers. App keeps at most ONE open at a time
@@ -23,11 +23,14 @@ interface HeaderProps {
   breadcrumb: string[];
   /** Called when the user clicks "back" to navigate up one level. */
   onBack?: () => void;
+  /** Resets the treemap zoom/pan to the fitted view (wired to TreemapViz). */
+  onResetZoom: () => void;
 }
 
 /**
  * Top bar — actions only (info lives in the info popover):
- * breadcrumb · filter group (icon + term chips) · field selector · info · config.
+ * breadcrumb · filter group (icon + term chips) · field selector · zoom reset ·
+ * info · config.
  * Pure presentational — no state; popovers render as App-level siblings.
  */
 export function Header({
@@ -39,6 +42,7 @@ export function Header({
   onRemoveTerm,
   breadcrumb,
   onBack,
+  onResetZoom,
 }: HeaderProps) {
   return (
     <div id="header">
@@ -47,7 +51,7 @@ export function Header({
           <button className="breadcrumb-back" onClick={onBack} title="Go back up one level">
             ← back
           </button>
-          <span className="breadcrumb-path">
+          <span className="breadcrumb-path" title={`Viewing /${breadcrumb.join('/')}`}>
             /{breadcrumb.join('/')}
           </span>
         </div>
@@ -69,6 +73,14 @@ export function Header({
         </button>
       )}
       <div className="spacer" />
+      <button
+        className="hdr-icon-btn"
+        onClick={onResetZoom}
+        title="Reset zoom and pan"
+        aria-label="Reset zoom and pan"
+      >
+        <ZoomResetIcon />
+      </button>
       <button
         className={'hdr-icon-btn' + (openPanel === 'info' ? ' active' : '')}
         onClick={() => onPanelToggle('info')}

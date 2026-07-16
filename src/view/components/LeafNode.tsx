@@ -52,23 +52,18 @@ export function LeafNode({
       onClick={onClick}
       style={{ cursor: 'pointer' }}
     >
+      {/* Hover stroke + label styling live in styles.css (theme-aware);
+          fill/opacity stay inline — computed per node from data. */}
       <rect
         width={lw}
         height={lh}
         rx={2}
         fill={fill}
         fillOpacity={opacity}
-        stroke={hovered ? 'rgba(255,255,255,0.4)' : 'none'}
-        strokeWidth={1}
+        className={hovered ? 'leaf-node__bg--hovered' : undefined}
       />
       {lw > 32 && lh > 14 && (
-        <text
-          x={3}
-          y={11}
-          fontFamily="var(--font-monospace)"
-          fontSize={9}
-          fill="rgba(255,255,255,0.65)"
-        >
+        <text x={3} y={11} className="leaf-node__label">
           {d.data.name}
         </text>
       )}

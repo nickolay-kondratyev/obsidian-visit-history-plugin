@@ -30,7 +30,11 @@ export function RadioGroup<T extends string>({
   return (
     <div className="cfg-radios" role="radiogroup" aria-label={ariaLabel}>
       {options.map(o => (
-        <label key={o.value} className={'cfg-radio' + (o.value === value ? ' active' : '')}>
+        <label
+          key={o.value}
+          className={'cfg-radio' + (o.value === value ? ' active' : '')}
+          title={o.sub ?? o.label}
+        >
           <input
             type="radio"
             name={name}

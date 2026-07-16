@@ -53,6 +53,8 @@ export function HeatmapOptions({ config, onConfigChange }: HeatmapOptionsProps) 
       </div>
       <select
         className="cfg-select"
+        title="Heatmap color gradient"
+        aria-label="Heatmap color gradient"
         value={config.gradKey}
         // DOM boundary: <option> values are exactly GRADIENT_KEYS entries.
         onChange={e => onConfigChange({ gradKey: e.target.value as GradientKey })}
@@ -67,6 +69,7 @@ export function HeatmapOptions({ config, onConfigChange }: HeatmapOptionsProps) 
       <RangeSlider
         label={<span style={{ color: hotColor }}>hot / new</span>}
         valueText={`${config.hotDays.value} days`}
+        title="Files newer than this many days get the hot color"
         range={config.hotDays}
         step={1}
         hardMin={DAYS_HARD_MIN}
@@ -75,6 +78,7 @@ export function HeatmapOptions({ config, onConfigChange }: HeatmapOptionsProps) 
       <RangeSlider
         label={<span style={{ color: coldColor }}>cold / old</span>}
         valueText={`${config.coldDays.value} days`}
+        title="Files older than this many days get the cold color"
         range={config.coldDays}
         step={1}
         hardMin={DAYS_HARD_MIN}

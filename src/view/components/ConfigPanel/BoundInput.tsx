@@ -29,6 +29,7 @@ export function BoundInput({ value, onCommit, ariaLabel }: BoundInputProps) {
       type="text"
       inputMode="decimal"
       aria-label={ariaLabel}
+      title={ariaLabel}
       value={draft}
       onChange={e => setDraft(e.target.value)}
       onBlur={commit}

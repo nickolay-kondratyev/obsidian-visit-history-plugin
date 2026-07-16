@@ -45,6 +45,13 @@ interface TreemapVizProps {
    */
   onFolderClick: (relativeSegments: string[]) => void;
   fileOpener: IFileOpener;
+  /**
+   * Hands the zoom-reset action up to the host (App wires it into the
+   * header's reset button). Called once on mount with a stable function.
+   */
+  registerResetZoom: (reset: () => void) => void;
+  /** Clears ALL filter terms — the empty state's escape hatch. */
+  onClearFilters: () => void;
 }
 
 // ── Zoom limits ─────────────────────────────────────────────────────────────
@@ -85,6 +92,8 @@ export function TreemapViz({
   onStatsChange,
   onFolderClick,
   fileOpener,
+  registerResetZoom,
+  onClearFilters,
 }: TreemapVizProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
@@ -97,6 +106,13 @@ export function TreemapViz({
   const [dims, setDims] = useState({ w: 800, h: 600 });
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
+
+  // ── Expose zoom reset to the host (header button lives outside #viz) ────
+
+  useEffect(() => {
+    // Closure over the stable zoomRef — survives Zoom render-prop re-renders.
+    registerResetZoom(() => zoomRef.current?.reset());
+  }, [registerResetZoom]);
 
   // ── ResizeObserver — track container size ──────────────────────────────
 
@@ -310,17 +326,20 @@ export function TreemapViz({
         <Tooltip x={tooltip.x} y={tooltip.y} node={tooltip.node} scales={scales} />
       )}
       {isFilterActive(filter) && leaves.length === 0 && (
-        <div className="viz-empty-msg">No files match the current filters</div>
+        <div className="viz-empty">
+          <div className="viz-empty-msg">No files match the current filters</div>
+          <button
+            className="header-btn"
+            onClick={onClearFilters}
+            title="Remove all filter terms"
+          >
+            clear filters
+          </button>
+        </div>
       )}
       <div id="hint">
         scroll · zoom &nbsp;|&nbsp; drag · pan &nbsp;|&nbsp; dbl-click · reset
       </div>
-      <button
-        className="zoom-reset"
-        onClick={() => zoomRef.current?.reset()}
-      >
-        reset zoom
-      </button>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 interface SegmentedToggleProps<T extends string> {
-  options: readonly { value: T; label: string }[];
+  /** `title` = descriptive hover text for the segment (falls back to label). */
+  options: readonly { value: T; label: string; title?: string }[];
   value: T;
   onChange: (value: T) => void;
   ariaLabel: string;
@@ -36,6 +37,7 @@ export function SegmentedToggle<T extends string>({
           role="radio"
           aria-checked={o.value === value}
           className={'seg-opt' + (o.value === value ? ' active' : '')}
+          title={o.title ?? o.label}
           onClick={() => onChange(o.value)}
         >
           {o.label}

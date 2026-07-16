@@ -71,6 +71,15 @@ export function App({
     setOpenPanel(prev => (prev === panel ? null : panel));
   }, []);
 
+  // ── Zoom reset relay ─────────────────────────────────────────────────────
+  // The reset action lives in TreemapViz (owns the zoom), the button in the
+  // Header — a ref bridges the siblings without lifting zoom state into App.
+  const zoomResetRef = useRef<() => void>(() => {});
+  const registerResetZoom = useCallback((reset: () => void) => {
+    zoomResetRef.current = reset;
+  }, []);
+  const handleResetZoom = useCallback(() => zoomResetRef.current(), []);
+
   // ── Click-outside dismissal ──────────────────────────────────────────────
   // Any pointer-down outside the header chrome (header row + its popovers,
   // all inside `chromeRef`) closes the open panel. Listener registered on the
@@ -149,6 +158,10 @@ export function App({
     updateConfig({ filterTerms: FilterTermOps.remove(config.filterTerms, term) });
   }
 
+  function clearFilterTerms(): void {
+    updateConfig({ filterTerms: [] });
+  }
+
   // TreemapViz consumes plain per-type factors — strip the slider bounds.
   const scaleFactors = useMemo(
     () =>
@@ -213,6 +226,7 @@ export function App({
           onRemoveTerm={removeFilterTerm}
           breadcrumb={breadcrumb}
           onBack={breadcrumb.length > 0 ? handleBack : undefined}
+          onResetZoom={handleResetZoom}
         />
         {/* Popovers are SIBLINGS of the header (it clips overflow); at most one
             is open (openPanel), so the shared left/right anchors never collide. */}
@@ -251,6 +265,8 @@ export function App({
         onStatsChange={setStats}
         onFolderClick={handleFolderClick}
         fileOpener={fileOpener}
+        registerResetZoom={registerResetZoom}
+        onClearFilters={clearFilterTerms}
       />
     </>
   );

@@ -1,5 +1,5 @@
 import type { HierarchyRectangularNode } from 'd3-hierarchy';
-import { TYPE_C, type TypeColors } from '../constants';
+import { TYPE_C } from '../constants';
 import { fmtBytes, fmtDate, nodePath } from '../utils';
 import type { VaultNode } from '../../core/data/VaultNode';
 
@@ -29,13 +29,9 @@ function TsRow({ label, ts }: { label: string; ts: number | null | undefined }) 
 // ── Tooltip component ───────────────────────────────────────────────────────
 
 export function Tooltip({ x, y, node: d, scales }: TooltipProps) {
-  const c: TypeColors = TYPE_C[d.data.type ?? ''] ?? {
-    fill: '#555',
-    hover: '#777',
-    badge: '#333',
-    fg: '#aaa',
-  };
   const eff = Math.round((d.data.size ?? 0) * (scales[d.data.type ?? ''] || 1));
+  // Badge tints live in styles.css (theme-aware vars) — keyed by known type.
+  const badgeType = TYPE_C[d.data.type ?? ''] ? d.data.type : 'unknown';
 
   return (
     <div id="tooltip" style={{ left: x + 'px', top: y + 'px' }}>
@@ -43,14 +39,7 @@ export function Tooltip({ x, y, node: d, scales }: TooltipProps) {
       <div className="tt-row">
         <span>type</span>
         <span className="tt-val">
-          <span
-            className="tt-badge"
-            style={{
-              background: (c.badge || '#333') + '55',
-              color: c.fg || '#aaa',
-              border: '1px solid ' + (c.badge || '#333'),
-            }}
-          >
+          <span className={`tt-badge tt-badge--${badgeType}`}>
             .{d.data.type}
           </span>
         </span>

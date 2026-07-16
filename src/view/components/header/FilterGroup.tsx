@@ -49,7 +49,7 @@ export function FilterGroup({ terms, filterOpen, onToggleFilter, onRemoveTerm }:
                 className="filter-chip-x"
                 onClick={() => onRemoveTerm(term)}
                 aria-label={`Remove filter: ${term.text}`}
-                title="Remove"
+                title={`Remove filter: ${term.text}`}
               >
                 <XIcon />
               </button>

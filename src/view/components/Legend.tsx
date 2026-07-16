@@ -22,16 +22,16 @@ export function Legend({ colorMode, gradKey }: LegendProps) {
   const g: GradientDef = GRADIENTS[gradKey];
   return (
     <div className="legend">
-      <span style={{ fontSize: '9px', color: 'var(--text-dim)' }}>new</span>
+      <span className="legend-end">new</span>
       <div
         className="legend-grad"
         style={{ background: `linear-gradient(to right, ${g.hot}, ${g.cold})` }}
       />
-      <span style={{ fontSize: '9px', color: 'var(--text-dim)' }}>old</span>
+      <span className="legend-end">old</span>
       <div className="legend-item" style={{ marginLeft: '6px' }}>
         <div
           className="pip"
-          style={{ background: g.nil, border: '1px solid var(--border2)' }}
+          style={{ background: g.nil, border: '1px solid var(--vt-border2)' }}
         />
         no data
       </div>

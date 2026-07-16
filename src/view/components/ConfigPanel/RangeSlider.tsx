@@ -7,6 +7,8 @@ interface RangeSliderProps {
   label: ReactNode;
   /** Formatted current value shown to the right of the label (e.g. "×0.30"). */
   valueText: string;
+  /** Descriptive hover text for the slider track. */
+  title: string;
   range: BoundedValue;
   step: number;
   /** Absolute floor the editable min bound can never go below. */
@@ -19,7 +21,7 @@ interface RangeSliderProps {
  * Bound edits keep the invariants: hardMin <= min < max, value stays inside.
  * Fully controlled — the committed range comes back via onChange.
  */
-export function RangeSlider({ label, valueText, range, step, hardMin, onChange }: RangeSliderProps) {
+export function RangeSlider({ label, valueText, title, range, step, hardMin, onChange }: RangeSliderProps) {
   function onSliderInput(raw: string): void {
     onChange({ ...range, value: parseFloat(raw) });
   }
@@ -43,16 +45,18 @@ export function RangeSlider({ label, valueText, range, step, hardMin, onChange }
         <span className="slider-value">{valueText}</span>
       </div>
       <div className="slider-track-row">
-        <BoundInput value={range.min} onCommit={commitMin} ariaLabel="Slider minimum" />
+        <BoundInput value={range.min} onCommit={commitMin} ariaLabel="Slider minimum (editable)" />
         <input
           type="range"
           min={range.min}
           max={range.max}
           step={step}
           value={range.value}
+          title={title}
+          aria-label={title}
           onChange={e => onSliderInput(e.target.value)}
         />
-        <BoundInput value={range.max} onCommit={commitMax} ariaLabel="Slider maximum" />
+        <BoundInput value={range.max} onCommit={commitMax} ariaLabel="Slider maximum (editable)" />
       </div>
     </div>
   );

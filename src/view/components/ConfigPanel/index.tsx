@@ -12,9 +12,9 @@ interface ConfigPanelProps {
 }
 
 // Heatmap first — it is the view's primary mode (owner-requested order).
-const COLOR_MODE_OPTIONS: readonly { value: ColorMode; label: string }[] = [
-  { value: 'heatmap', label: 'Heatmap' },
-  { value: 'type', label: 'Type' },
+const COLOR_MODE_OPTIONS: readonly { value: ColorMode; label: string; title: string }[] = [
+  { value: 'heatmap', label: 'Heatmap', title: 'Color cells by timestamp recency' },
+  { value: 'type', label: 'Type', title: 'Color cells by file type' },
 ];
 
 const SCALE_STEP = 0.01;
@@ -52,6 +52,7 @@ export function ConfigPanel({ open, config, onConfigChange }: ConfigPanelProps) 
             </span>
           }
           valueText={`×${scale.value.toFixed(2)}`}
+          title={`Scale factor for .${type} files — multiplies their cell size`}
           range={scale}
           step={SCALE_STEP}
           hardMin={SCALE_HARD_MIN}

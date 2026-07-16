@@ -74,6 +74,21 @@ body.vault-heatmap-active .status-bar-mobile {
   box-shadow: none;
 }
 
+/* Keyboard focus ring — Obsidian's native button chrome is stripped above,
+   so custom controls must bring their own :focus-visible affordance. */
+.vault-heatmap-view :is(button, input, select):focus-visible {
+  outline: 2px solid var(--vt-accent);
+  outline-offset: 1px;
+}
+
+/* Light theme: the type fg tints are picked for dark surfaces — swap to the
+   darker badge shades so chip/badge text keeps contrast on light backgrounds. */
+body.theme-light .vault-heatmap-view {
+  --vt-md-fg: #3248b0;
+  --vt-cn-fg: #9a5a10;
+  --vt-ex-fg: #14786c;
+}
+
 /* ── Header ─────────────────────────────────────────────── */
 .vault-heatmap-view #header {
   position: absolute;
@@ -136,6 +151,12 @@ body.vault-heatmap-active .status-bar-mobile {
   height: 8px;
   width: 88px;
   border-radius: 3px;
+}
+
+/* "new"/"old" endpoint labels flanking the legend gradient. */
+.vault-heatmap-view .legend-end {
+  font-size: 9px;
+  color: var(--vt-text-dim);
 }
 
 .vault-heatmap-view .header-btn {
@@ -334,6 +355,9 @@ body.vault-heatmap-active .status-bar-mobile {
   background: var(--vt-surface);
   border: 1px solid var(--vt-border);
   border-top: none;
+  border-radius: 0 0 6px 6px;
+  /* Dropdown-level elevation: soft direct-light shadow + tight ambient one. */
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22), 0 2px 8px rgba(0, 0, 0, 0.16);
   padding: 14px;
   z-index: 99;
   overflow-y: auto;
@@ -351,6 +375,8 @@ body.vault-heatmap-active .status-bar-mobile {
 
 .vault-heatmap-view .hdr-pop--right {
   right: 0;
+  /* Flush against the view's right edge — only the free corner is rounded. */
+  border-radius: 0 0 0 6px;
 }
 
 .vault-heatmap-view .filter-pop-input {
@@ -394,6 +420,9 @@ body.vault-heatmap-active .status-bar-mobile {
   background: var(--vt-surface);
   border-left: 1px solid var(--vt-border);
   border-bottom: 1px solid var(--vt-border);
+  /* Flush right like .hdr-pop--right — same elevation + free-corner radius. */
+  border-radius: 0 0 0 6px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22), 0 2px 8px rgba(0, 0, 0, 0.16);
   padding: 14px;
   z-index: 99;
   overflow-y: auto;
@@ -552,11 +581,12 @@ body.vault-heatmap-active .status-bar-mobile {
   position: absolute;
   inset: 2px;
   border-radius: 50%;
-  background: var(--vt-text);
+  /* Accent like the seg-toggle thumb — "active" agrees across controls. */
+  background: var(--vt-accent);
 }
 
 .vault-heatmap-view .cfg-radio input[type="radio"]:focus-visible + .radio-dot {
-  outline: 1px solid var(--vt-border2);
+  outline: 2px solid var(--vt-accent);
   outline-offset: 2px;
 }
 
@@ -616,7 +646,8 @@ body.vault-heatmap-active .status-bar-mobile {
 
 .vault-heatmap-view input[type="range"] {
   width: 100%;
-  accent-color: var(--vt-border2);
+  /* Accent, not a border grey — the track must read as interactive. */
+  accent-color: var(--vt-accent);
   cursor: pointer;
 }
 
@@ -670,17 +701,25 @@ body.vault-heatmap-active .status-bar-mobile {
   cursor: grabbing;
 }
 
-/* Centered empty state when an active filter matches nothing. */
-.vault-heatmap-view .viz-empty-msg {
+/* Centered empty state when an active filter matches nothing.
+   Message + a "clear filters" escape hatch — an empty state must guide
+   toward action, not dead-end (the chips may be scrolled out of view). */
+.vault-heatmap-view .viz-empty {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.vault-heatmap-view .viz-empty-msg {
   font-size: 11px;
   letter-spacing: 0.07em;
   text-transform: uppercase;
   color: var(--vt-text-dim);
-  pointer-events: none;
 }
 
 .vault-heatmap-view #hint {
@@ -694,29 +733,68 @@ body.vault-heatmap-active .status-bar-mobile {
   pointer-events: none;
 }
 
-.vault-heatmap-view .zoom-reset {
-  position: absolute;
-  bottom: 10px;
-  right: 12px;
-  font-family: inherit;
-  font-size: 9px;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  background: none;
-  border: 1px solid var(--vt-border);
-  color: var(--vt-text-dim);
-  padding: 4px 8px;
-  cursor: pointer;
+/* ── Treemap node styling ───────────────────────────────── */
+/* Folder chrome derives from theme vars (color-mix) so the canvas follows
+   Obsidian light/dark instead of staying a hard-coded dark slab.
+   Depth tiers d1..d4 (capped in FolderNode): deeper = closer to text color,
+   preserving the old subtle "raised nesting" gradient in both themes. */
+.vault-heatmap-view .folder-node__bg {
+  stroke: var(--vt-border);
+  stroke-width: 0.75;
 }
 
-.vault-heatmap-view .zoom-reset:hover {
-  color: var(--vt-text);
+.vault-heatmap-view .folder-node__bg--d1 {
+  fill: color-mix(in srgb, var(--vt-text) 5%, var(--vt-bg));
+  stroke: var(--vt-border2);
+  stroke-width: 1.5;
 }
 
-/* ── Folder node interactivity ──────────────────────────── */
+.vault-heatmap-view .folder-node__bg--d2 {
+  fill: color-mix(in srgb, var(--vt-text) 8%, var(--vt-bg));
+}
+
+.vault-heatmap-view .folder-node__bg--d3 {
+  fill: color-mix(in srgb, var(--vt-text) 11%, var(--vt-bg));
+}
+
+.vault-heatmap-view .folder-node__bg--d4 {
+  fill: color-mix(in srgb, var(--vt-text) 14%, var(--vt-bg));
+}
+
 .vault-heatmap-view .folder-node--interactive:hover .folder-node__bg {
-  fill: #3a3a50;
+  fill: color-mix(in srgb, var(--vt-accent) 16%, var(--vt-bg));
   transition: fill 0.12s;
+}
+
+.vault-heatmap-view .folder-node__label {
+  font-family: var(--font-monospace);
+  font-size: 9px;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  fill: var(--vt-text-mut);
+}
+
+.vault-heatmap-view .folder-node__label--top {
+  font-size: 10px;
+  font-weight: 500;
+}
+
+/* Leaf label: white with a dark halo (paint-order) — readable over ANY cell
+   color (type palette or heat gradient) in both themes. */
+.vault-heatmap-view .leaf-node__label {
+  font-family: var(--font-monospace);
+  font-size: 9px;
+  fill: rgba(255, 255, 255, 0.78);
+  paint-order: stroke;
+  stroke: rgba(0, 0, 0, 0.4);
+  stroke-width: 2px;
+  stroke-linejoin: round;
+}
+
+.vault-heatmap-view .leaf-node__bg--hovered {
+  stroke: var(--vt-text);
+  stroke-opacity: 0.6;
+  stroke-width: 1;
 }
 
 /* ── Tooltip ────────────────────────────────────────────── */
@@ -724,6 +802,9 @@ body.vault-heatmap-active .status-bar-mobile {
   position: absolute;
   background: var(--vt-surface);
   border: 1px solid var(--vt-border2);
+  border-radius: 4px;
+  /* Floats over colored cells — needs real elevation to separate. */
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28), 0 2px 6px rgba(0, 0, 0, 0.2);
   padding: 10px 13px;
   pointer-events: none;
   z-index: 200;
@@ -732,8 +813,8 @@ body.vault-heatmap-active .status-bar-mobile {
 }
 
 .vault-heatmap-view .tt-name {
-  font-size: 11px;
-  font-weight: 500;
+  font-size: 12px;
+  font-weight: 600;
   color: var(--vt-text);
   margin-bottom: 6px;
   word-break: break-all;
@@ -760,6 +841,31 @@ body.vault-heatmap-active .status-bar-mobile {
   padding: 1px 5px;
   border-radius: 2px;
   font-weight: 500;
+}
+
+/* Type badge tints via the theme-adjusted vars (fg swaps on light theme). */
+.vault-heatmap-view .tt-badge--md {
+  background: color-mix(in srgb, var(--vt-md-b) 33%, transparent);
+  color: var(--vt-md-fg);
+  border: 1px solid var(--vt-md-b);
+}
+
+.vault-heatmap-view .tt-badge--canvas {
+  background: color-mix(in srgb, var(--vt-cn-b) 33%, transparent);
+  color: var(--vt-cn-fg);
+  border: 1px solid var(--vt-cn-b);
+}
+
+.vault-heatmap-view .tt-badge--excalidraw {
+  background: color-mix(in srgb, var(--vt-ex-b) 33%, transparent);
+  color: var(--vt-ex-fg);
+  border: 1px solid var(--vt-ex-b);
+}
+
+.vault-heatmap-view .tt-badge--unknown {
+  background: color-mix(in srgb, var(--vt-text-mut) 20%, transparent);
+  color: var(--vt-text-dim);
+  border: 1px solid var(--vt-border2);
 }
 
 .vault-heatmap-view .tt-sep {

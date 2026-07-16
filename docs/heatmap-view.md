@@ -69,7 +69,9 @@ The tree filter itself is pure: `viewModel/filterVaultTree.ts` (mirrors
 folders, identity fast-path when inactive), composed AFTER archive pruning
 in TreemapViz's `treeRoot` memo, so stats/legend automatically reflect the
 filtered view. A zero-match active filter shows a centered empty-state
-message. Terms persist in `HeatmapConfig.filterTerms` (data.json) — sticky
+message with a "clear filters" escape hatch (removes ALL terms — the chips
+may be scrolled out of view). Terms persist in
+`HeatmapConfig.filterTerms` (data.json) — sticky
 across restarts and drill-down. `FilterTermOps` normalizes UI adds (trim,
 per-kind case-insensitive dedupe); `HeatmapConfigSanitizer` enforces the
 same rules at the data.json boundary.
@@ -85,7 +87,9 @@ App                     state owner: HeatmapConfig (color mode, gradient,
  │                      filter terms), folder drill-down (folderSegments),
  │                      openPanel ('filter'|'field'|'info'|'config'|null —
  │                      at most ONE popover/panel open), contentMatchedPaths
- ├─ Header              actions only: breadcrumb + back, FilterGroup
+ ├─ Header              actions only: breadcrumb + back, FilterGroup,
+ │                      zoom reset (action lives in TreemapViz — bridged
+ │                      up through a ref registered via registerResetZoom)
  │   └─ FilterGroup     filter icon trigger + removable term chips
  │                      (kind = glyph + tint + title, never color alone)
  ├─ FilterPopover       kind SegmentedToggle + Enter-to-add input
@@ -108,9 +112,10 @@ on click-outside: App wraps the header chrome (header + popovers + config)
 in one ref'd div and listens for pointerdown on its `ownerDocument` (popout
 windows) while a panel is open. Esc dismissal is still ticketed.
 
-Header icons (filter funnel / info / config sliders / chip ✕) are one
-lucide-style stroked-SVG family in `view/components/icons.tsx` — colorless
-(`currentColor`), sized via CSS (`.vt-icon`), uniform 28×28 triggers.
+Header icons (filter funnel / zoom-reset corners / info / config sliders /
+chip ✕) are one lucide-style stroked-SVG family in
+`view/components/icons.tsx` — colorless (`currentColor`), sized via CSS
+(`.vt-icon`), uniform 28×28 triggers.
 
 - Props drilling by design (small app, no context).
 - Types are compile-time-safe unions: `ColorMode` (`type | heatmap`),
@@ -150,4 +155,15 @@ so it sticks across restarts:
 ## Styling
 
 All styles in `styles.css` at plugin root (class-based; inline styles only
-for computed values like gradient previews).
+for computed values like gradient previews and per-node cell fills).
+
+Theme-awareness: chrome AND the treemap canvas derive from Obsidian theme
+vars (`--vt-*` mapping at the top of `styles.css`). Folder chrome uses
+`color-mix` over `--vt-text`/`--vt-bg` (depth tiers `folder-node__bg--d1..d4`,
+deeper = closer to text color); leaf labels are white with a dark halo
+(`paint-order: stroke`) so they stay readable over any cell color in both
+themes; `body.theme-light` swaps the type fg tints to their darker badge
+shades for chip/badge contrast. Floating surfaces (popovers, config panel,
+tooltip) carry a two-part elevation shadow; all custom controls have an
+accent `:focus-visible` ring (Obsidian's native button chrome is stripped
+within the view).

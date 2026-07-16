@@ -8,9 +8,9 @@ interface FilterPopoverProps {
   onAddTerm: (kind: FilterTermKind, text: string) => void;
 }
 
-const KIND_OPTIONS: readonly { value: FilterTermKind; label: string }[] = [
-  { value: 'path', label: 'Path' },
-  { value: 'content', label: 'Content' },
+const KIND_OPTIONS: readonly { value: FilterTermKind; label: string; title: string }[] = [
+  { value: 'path', label: 'Path', title: 'Match against the file path' },
+  { value: 'content', label: 'Content', title: 'Match against text inside files' },
 ];
 
 const KIND_HINTS: Record<FilterTermKind, string> = {
