@@ -3,6 +3,9 @@
 // segment. Conservative portable-filename charset; leading/trailing dots
 // excluded ('.', '..', hidden files); 200 chars keeps `<id>.vh_v3` under
 // common 255-byte limits.
+// Consumes obsidian-id-lib's id FORMAT contract (generated ids are always
+// filename-safe base36; foreign-format ids are not) —
+// see ref.ap_iZAE3fAcs5zXIWrTiIdx3_E in the lib README.
 const FILENAME_SAFE_ID_PATTERN = /^[A-Za-z0-9_-][A-Za-z0-9._-]{0,198}[A-Za-z0-9_-]$|^[A-Za-z0-9_-]$/;
 
 /**
