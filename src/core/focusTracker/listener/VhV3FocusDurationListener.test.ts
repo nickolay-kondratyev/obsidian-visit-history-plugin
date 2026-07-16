@@ -1,7 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { VhV3FocusDurationListener } from './VhV3FocusDurationListener';
 import { FocusEvent } from '../FocusTracker';
-import { FocusDurationSink, FocusDurationTracker } from '../../focusDuration/FocusDurationTracker';
+import {
+  FocusDurationSink,
+  FocusDurationTracker,
+  UNFOCUS_GRACE_MS,
+} from '../../focusDuration/FocusDurationTracker';
 import { FakeDocIdService } from '../../../testSupport/fakes';
 import { makeTFile } from '../../../testSupport/fileFactory';
 
@@ -52,8 +56,9 @@ describe('VhV3FocusDurationListener', () => {
       const { listener, sink } = setup();
       await listener.onFocus(makeFocusEvent('notes/a.md'));
       vi.advanceTimersByTime(5000);
-      // WHEN it is unfocused
+      // WHEN it is unfocused and the unfocus grace resolves
       await listener.onUnfocus(makeFocusEvent('notes/a.md'));
+      vi.advanceTimersByTime(UNFOCUS_GRACE_MS);
       // THEN the session was recorded under the doc id
       expect(sink.docIds).toEqual(['docid-for-notes_a.md']);
     });
@@ -74,8 +79,10 @@ describe('VhV3FocusDurationListener', () => {
       const { listener, sink } = setup();
       await listener.onFocus(makeFocusEvent('notes/a.md'));
       vi.advanceTimersByTime(5000);
-      // WHEN a same-leaf navigation lands on an id-less doc (focus only, no unfocus)
+      // WHEN a same-leaf navigation lands on an id-less doc (focus only, no
+      // unfocus) and the unfocus grace resolves
       await listener.onFocus(makeFocusEvent('draw.excalidraw'));
+      vi.advanceTimersByTime(UNFOCUS_GRACE_MS);
       // THEN the note's session was closed (not left running forever)
       expect(sink.docIds).toEqual(['docid-for-notes_a.md']);
     });

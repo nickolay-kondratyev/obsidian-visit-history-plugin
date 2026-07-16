@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Plugin, WorkspaceLeaf } from 'obsidian';
 import { WindowActivityMonitor } from './WindowActivityMonitor';
-import { FocusDurationSink, FocusDurationTracker } from './FocusDurationTracker';
+import { FocusDurationSink, FocusDurationTracker, UNFOCUS_GRACE_MS } from './FocusDurationTracker';
 
 const IDLE_MS = 180_000;
 
@@ -86,10 +86,12 @@ describe('WindowActivityMonitor', () => {
       const sink = new RecordingSink();
       const tracker = new FocusDurationTracker(sink, () => IDLE_MS);
       new WindowActivityMonitor(plugin, tracker, main.win, main.doc);
-      // WHEN a doc hosted in that popout is focused for 5s and then unfocused
+      // WHEN a doc hosted in that popout is focused for 5s, unfocused, and
+      // the unfocus grace resolves
       tracker.onDocFocused('X', popout.doc);
       vi.advanceTimersByTime(5000);
       tracker.onDocUnfocused();
+      vi.advanceTimersByTime(UNFOCUS_GRACE_MS);
       // THEN its session was recorded — the popout counts as a focused window
       expect(sink.records).toEqual(['X:5000']);
     });
