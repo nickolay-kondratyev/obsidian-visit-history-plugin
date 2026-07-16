@@ -69,6 +69,20 @@ describe('FrontmatterDocIdStore', () => {
       expect(await store.ensureId(file)).toBe('some-legacy-uuid');
     });
 
+    it('should respect an existing legacy uppercase docid (base62/_E era) without any write', async () => {
+      // GIVEN a note with a legacy-format id containing uppercase characters
+      const { store, noteFileUtil } = setup();
+      const file = noteFileUtil.seedNote(
+        'notes/a.md',
+        '---\nid: docid_pdoZOBNLFpbYABiCpDVfM_E\n---\nbody',
+      );
+      // WHEN
+      const id = await store.ensureId(file);
+      // THEN the uppercase id is kept verbatim and the file stays untouched
+      expect({ id, writes: noteFileUtil.processCallCount })
+        .toEqual({ id: 'docid_pdoZOBNLFpbYABiCpDVfM_E', writes: 0 });
+    });
+
     it('should return an existing id declared with a quoted key without any write', async () => {
       // GIVEN a note whose id key is quoted YAML
       const { store, noteFileUtil } = setup();

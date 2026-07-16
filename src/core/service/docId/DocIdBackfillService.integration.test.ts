@@ -8,9 +8,9 @@ import { DocIdGeneratorDefault } from './DocIdGenerator';
 import { FakeNoteFileUtil } from '../../../testSupport/FakeNoteFileUtil';
 import { FakeVaultUtil } from '../../../testSupport/fakes';
 
-const DOC_ID_REGEX = /^docid_[0-9a-zA-Z]{21}_E$/;
+const DOC_ID_REGEX = /^docid_[0-9a-z]{24}_e$/;
 // Frontmatter block whose only entry is a generated doc id.
-const FRONTMATTER_WITH_DOC_ID_REGEX = /^---\nid: (docid_[0-9a-zA-Z]{21}_E)\n/;
+const FRONTMATTER_WITH_DOC_ID_REGEX = /^---\nid: (docid_[0-9a-z]{24}_e)\n/;
 
 /**
  * Integration: real DocIdBackfillServiceDefault → DocIdServiceDefault →
@@ -82,7 +82,7 @@ describe('DocIdBackfillServiceDefault (integration)', () => {
       await service.backfillAll();
       // THEN quotes survive; only the id line is new
       expect(noteFileUtil.getContent('notes/quoted.md'))
-        .toMatch(/^---\nid: docid_[0-9a-zA-Z]{21}_E\n"someother field 3": v3\n---\nbody$/);
+        .toMatch(/^---\nid: docid_[0-9a-z]{24}_e\n"someother field 3": v3\n---\nbody$/);
     });
 
     it('should write metadata.frontmatter.id into a canvas without an id', async () => {

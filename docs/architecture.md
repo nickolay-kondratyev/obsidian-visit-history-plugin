@@ -125,7 +125,8 @@ VaultTreemapView.refresh
 
 ## Doc id flow
 
-Every focused document gets a persistent id: `docid_{21 base62 chars}_E`.
+Every focused document gets a persistent id: `docid_{24 base36 chars}_e`
+(lowercase; 36^24 ≈ 2.2e37 keeps the random space above UUID v4's 2^122).
 
 ```
 active-leaf-change
@@ -139,8 +140,9 @@ active-leaf-change
 ```
 
 Rules:
-- An existing id is used as-is even if it does not follow the docid_ format —
-  the file is then NOT modified (no mtime churn, no sync noise).
+- An existing id is used as-is even if it does not follow the docid_ format
+  (incl. legacy uppercase base62 `docid_{21}_E` ids) — the file is then NOT
+  modified (no mtime churn, no sync noise).
 - An id slot occupied by an unusable value (e.g. a nested mapping) is never
   overwritten; ensure returns null.
 - Empty/whitespace-only canvas content (a brand-new canvas) is treated as an

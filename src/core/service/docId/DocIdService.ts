@@ -3,7 +3,7 @@ import { DocIdStore } from './DocIdStore';
 
 /**
  * Ensures every opened document carries a persistent doc id
- * (docid_{21 base62}_E). Dispatched from DocIdFocusListener on file focus.
+ * (docid_{24 base36}_e). Dispatched from DocIdFocusListener on file focus.
  */
 export interface DocIdService {
   /**
