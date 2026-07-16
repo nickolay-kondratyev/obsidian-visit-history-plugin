@@ -1,4 +1,5 @@
 import type { FilterTerm, FilterTermKind } from '../../../viewModel/heatmapConfig';
+import { FilterIcon, XIcon } from '../icons';
 
 interface FilterGroupProps {
   terms: FilterTerm[];
@@ -30,7 +31,7 @@ export function FilterGroup({ terms, filterOpen, onToggleFilter, onRemoveTerm }:
         aria-label="Filter files"
         aria-expanded={filterOpen}
       >
-        🔍
+        <FilterIcon />
       </button>
       {terms.length > 0 && (
         <div className="filter-chips">
@@ -50,7 +51,7 @@ export function FilterGroup({ terms, filterOpen, onToggleFilter, onRemoveTerm }:
                 aria-label={`Remove filter: ${term.text}`}
                 title="Remove"
               >
-                ✕
+                <XIcon />
               </button>
             </span>
           ))}

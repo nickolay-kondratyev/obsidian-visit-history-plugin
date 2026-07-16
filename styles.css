@@ -28,6 +28,8 @@ body.vault-heatmap-active .status-bar-mobile {
   --vt-text:     var(--text-normal);
   --vt-text-dim: var(--text-muted);
   --vt-text-mut: var(--text-faint);
+  --vt-accent:    var(--interactive-accent);
+  --vt-on-accent: var(--text-on-accent);
 
   /* File-type colors — no Obsidian equivalent, keep as plugin-specific */
   --vt-md:       #4a5ed4;
@@ -122,6 +124,7 @@ body.vault-heatmap-active .status-bar-mobile {
   font-size: 10px;
   background: none;
   border: 1px solid var(--vt-border);
+  border-radius: 4px;
   color: var(--vt-text-dim);
   padding: 4px 10px;
   cursor: pointer;
@@ -141,19 +144,30 @@ body.vault-heatmap-active .status-bar-mobile {
   color: var(--vt-text);
 }
 
-/* Square icon variant of .header-btn (filter / info / config triggers). */
+/* Square icon variant of .header-btn (filter / info / config triggers).
+   Fixed 28×28 so every icon trigger reads as one uniform family. */
 .vault-heatmap-view .hdr-icon-btn {
-  font-family: inherit;
-  font-size: 11px;
-  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
   background: none;
   border: 1px solid var(--vt-border);
+  border-radius: 4px;
   color: var(--vt-text-dim);
-  padding: 4px 8px;
   cursor: pointer;
-  white-space: nowrap;
   transition: color 0.15s, border-color 0.15s;
   flex-shrink: 0;
+}
+
+/* Icon set (src/view/components/icons.tsx) — one size everywhere it appears
+   at header level; inherits currentColor from the hosting button. */
+.vault-heatmap-view .vt-icon {
+  display: block;
+  width: 15px;
+  height: 15px;
 }
 
 .vault-heatmap-view .hdr-icon-btn:hover,
@@ -178,6 +192,7 @@ body.vault-heatmap-active .status-bar-mobile {
   font-size: 10px;
   background: none;
   border: 1px solid var(--vt-border);
+  border-radius: 4px;
   color: var(--vt-text-dim);
   padding: 3px 8px;
   cursor: pointer;
@@ -269,15 +284,21 @@ body.vault-heatmap-active .status-bar-mobile {
 }
 
 .vault-heatmap-view .filter-chip-x {
-  font-family: inherit;
-  font-size: 10px;
-  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
   color: var(--vt-text-dim);
   padding: 3px 5px;
   cursor: pointer;
   transition: color 0.15s;
+}
+
+/* Chip-scale X — smaller than the 15px header icons. */
+.vault-heatmap-view .filter-chip-x .vt-icon {
+  width: 9px;
+  height: 9px;
 }
 
 .vault-heatmap-view .filter-chip-x:hover {
@@ -410,24 +431,26 @@ body.vault-heatmap-active .status-bar-mobile {
 }
 
 /* ── Segmented toggle (binary radio rendered as a sliding switch) ── */
+/* Pill track + filled accent thumb — reads as a switch, not two buttons.
+   --seg-pad is read by SegmentedToggle.tsx for the thumb-width calc. */
 .vault-heatmap-view .seg-toggle {
+  --seg-pad: 3px;
   position: relative;
   display: flex;
   background: var(--vt-bg);
   border: 1px solid var(--vt-border);
-  border-radius: 4px;
-  padding: 2px;
+  border-radius: 999px;
+  padding: var(--seg-pad);
   margin-bottom: 12px;
 }
 
 .vault-heatmap-view .seg-thumb {
   position: absolute;
-  top: 2px;
-  bottom: 2px;
-  left: 2px;
-  background: var(--vt-surface);
-  border: 1px solid var(--vt-border2);
-  border-radius: 3px;
+  top: var(--seg-pad);
+  bottom: var(--seg-pad);
+  left: var(--seg-pad);
+  background: var(--vt-accent);
+  border-radius: 999px;
   transition: transform 0.18s ease;
 }
 
@@ -446,9 +469,14 @@ body.vault-heatmap-active .status-bar-mobile {
   transition: color 0.15s;
 }
 
-.vault-heatmap-view .seg-opt:hover,
-.vault-heatmap-view .seg-opt.active {
+.vault-heatmap-view .seg-opt:hover {
   color: var(--vt-text);
+}
+
+/* Label riding the accent thumb needs on-accent contrast (incl. on hover). */
+.vault-heatmap-view .seg-opt.active,
+.vault-heatmap-view .seg-opt.active:hover {
+  color: var(--vt-on-accent);
 }
 
 /* ── Radio group (timestamp field) ──────────────────────── */

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { Header, type HeaderPanel } from './Header';
 import { ConfigPanel } from './ConfigPanel';
 import { TreemapViz } from './TreemapViz';
@@ -70,6 +70,25 @@ export function App({
   const handlePanelToggle = useCallback((panel: HeaderPanel) => {
     setOpenPanel(prev => (prev === panel ? null : panel));
   }, []);
+
+  // ── Click-outside dismissal ──────────────────────────────────────────────
+  // Any pointer-down outside the header chrome (header row + its popovers,
+  // all inside `chromeRef`) closes the open panel. Listener registered on the
+  // chrome's ownerDocument — the view may live in an Obsidian popout window,
+  // where the main window's `document` would never see the event. Capture
+  // phase so an inner stopPropagation cannot leave a stale panel open.
+  const chromeRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (openPanel === null) return;
+    const chrome = chromeRef.current;
+    if (!chrome) return;
+    const onPointerDown = (e: PointerEvent): void => {
+      if (e.target instanceof Node && !chrome.contains(e.target)) setOpenPanel(null);
+    };
+    const doc = chrome.ownerDocument;
+    doc.addEventListener('pointerdown', onPointerDown, { capture: true });
+    return () => doc.removeEventListener('pointerdown', onPointerDown, { capture: true });
+  }, [openPanel]);
 
   // ── Filter terms → tree filter ───────────────────────────────────────────
 
@@ -181,38 +200,43 @@ export function App({
 
   return (
     <>
-      <Header
-        colorMode={config.colorMode}
-        field={config.field}
-        filterTerms={config.filterTerms}
-        openPanel={openPanel}
-        onPanelToggle={handlePanelToggle}
-        onRemoveTerm={removeFilterTerm}
-        breadcrumb={breadcrumb}
-        onBack={breadcrumb.length > 0 ? handleBack : undefined}
-      />
-      {/* Popovers are SIBLINGS of the header (it clips overflow); at most one
-          is open (openPanel), so the shared left/right anchors never collide. */}
-      <FilterPopover
-        open={openPanel === 'filter'}
-        onAddTerm={addFilterTerm}
-      />
-      <FieldPopover
-        open={openPanel === 'field'}
-        field={config.field}
-        onFieldChange={field => updateConfig({ field })}
-      />
-      <InfoPopover
-        open={openPanel === 'info'}
-        stats={stats}
-        colorMode={config.colorMode}
-        gradKey={config.gradKey}
-      />
-      <ConfigPanel
-        open={openPanel === 'config'}
-        config={config}
-        onConfigChange={updateConfig}
-      />
+      {/* Header chrome boundary for click-outside dismissal. Deliberately
+          UNPOSITIONED: children stay absolutely positioned against the
+          .vault-heatmap-view container, exactly as when they were siblings. */}
+      <div ref={chromeRef}>
+        <Header
+          colorMode={config.colorMode}
+          field={config.field}
+          filterTerms={config.filterTerms}
+          openPanel={openPanel}
+          onPanelToggle={handlePanelToggle}
+          onRemoveTerm={removeFilterTerm}
+          breadcrumb={breadcrumb}
+          onBack={breadcrumb.length > 0 ? handleBack : undefined}
+        />
+        {/* Popovers are SIBLINGS of the header (it clips overflow); at most one
+            is open (openPanel), so the shared left/right anchors never collide. */}
+        <FilterPopover
+          open={openPanel === 'filter'}
+          onAddTerm={addFilterTerm}
+        />
+        <FieldPopover
+          open={openPanel === 'field'}
+          field={config.field}
+          onFieldChange={field => updateConfig({ field })}
+        />
+        <InfoPopover
+          open={openPanel === 'info'}
+          stats={stats}
+          colorMode={config.colorMode}
+          gradKey={config.gradKey}
+        />
+        <ConfigPanel
+          open={openPanel === 'config'}
+          config={config}
+          onConfigChange={updateConfig}
+        />
+      </div>
       <TreemapViz
         data={data}
         currentRoot={currentRoot}

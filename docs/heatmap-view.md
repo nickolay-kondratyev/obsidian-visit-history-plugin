@@ -103,8 +103,14 @@ App                     state owner: HeatmapConfig (color mode, gradient,
 ```
 
 Popovers are always-rendered siblings of `#header` (it clips overflow),
-shown via an `.open` class — the ConfigPanel pattern. No click-outside/Esc
-dismissal (consistent with ConfigPanel; wholesale follow-up ticket).
+shown via an `.open` class — the ConfigPanel pattern. All four panels close
+on click-outside: App wraps the header chrome (header + popovers + config)
+in one ref'd div and listens for pointerdown on its `ownerDocument` (popout
+windows) while a panel is open. Esc dismissal is still ticketed.
+
+Header icons (filter funnel / info / config sliders / chip ✕) are one
+lucide-style stroked-SVG family in `view/components/icons.tsx` — colorless
+(`currentColor`), sized via CSS (`.vt-icon`), uniform 28×28 triggers.
 
 - Props drilling by design (small app, no context).
 - Types are compile-time-safe unions: `ColorMode` (`type | heatmap`),

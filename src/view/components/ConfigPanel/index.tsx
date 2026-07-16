@@ -11,9 +11,10 @@ interface ConfigPanelProps {
   onConfigChange: (partial: Partial<HeatmapConfig>) => void;
 }
 
+// Heatmap first — it is the view's primary mode (owner-requested order).
 const COLOR_MODE_OPTIONS: readonly { value: ColorMode; label: string }[] = [
-  { value: 'type', label: 'By type' },
   { value: 'heatmap', label: 'Heatmap' },
+  { value: 'type', label: 'Type' },
 ];
 
 const SCALE_STEP = 0.01;

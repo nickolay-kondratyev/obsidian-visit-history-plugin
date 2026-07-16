@@ -1,6 +1,7 @@
 import { FIELD_LABELS, type ColorMode, type HeatField } from '../constants';
 import type { FilterTerm } from '../../viewModel/heatmapConfig';
 import { FilterGroup } from './header/FilterGroup';
+import { InfoIcon, SettingsIcon } from './icons';
 
 /**
  * Header popover/panel identifiers. App keeps at most ONE open at a time
@@ -25,8 +26,8 @@ interface HeaderProps {
 }
 
 /**
- * Top bar — actions only (info lives in the ⓘ popover):
- * breadcrumb · filter group (icon + term chips) · field selector · ⓘ · ⚙.
+ * Top bar — actions only (info lives in the info popover):
+ * breadcrumb · filter group (icon + term chips) · field selector · info · config.
  * Pure presentational — no state; popovers render as App-level siblings.
  */
 export function Header({
@@ -75,7 +76,7 @@ export function Header({
         aria-label="View info"
         aria-expanded={openPanel === 'info'}
       >
-        ⓘ
+        <InfoIcon />
       </button>
       <button
         className={'hdr-icon-btn' + (openPanel === 'config' ? ' active' : '')}
@@ -84,7 +85,7 @@ export function Header({
         aria-label="Configure heatmap"
         aria-expanded={openPanel === 'config'}
       >
-        ⚙
+        <SettingsIcon />
       </button>
     </div>
   );

@@ -1,19 +1,13 @@
-# Heatmap header: click-outside / Esc dismissal for popovers + config panel
+# Heatmap header: Esc dismissal for popovers + config panel
 
-**Status**: OPEN (deferred from `heatmap-filter-ui`, 2026-07-15)
+**Status**: OPEN — narrowed to Esc only (2026-07-16).
+Click-outside dismissal SHIPPED for all four panels (heatmap skinning pass):
+document-level pointerdown listener in App (active while openPanel !== null),
+scoped to the header-chrome wrapper's `ownerDocument` for popout windows.
 
-## Problem
-The header popovers (filter/field/info) and the config panel are toggle-only:
-they close via their trigger button (or by opening another panel — App keeps
-at most one open). Click-outside and Esc do nothing, which is unusual for
-popover UX.
-
-## Why deferred
-The pre-existing ConfigPanel is toggle-only; adding dismissal to just the new
-popovers would be inconsistent. Per "change a pattern wholesale", do all four
-at once.
+## Remaining problem
+Esc does not close the open popover/panel — standard popover UX expects it.
 
 ## Fix ideas
-- One document-level pointerdown listener in App (registered while
-  openPanel !== null) + Esc keydown; ignore events inside the open panel or
-  its trigger. Mind popout windows (use the view's ownerDocument).
+- Esc keydown listener alongside the existing pointerdown listener in App
+  (same effect, same ownerDocument scoping).

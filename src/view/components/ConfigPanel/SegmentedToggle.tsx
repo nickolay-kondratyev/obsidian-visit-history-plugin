@@ -24,7 +24,8 @@ export function SegmentedToggle<T extends string>({
         aria-hidden
         style={{
           // Thumb spans one segment; slides to the selected one.
-          width: `calc((100% - 4px) / ${options.length})`,
+          // --seg-pad is owned by styles.css (.seg-toggle) — single source.
+          width: `calc((100% - 2 * var(--seg-pad)) / ${options.length})`,
           transform: `translateX(${selectedIndex * 100}%)`,
         }}
       />
