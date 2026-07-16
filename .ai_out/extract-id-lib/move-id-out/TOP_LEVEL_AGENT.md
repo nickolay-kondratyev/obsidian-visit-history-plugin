@@ -11,9 +11,9 @@ Lib repo needs concise README. Commits in BOTH repos.
 - [x] Setup (dirs, submodule inspected)
 - [x] EXPLORATION → EXPLORATION__PUBLIC.md (done; 4 human questions raised)
 - [x] CLARIFICATION — all 4 questions resolved by human (see CLARIFICATION__PUBLIC.md); ulid removal approved
-- [~] DETAILED_PLANNING (PLANNER, background, THINK_HARDER)
-- [ ] DETAILED_PLAN_REVIEW (PLAN_REVIEWER)
-- [ ] PLAN_ITERATION
+- [x] DETAILED_PLANNING — plan approved
+- [x] DETAILED_PLAN_REVIEW — 0 MAJOR, 3 minor inline edits
+- [x] PLAN_ITERATION — SKIPPED (reviewer signal: only minor inline edits)
 - [ ] IMPLEMENTATION
 - [ ] IMPLEMENTATION_REVIEW
 - [ ] IMPLEMENTATION_ITERATION

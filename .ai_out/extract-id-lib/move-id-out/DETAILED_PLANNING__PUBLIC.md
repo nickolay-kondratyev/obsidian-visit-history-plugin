@@ -61,6 +61,7 @@ New lib-owned pieces:
     static createDefault(vault: Vault): DocIdService;
   }
   ```
+  NOTE (reviewer): CLARIFICATION Q3 literally said "thin `app`-taking facade"; taking `Vault` is a deliberate narrowing (consumers write `createDefault(app.vault)` — still one line). Called out for transparency; if the human prefers the literal `App` signature, the facade alone widens (DI classes stay on `Vault`).
 - **`src/index.ts` barrel** exporting all of the above (use `export type` for type-only exports — the consumer compiles with `isolatedModules`).
 
 The lib's ONLY `obsidian` imports stay `TFile` (type) + `Vault` (type, in `VaultFileContentAccess`/factory). Log prefix in moved code changes `[VHP]` → `[obsidian-id-lib]` (behavior-neutral; adjust any test that asserts it).
@@ -196,7 +197,7 @@ submodules/obsidian-id-lib/            (own git repo, branch main)
 - **Verify**: all moved tests pass unchanged in substance; new lock suite green.
 
 ### Phase 3 — Rewire the plugin (parent repo)
-1. `package.json`: add `"obsidian-id-lib": "file:submodules/obsidian-id-lib"` to dependencies; REMOVE `"ulid"`. `npm install` (refreshes lockfile).
+1. `package.json`: add `"obsidian-id-lib": "file:submodules/obsidian-id-lib"` to dependencies; REMOVE `"ulid"`. Add script `"test:lib": "npm --prefix submodules/obsidian-id-lib run test"` so the lib suite is runnable from the plugin repo root (lib code changes must stay test-covered without remembering to cd). `npm install` (refreshes lockfile).
 2. Delete moved files from `src/core/service/docId/` (keep `DocIdBackfillService.ts` + its two tests). Directory now holds backfill only.
 3. Retarget imports to `'obsidian-id-lib'` in: `PluginFactory.ts` (replace generator/store/service wiring lines 59–63 with `this.docIdService = DocIdServices.createDefault(app.vault);`), `DocIdFocusListener.ts` (+ its test), `VhV3FocusDurationListener.ts`, `VisitHistoryServiceV3.ts`, `DocIdBackfillService.ts` (+ unit test), `testSupport/fakes.ts` (`FakeDocIdService`).
 4. `DocIdBackfillService.integration.test.ts`: import lib classes from `'obsidian-id-lib'`; construct `new DocIdServiceDefault(new FrontmatterDocIdStore(fakeNoteFileUtil, gen), new CanvasDocIdStore(fakeNoteFileUtil, gen), new CrossPluginPathLock({}))` — `FakeNoteFileUtil` satisfies `FileContentAccess` structurally; fresh `{}` registry host isolates the test. This test is now the consumer-side integration proof (AC-P3).
@@ -208,7 +209,7 @@ submodules/obsidian-id-lib/            (own git repo, branch main)
 ### Phase 4 — Documentation
 1. **Lib README rewrite** (submodule) per §5 outline; commit in submodule: `README: usage, window-lock contract, id format contract`.
 2. **`docs/migration/extraction-of-id.md`**: mark IMPLEMENTED (pointer to lib); rewrite §Solution.3 → raw-text `Vault.process` + in-transform re-check with the WHY-NOT-processFrontMatter rationale (Q1); §Solution.2 → `docid_{24 base36 lowercase}_e`, existing ids honored (Q2); §API surface → DI classes + `DocIdServices.createDefault` facade (Q3); record the final window key + Map value shape.
-3. **`CLAUDE.md`**: architecture tree — `service/docId/` entry now = `DocIdBackfillService` + pointer "generator/stores/service/lock live in `submodules/obsidian-id-lib` (git submodule, bundled via `file:` dep)"; "Key design decisions" doc-ids bullet — add the cross-plugin lock + versioned window key + lib extraction; deps line — remove `ulid`, add `obsidian-id-lib` submodule; dev-env — `git submodule update --init` before `npm install`. Keep entries SUCCINCT.
+3. **`CLAUDE.md`**: architecture tree — `service/docId/` entry now = `DocIdBackfillService` + pointer "generator/stores/service/lock live in `submodules/obsidian-id-lib` (git submodule, bundled via `file:` dep)"; "Key design decisions" doc-ids bullet — add the cross-plugin lock + versioned window key + lib extraction; deps line — remove `ulid`, add `obsidian-id-lib` submodule; dev-env — `git submodule update --init` before `npm install`, and `npm run test:lib` for the lib suite. Keep entries SUCCINCT.
 4. **`docs/architecture.md`**: "Doc id flow" section + component-diagram lines — insert the lib boundary and the lock step (`DocIdService (obsidian-id-lib) — per-path cross-plugin window lock → store`). Skim `docs/README.md` for staleness (likely no change).
 5. Commit in the PARENT: `Docs: doc-id library extraction + cross-plugin lock (CLAUDE.md, architecture, design brief)`.
 
@@ -243,7 +244,7 @@ submodules/obsidian-id-lib/            (own git repo, branch main)
 - **AC-L7 foreign-version tolerance**: manually pre-seed the registry with a plain pending/rejecting `Promise` (simulating an older lib version's tail) → `runExclusive` waits for it / is not wedged by its rejection.
 
 ### Service/lock integration — `DocIdServices.lock.test.ts` + `DocIdService.test.ts`
-- **AC-S1 one write under race**: two `DocIdServiceDefault` instances (two "plugins") sharing one registry host and one `FakeFileContentAccess` over the same id-less file → both `ensureDocId` calls return the SAME id and `processCallCount === 1` (second locked-out writer's fast-path/re-check sees the id and bails — idempotency backstop observable).
+- **AC-S1 one write under race**: two `DocIdServiceDefault` instances (two "plugins") sharing one registry host and one `FakeFileContentAccess` over the same id-less file → both `ensureDocId` calls return the SAME id and `processCallCount === 1`. (When the lock works, it is the second writer's FAST-PATH read that sees the id and bails; the in-transform re-check backstop — which fires only when the lock is bypassed — is separately covered by the moved store tests, AC-B7.)
 - **AC-S2 getDocId lock-free**: `getDocId` never creates a registry entry (host stays key-free) and never calls `process`.
 - **AC-S3 lock delegation**: `ensureDocId` invokes `PathLock.runExclusive` with `file.path`; unsupported extensions return `null` WITHOUT touching the lock.
 
