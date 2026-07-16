@@ -89,12 +89,16 @@ Export `UNFOCUS_GRACE_MS` so tests import it (no mirrored magic number in the te
 
 **Why `cappedEndMs` is snapshotted at unfocus (not computed at finalize):** the retroactive
 idle cutoff compares against `lastActivityMs`, which legitimately keeps advancing during grace
-(the user is clicking around a modal). Scenario that breaks a compute-at-finalize design:
+(the user is clicking around a modal). Illustrative risk of a compute-at-finalize design:
 activity at `t_a`, OS sleep 8 h, wake, unfocus at `t1` (correct end = `t_a`, sleep gap
-excluded), user activity during grace pushes `lastActivityMs` past `t1` → a finalize-time
-cutoff check would see no idle gap and record end `t1`, counting 8 h of sleep. The snapshot
-pins `t_a`. Existing test `should cap the duration at the last interaction when the doc is
-unfocused right after waking` continues to pass unchanged because of this.
+excluded), then `lastActivityMs` advances past `t1` during grace → a finalize-time cutoff
+check would see no idle gap and record end `t1`, counting 8 h of sleep. (In THIS plan's design
+the `onUserActivity` retro-idle row would finalize on the first post-sleep interaction before
+`lastActivityMs` updates, intercepting that exact sequence — but correctness must not hinge on
+that cross-row coupling. The snapshot makes I4 LOCALLY true: the end is resolved once, at
+unfocus, with the then-current `lastActivityMs` and idle timeout — also deterministic under a
+live mid-grace idle-timeout settings change.) Existing test `should cap the duration at the
+last interaction when the doc is unfocused right after waking` keeps its exact expectation.
 
 Extract the (now twice-needed) cutoff expression into one private helper — DRY:
 
@@ -106,8 +110,10 @@ private idleCappedEndMs(endMs: number): number {
 }
 ```
 
-`endSession` keeps its existing check by calling this helper (its re-application to an
-already-capped `cappedEndMs` is a provably idempotent no-op — safe backstop).
+`endSession` keeps its existing check by calling this helper. Re-application to an
+already-capped `cappedEndMs` is a no-op under a stable idle timeout; if the timeout is
+live-shrunk mid-grace it can only pull the end EARLIER, never later — I3 holds either way
+(safe backstop).
 
 ### 2.3 New private methods (mirror the idle-timer trio)
 
@@ -124,7 +130,7 @@ already-capped `cappedEndMs` is a provably idempotent no-op — safe backstop).
     const { cappedEndMs } = this.pendingClose;
     this.pendingClose = null;
     this.clearGraceTimer();
-    this.endSession(cappedEndMs); // re-cap inside endSession is an idempotent backstop
+    this.endSession(cappedEndMs); // re-cap inside endSession: safe backstop (can only pull earlier — I3)
     this.currentDoc = null;       // the doc really is gone — no window-refocus revival
   }
   ```
@@ -274,7 +280,9 @@ Activity / idle:
 - **D4** `should start a NEW session on same-doc refocus after the idle close finalized the pending close`
   — continue D3: refocus A at T0+13 s, 3 s, unfocus, expire → `records[1]` starts T0+13 s.
 
-OS sleep (uses the existing `sleepMs` helper):
+OS sleep (uses the existing `sleepMs` helper — NOTE: it is currently scoped inside the
+`describe('OS sleep …')` block; hoist it to file scope next to `advanceMs`, unchanged, so the
+grace tests can use it):
 - **E1** `should finalize at the original unfocus time when the same doc refocuses after a sleep longer than grace`
   — A 5 s → unfocus → sleep 8 h → refocus A → `records[0]` = `{A, T0, 5000}` (wall-clock
   guard; no session spans the sleep).

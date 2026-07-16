@@ -14,10 +14,10 @@ must present our approach (or lack of one) to the human.
 ## Workflow status
 - [x] EXPLORATION — done → EXPLORATION_PUBLIC.md
 - [x] CLARIFICATION — done → CLARIFICATION__PUBLIC.md (grace-period approach approved; 10 s constant; >grace gaps still split)
-- [ ] DETAILED_PLANNING (PLANNER, THINK_HARD) — in progress
-- [ ] DETAILED_PLAN_REVIEW (PLAN_REVIEWER)
-- [ ] PLAN_ITERATION
-- [ ] IMPLEMENTATION
+- [x] DETAILED_PLANNING — done → DETAILED_PLANNING__PUBLIC.md
+- [x] DETAILED_PLAN_REVIEW — READY (0 blocking/important, 2 suggestions, 3 minor inline edits) → DETAILED_PLAN_REVIEW__PUBLIC.md
+- [x] PLAN_ITERATION — SKIPPED (reviewer signal: only minor inline adjustments)
+- [ ] IMPLEMENTATION — in progress
 - [ ] IMPLEMENTATION_REVIEW
 - [ ] IMPLEMENTATION_ITERATION
 - [ ] PARETO_COMPLEXITY_ANALYSIS
