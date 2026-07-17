@@ -71,6 +71,11 @@ export default class VisitHistoryPlugin extends Plugin {
     factory: PluginFactory,
     hiddenFileUtil: HiddenFileUtil,
   ): Promise<void> {
+    // onLayoutReady is not Component-tied: unloading before layout-ready must
+    // not open the name modal (dispose() already ran — nothing would close it).
+    if (this.unloaded) {
+      return;
+    }
     try {
       const userName = await factory.userNameProvider.getUserName();
       if (userName === null || this.unloaded) {
