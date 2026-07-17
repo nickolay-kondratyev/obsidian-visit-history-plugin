@@ -7,10 +7,12 @@ drawings, and visualizes vault activity as a treemap heatmap.
 
 1. **Recording** — each completed focus session (start timestamp + duration)
    is appended to a per-user, per-document, per-device V3 log under
-   `.visit_history/user/<user-name>/` (keyed by the document's persistent
-   doc id). Legacy v2 and `_visit_history/` (V1) data from older plugin
-   versions is no longer read or written — content left untouched;
-   pre-user-scoped `.visit_history/v2|v3` dirs are auto-moved under the user.
+   `__visit_history/user/<user-name>/` (keyed by the document's persistent
+   doc id; NOT dot-hidden so Obsidian Sync syncs it — the plugin's own
+   tracking/heatmap exclude the dir). Legacy v2 and `_visit_history/` (V1)
+   data from older plugin versions is no longer read or written — content
+   left untouched; a pre-2026-07 `.visit_history/` dir is auto-renamed and
+   pre-user-scoped `v2|v3` dirs are auto-moved under the user.
 2. **Visualization** — the "Open vault heatmap" command renders the vault as a
    zoomable treemap, colored by created/modified/visited recency ("visited" =
    latest V3 session start across ALL users' devices).

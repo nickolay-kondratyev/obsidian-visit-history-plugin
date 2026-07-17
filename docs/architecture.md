@@ -32,7 +32,7 @@ core/init/PluginFactory ──── DI container: constructs & wires everything
    │                          session line; VhV3Paths layout; VhV3ReadmeWriter
    │                          generates the in-vault format doc;
    │                          DocIdFilenameSafety validates id-as-filename)
-   │                         user/: VhUserPaths (.visit_history/user/<user-name>/)
+   │                         user/: VhUserPaths (__visit_history/user/<user-name>/)
    │                         + UserNameProvider (resolves + persists the user name)
    │                         LastVisitProvider (read-only interface) ←
    │                         VisitHistoryServiceV3: last-visit stamp for the
@@ -42,9 +42,11 @@ core/init/PluginFactory ──── DI container: constructs & wires everything
    │                         service/lock live in submodules/obsidian-id-lib
    │                         (git submodule, bundled via file: dep)
    │                         DocIdBackfillService: vault-wide doc id backfill
-   │                         migration/: VhUserScopeMigrationService
-   │                         (pre-user-scoped v2/v3 dirs → user/<user-name>/;
-   │                         drop after 2026-Oct)
+   │                         migration/: VhTopDirRenameMigrationService
+   │                         (.visit_history → __visit_history; runs FIRST)
+   │                         + VhUserScopeMigrationService (pre-user-scoped
+   │                         v2/v3 dirs → user/<user-name>/); drop both
+   │                         after 2026-Oct
    │
    ├── settingsTab/ ───────── VisitHistorySettingTab (Settings → Visit History):
    │                         "File modifying actions" → doc id backfill button
@@ -52,8 +54,9 @@ core/init/PluginFactory ──── DI container: constructs & wires everything
    │                         (persisted setting, live-read by the V3 tracker)
    │
    ├── core/util ─────────── NoteFileUtil (vault file I/O),
-   │                         HiddenFileUtil (DataAdapter I/O for dot-folders —
-   │                         the Vault API cannot see `.visit_history/`),
+   │                         HiddenFileUtil (DataAdapter I/O for all VH data
+   │                         paths — incl. legacy dot-dirs the Vault API
+   │                         cannot see),
    │                         VaultUtil (tracked files), IsTrackedProvider,
    │                         DeviceNameProvider, UserNotifier
    │
@@ -107,7 +110,7 @@ user input events  ──► (idle detection)       │   main at load, popouts 
                                 │  LastVisitCache after a successful append)
                                 ▼
                               VhV3DurationStore.appendFocusDuration
-                                (.visit_history/user/<user>/v3/
+                                (__visit_history/user/<user>/v3/
                                  focus_duration_per_device/<device>/<id>.vh_v3
                                  — `<ISO start> D:<millis>`)
 ```
@@ -209,8 +212,12 @@ stamp cache entry is evicted or the plugin reloads.
 
 ## Legacy data
 
-v2 focus stamps (under `.visit_history/v2/` or, after the legacy-layout
-move, `.visit_history/user/<user-name>/v2/`) and `_visit_history/` (V1) are
+v2 focus stamps (under `__visit_history/v2/` or, after the legacy-layout
+move, `__visit_history/user/<user-name>/v2/`) and `_visit_history/` (V1) are
 formats from older plugin versions — no longer read or written, content left
-untouched (owner decision). `_visit_history/` files stay excluded from
-tracking via `IsTrackedProvider`.
+untouched (owner decision). Both `_visit_history/` (legacy) and
+`__visit_history/` (active, Vault-API visible since the rename for Obsidian
+Sync) are excluded from tracking via `IsTrackedProvider`. A pre-2026-07
+dot-hidden `.visit_history/` dir is renamed wholesale to `__visit_history/`
+by `VhTopDirRenameMigrationService` (first thing in `onload`; never merges —
+if both exist the user is notified and the legacy dir is kept).
