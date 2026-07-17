@@ -4,8 +4,11 @@ import { VhUserPaths } from '../visitHistoryService/user/VhUserPaths';
 /**
  * One-shot migration of the pre-user-scoped layout (before July 2026):
  *
- *   .visit_history/v2  →  .visit_history/user/<user-name>/v2
- *   .visit_history/v3  →  .visit_history/user/<user-name>/v3
+ *   __visit_history/v2  →  __visit_history/user/<user-name>/v2
+ *   __visit_history/v3  →  __visit_history/user/<user-name>/v3
+ *
+ * (VhTopDirRenameMigrationService runs first, so by this point any legacy
+ * `.visit_history` top dir has already been renamed to `__visit_history`.)
  *
  * Runs early in onload (main.ts), BEFORE focus tracking starts, so new
  * visits can never be written to the legacy location mid-move. Legacy data
@@ -28,7 +31,7 @@ import { VhUserPaths } from '../visitHistoryService/user/VhUserPaths';
  * 2026-October — delete this class (and its wiring in main.ts) then.
  */
 export class VhUserScopeMigrationService {
-  /** Version dirs of the legacy layout, directly under `.visit_history/`. */
+  /** Version dirs of the legacy layout, directly under the VH top dir. */
   private static readonly LEGACY_VERSION_DIRS = ['v2', 'v3'] as const;
 
   constructor(

@@ -3,8 +3,8 @@
 V3 records one COMPLETED focus session (start stamp + duration) per line.
 It is the only history the plugin reads and writes.
 
-> **Legacy data**: v2 data — wherever it sits, `.visit_history/v2/` or
-> `.visit_history/user/<user-name>/v2/` — and top-level `_visit_history/`
+> **Legacy data**: v2 data — wherever it sits, `__visit_history/v2/` or
+> `__visit_history/user/<user-name>/v2/` — and top-level `_visit_history/`
 > (V1) are data from older plugin versions — no longer read or written; the
 > content is left untouched (owner decision; the pre-user-scoped `v2` DIR is
 > still moved under the user tree, see the legacy-layout section below).
@@ -12,7 +12,7 @@ It is the only history the plugin reads and writes.
 ## Layout
 
 ```
-.visit_history/
+__visit_history/
   user/
     <user-name>/                           # one dir per user (see "User name" below)
       v3/
@@ -22,10 +22,16 @@ It is the only history the plugin reads and writes.
             <doc-id>.vh_v3                   # one duration file per (device, document)
 ```
 
-- **Dot-folder on purpose**: Obsidian's Vault API and metadata cache do not
-  see dot-folders, so VH files never pollute search, graph, or backlinks.
-  All access goes through `HiddenFileUtil` (DataAdapter-backed) —
-  see `VhUserPaths`/`VhV3Paths` for the path layout.
+- **NOT dot-hidden on purpose**: Obsidian Sync does not sync dot-hidden
+  folders
+  (https://forum.obsidian.md/t/obsidian-sync-sync-hidden-files-and-folders-as-well-start-with-a-dot/32123/26),
+  so the top dir is the VISIBLE `__visit_history/` (renamed from the
+  pre-2026-07 `.visit_history/` by `VhTopDirRenameMigrationService`). The
+  folder therefore shows up in the file explorer/search; the plugin's own
+  tracking and heatmap exclude it via `IsTrackedProvider`. All access still
+  goes through `HiddenFileUtil` (DataAdapter-backed; predates the rename and
+  works for visible folders too) — see `VhUserPaths`/`VhV3Paths` for the
+  path layout.
 - **User name** (`UserNameProvider`): keeps the histories of different people
   syncing one vault apart. Resolution — first resolution wins, persisted in
   device-scoped localStorage so it can never flip later: desktop → OS account
@@ -87,11 +93,18 @@ ids into user files). Writes always target the CURRENT user's tree. A visit
 becomes visible to the heatmap only once its session closes — accepted owner
 decision.
 
-## Legacy pre-user-scoped layout (moved, never read)
+## Legacy layouts (moved, never read)
 
-Before July 2026, version dirs lived directly under `.visit_history/`.
+Before July 2026, the top dir was the dot-hidden `.visit_history/`.
+`VhTopDirRenameMigrationService` (run FIRST in `onload`, before user-name
+resolution) renames it wholesale to `__visit_history/` so Obsidian Sync
+picks it up. If BOTH dirs exist (another synced device already migrated),
+the rename is skipped: `.visit_history/` is kept untouched — never merged,
+never deleted — and the user is notified of the conflict.
+
+Also before July 2026, version dirs lived directly under the top dir.
 `VhUserScopeMigrationService` (run early in `onload`, before focus tracking
-starts) moves `.visit_history/v2` and `.visit_history/v3` under
+starts) moves `__visit_history/v2` and `__visit_history/v3` under
 `user/<user-name>/`, attributing legacy data to the CURRENT user. The
 dormant v2 dir is moved too so it stays organized under the user tree, but
 its content is never read or written. The move never merges and never
@@ -101,8 +114,8 @@ error is logged. Such one-shot layout migrations should be cleaned up after
 
 ## Invariants
 
-- V3 files are invisible to `vault.getFiles()` (dot-folder) — they can never
-  be self-tracked. Legacy `_visit_history/` stays excluded via
+- V3 files can never be self-tracked: `__visit_history/` (visible to
+  `vault.getFiles()`) and legacy `_visit_history/` are both excluded via
   `IsTrackedProvider`.
 - Sessions in one file are ascending by start stamp; readers must still
   tolerate violations (skip bad lines, max aggregation).

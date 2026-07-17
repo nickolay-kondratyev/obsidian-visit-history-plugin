@@ -23,12 +23,26 @@ describe('IsTrackedProviderDefault', () => {
       expect(provider.isTrackedFile(makeTFile({ path: 'b.canvas' }))).toBe(true);
     });
 
-    it('should NOT track files inside _visit_history (no self-tracking loops)', () => {
+    it('should NOT track files inside legacy _visit_history (no self-tracking loops)', () => {
       expect(provider.isTrackedFile(makeTFile({ path: '_visit_history/v1/focus/mac/_vh_01A.md' }))).toBe(false);
+    });
+
+    it('should NOT track md files inside __visit_history (e.g. the generated V3 README)', () => {
+      expect(provider.isTrackedFile(
+        makeTFile({ path: '__visit_history/user/alice/v3/README__generated__vh_v3_format.md' }),
+      )).toBe(false);
     });
 
     it('should NOT track unsupported extensions', () => {
       expect(provider.isTrackedFile(makeTFile({ path: 'image.png' }))).toBe(false);
+    });
+
+    it('should track files in a sibling dir sharing the __visit_history prefix', () => {
+      expect(provider.isTrackedFile(makeTFile({ path: '__visit_history_notes/note.md' }))).toBe(true);
+    });
+
+    it('should track files in a sibling dir sharing the legacy _visit_history prefix', () => {
+      expect(provider.isTrackedFile(makeTFile({ path: '_visit_history_notes/note.md' }))).toBe(true);
     });
   });
 
@@ -49,8 +63,22 @@ describe('IsTrackedProviderDefault', () => {
       expect(provider.isTrackedView(makeView('markdown', null))).toBe(false);
     });
 
-    it('should NOT track a view showing a visit history file', () => {
+    it('should NOT track a view showing a legacy _visit_history file', () => {
       expect(provider.isTrackedView(makeView('markdown', '_visit_history/v1/focus/mac/_vh_01A.md'))).toBe(false);
+    });
+
+    it('should NOT track a view showing a __visit_history file (e.g. the generated V3 README)', () => {
+      expect(provider.isTrackedView(
+        makeView('markdown', '__visit_history/user/alice/v3/README__generated__vh_v3_format.md'),
+      )).toBe(false);
+    });
+
+    it('should track a view showing a file in a sibling dir sharing the __visit_history prefix', () => {
+      expect(provider.isTrackedView(makeView('markdown', '__visit_history_notes/note.md'))).toBe(true);
+    });
+
+    it('should track a view showing a file in a sibling dir sharing the legacy _visit_history prefix', () => {
+      expect(provider.isTrackedView(makeView('markdown', '_visit_history_notes/note.md'))).toBe(true);
     });
   });
 });
