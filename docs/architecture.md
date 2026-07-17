@@ -33,7 +33,8 @@ core/init/PluginFactory ──── DI container: constructs & wires everything
    │                          generates the in-vault format doc;
    │                          DocIdFilenameSafety validates id-as-filename)
    │                         user/: VhUserPaths (__visit_history/user/<user-name>/)
-   │                         + UserNameProvider (resolves + persists the user name)
+   │                         + UserNameProvider (prompts + pins the user name via
+   │                         the UserNamePrompt modal; UserNameSafety charset)
    │                         LastVisitProvider (read-only interface) ←
    │                         VisitHistoryServiceV3: last-visit stamp for the
    │                         heatmap (LastVisitCache, LRU keyed by doc id)
@@ -182,13 +183,21 @@ JOIN the in-flight run.
 
 ## Startup flow (user name + legacy-layout move)
 
-`main.ts#onload` first resolves the user name (`UserNameProvider` — cached in
-device-scoped localStorage) and moves any pre-user-scoped `v2`/`v3` dirs under
-`user/<user-name>/` (`VhUserScopeMigrationService`) BEFORE wiring
-`PluginFactory`, so focus tracking can never write to the legacy location.
+`main.ts#onload` wires only the NAME-INDEPENDENT parts of `PluginFactory`
+(heatmap reads aggregate across all users; doc-id assignment is
+user-agnostic) — the plugin fully loads without a user name.
 
-`main.ts` then schedules `VhStartupTasks.run()` via `onLayoutReady` (keeps
-file IO off the load path): rewrite the generated V3 format README.
+On `onLayoutReady`, `main.ts` resolves the user name (`UserNameProvider`):
+an already-pinned device (device-scoped localStorage, first pin wins)
+resolves silently; otherwise a confirmation modal asks the human to pick an
+existing `user/<name>` dir or type a new lowercase filename-safe name
+(`UserNameSafety`; desktop pre-filled with the sanitized OS login name).
+After the pin, `main.ts` moves any pre-user-scoped `v2`/`v3` dirs under
+`user/<user-name>/` (`VhUserScopeMigrationService`) and only THEN calls
+`PluginFactory.activateUserScopedRecording`, so focus tracking can never
+write to the legacy location; activation also runs `VhStartupTasks`
+(rewrite the generated V3 format README). A dismissed modal pins nothing —
+no VH is recorded that session and the modal returns on the next start.
 
 
 ## Caching (all LRU, instance-scoped)

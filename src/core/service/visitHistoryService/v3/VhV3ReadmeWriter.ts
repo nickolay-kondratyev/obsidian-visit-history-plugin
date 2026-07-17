@@ -11,7 +11,7 @@ const README_CONTENT = `<!--
 \`\`\`
 __visit_history/
   user/
-    <user-name>/                          # OS user name on desktop; see the user bullet for mobile
+    <user-name>/                          # chosen in the plugin's user-name modal; see the user bullet
       v3/
         README__generated__vh_v3_format.md    # this file
         focus_duration_per_device/
@@ -28,8 +28,9 @@ __visit_history/
   does not sync folders starting with a dot, so the history must be visible
   to sync across devices. The plugin's own tracking and heatmap exclude it.
 - Per-user directories keep the histories of different people syncing one
-  vault apart. Mobile devices adopt the single existing user name when there
-  is exactly one, otherwise fall back to a persisted \`mobile-user-XXXXXXXX\`.
+  vault apart. The user name is confirmed by the human in a modal on first
+  plugin start (existing name or a new lowercase one) and remembered per
+  device; nothing is recorded until a name is confirmed.
 - Each \`.vh_v3\` line is one COMPLETED focus session, newline-terminated:
   \`<ISO 8601 UTC ms stamp of focus start> D:<millis spent in focus>\`
   e.g. \`2026-07-09T22:02:15.745Z D:5600\`
