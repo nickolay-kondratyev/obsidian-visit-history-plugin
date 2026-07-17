@@ -1,5 +1,10 @@
 # Plugin onload hard-fails if user-name resolution throws
 
+**RESOLVED (2026-07, user-name confirmation modal):** resolution moved off the
+`onload` path entirely — it runs on `onLayoutReady` inside
+`main.ts#pinUserNameAndStartRecording`, which try/catches and degrades to
+"no VH recording this session" (`console.error`). The plugin always loads.
+
 `main.ts onload`: `VhUserScopeMigrationService.migrateIfLegacyPresent()` is
 try/caught, but `UserNameProviderDefault.getUserName()` is not. On the mobile
 path a `listSubfolderNames` rejection (adapter error, not merely a missing

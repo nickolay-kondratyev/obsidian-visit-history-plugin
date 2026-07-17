@@ -13,9 +13,11 @@ import { VhV3FocusSession, VhV3SessionLineParser } from './VhV3SessionLineParser
  *
  * (Line grammar is parsed by VhV3SessionLineParser.)
  *
- * Writes always target the CURRENT user's tree (injected user name); reads
- * for aggregation span ALL users' trees — the heatmap shows whole-vault
- * activity (owner decision).
+ * The user name is a PER-CALL parameter (mirrors VhV3Paths): writes target
+ * the caller's CURRENT user, while the aggregate read spans ALL users' trees
+ * — the heatmap shows whole-vault activity (owner decision). Name-free at
+ * construction on purpose: the read path must work BEFORE a user name is
+ * pinned (heatmap loads eagerly; recording activates post-pin).
  *
  * Lines are appended when a session ENDS, in session-start order (sessions on
  * one device never overlap), so files are naturally ascending by start stamp.
@@ -30,12 +32,12 @@ import { VhV3FocusSession, VhV3SessionLineParser } from './VhV3SessionLineParser
 export class VhV3DurationStore {
   constructor(
     private readonly hiddenFileUtil: HiddenFileUtil,
-    private readonly userName: string,
   ) {
   }
 
   /** Appends one completed focus session (creates the file when absent). */
   async appendFocusDuration(
+    userName: string,
     deviceName: string,
     docId: string,
     focusStartEpochMs: number,
@@ -45,14 +47,26 @@ export class VhV3DurationStore {
       throw new Error(`Doc id is not filename-safe docId=[${docId}]`);
     }
     await this.hiddenFileUtil.append(
-      VhV3Paths.focusDurationFilePath(this.userName, deviceName, docId),
+      VhV3Paths.focusDurationFilePath(userName, deviceName, docId),
       `${new Date(focusStartEpochMs).toISOString()} D:${durationMs}\n`,
     );
   }
 
-  /** Current user's completed sessions for the doc on one device; [] when absent. */
-  async readSessions(deviceName: string, docId: string): Promise<VhV3FocusSession[]> {
-    return this.readSessionsForUser(this.userName, deviceName, docId);
+  /** One user's completed sessions for the doc on one device; [] when absent. */
+  async readSessions(userName: string, deviceName: string, docId: string): Promise<VhV3FocusSession[]> {
+    if (!DocIdFilenameSafety.isFilenameSafeId(docId)) {
+      return [];
+    }
+    const content = await this.hiddenFileUtil.readIfExists(
+      VhV3Paths.focusDurationFilePath(userName, deviceName, docId),
+    );
+    if (content === null) {
+      return [];
+    }
+    return content
+      .split('\n')
+      .map(line => VhV3SessionLineParser.parseSession(line))
+      .filter((session): session is VhV3FocusSession => session !== null);
   }
 
   /**
@@ -90,28 +104,8 @@ export class VhV3DurationStore {
       VhV3Paths.focusDurationPerDeviceDir(userName),
     );
     const sessionsPerDevice = await Promise.all(
-      deviceNames.map(deviceName => this.readSessionsForUser(userName, deviceName, docId)),
+      deviceNames.map(deviceName => this.readSessions(userName, deviceName, docId)),
     );
     return sessionsPerDevice.flat();
-  }
-
-  private async readSessionsForUser(
-    userName: string,
-    deviceName: string,
-    docId: string,
-  ): Promise<VhV3FocusSession[]> {
-    if (!DocIdFilenameSafety.isFilenameSafeId(docId)) {
-      return [];
-    }
-    const content = await this.hiddenFileUtil.readIfExists(
-      VhV3Paths.focusDurationFilePath(userName, deviceName, docId),
-    );
-    if (content === null) {
-      return [];
-    }
-    return content
-      .split('\n')
-      .map(line => VhV3SessionLineParser.parseSession(line))
-      .filter((session): session is VhV3FocusSession => session !== null);
   }
 }

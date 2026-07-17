@@ -1,8 +1,8 @@
 import { Plugin, TFolder } from 'obsidian';
 import { SettingsSanitizer, VisitHistoryPluginSettings } from './settings';
 import { PluginFactory } from './core/init/PluginFactory';
+import { HiddenFileUtil } from './core/util/file/hidden/HiddenFileUtil';
 import { HiddenFileUtilDefault } from './core/util/file/hidden/impl/HiddenFileUtilDefault';
-import { UserNameProviderDefault } from './core/service/visitHistoryService/user/UserNameProvider';
 import { VhTopDirRenameMigrationService } from './core/service/migration/VhTopDirRenameMigrationService';
 import { VhUserScopeMigrationService } from './core/service/migration/VhUserScopeMigrationService';
 import { UserNotifier } from './core/util/userComm/UserNotifier';
@@ -16,14 +16,19 @@ export default class VisitHistoryPlugin extends Plugin {
   userNotifier!: UserNotifier;
   // Optional: onunload must not throw when onload failed before wiring.
   private factory?: PluginFactory;
+  // Guards pinUserNameAndStartRecording: its awaits (modal, migration) can
+  // straddle a plugin unload, and activating recording on an unloaded
+  // Component would leak its registered listeners forever.
+  private unloaded = false;
 
   async onload() {
     await this.loadSettings();
 
     const hiddenFileUtil = new HiddenFileUtilDefault(this.app);
-    // Top-dir rename FIRST — before user-name resolution: mobile user
-    // adoption lists `__visit_history/user`, so a still-dot-named dir would
-    // be missed and a bogus mobile user minted.
+    // Top-dir rename FIRST — before user-name resolution: the user-name
+    // modal lists `__visit_history/user` for joinable identities, so a
+    // still-dot-named dir would hide them. (onLayoutReady fires after
+    // onload completes, so this await settles before the modal opens.)
     try {
       // TODO(cleanup): remove after 2026-October (see VhTopDirRenameMigrationService).
       await new VhTopDirRenameMigrationService(hiddenFileUtil, new UserNotifierDefault(this))
@@ -33,20 +38,9 @@ export default class VisitHistoryPlugin extends Plugin {
       console.error('[VHP][main] VH top-dir rename migration failed', error);
     }
 
-    // User name next: it keys `__visit_history/user/<user-name>/` and the
-    // legacy-layout move below — both must be settled before any focus
-    // tracking writes (cheap: cached in localStorage after first resolution).
-    const userName = await new UserNameProviderDefault(hiddenFileUtil).getUserName();
-    try {
-      // TODO(cleanup): remove after 2026-October (see VhUserScopeMigrationService).
-      await new VhUserScopeMigrationService(hiddenFileUtil, userName).migrateIfLegacyPresent();
-    } catch (error) {
-      // Never blocks load: new visits go to the user-scoped layout, legacy
-      // dirs stay untouched, and the migration retries on the next load.
-      console.error('[VHP][main] user-scope VH migration failed', error);
-    }
-
-    const factory = new PluginFactory(this, userName);
+    // The factory wires only NAME-INDEPENDENT parts (heatmap reads, doc-id
+    // assignment) — the plugin fully loads without a pinned user name.
+    const factory = new PluginFactory(this);
     this.factory = factory;
     this.userNotifier = factory.userNotifier;
 
@@ -59,11 +53,53 @@ export default class VisitHistoryPlugin extends Plugin {
       this.userNotifier,
     ));
 
-    // Deferred: V3 format README write — onLayoutReady keeps file IO off
+    // Deferred: user-name pin (modal on unpinned devices) + everything that
+    // writes user-scoped VH data — onLayoutReady keeps UI and file IO off
     // the load path.
     this.app.workspace.onLayoutReady(() => {
-      void factory.vhStartupTasks.run();
+      void this.pinUserNameAndStartRecording(factory, hiddenFileUtil);
     });
+  }
+
+  /**
+   * Resolves the user name (already-pinned devices resolve silently; others
+   * get the confirmation modal) and activates VH recording. A dismissed
+   * modal pins nothing: no VH is recorded this session and the modal shows
+   * again on the next plugin start.
+   */
+  private async pinUserNameAndStartRecording(
+    factory: PluginFactory,
+    hiddenFileUtil: HiddenFileUtil,
+  ): Promise<void> {
+    // onLayoutReady is not Component-tied: unloading before layout-ready must
+    // not open the name modal (dispose() already ran — nothing would close it).
+    if (this.unloaded) {
+      return;
+    }
+    try {
+      const userName = await factory.userNameProvider.getUserName();
+      if (userName === null || this.unloaded) {
+        return;
+      }
+      try {
+        // Legacy-layout move BEFORE recording activates, so new visits can
+        // never be written to the legacy location mid-move.
+        // TODO(cleanup): remove after 2026-October (see VhUserScopeMigrationService).
+        await new VhUserScopeMigrationService(hiddenFileUtil, userName).migrateIfLegacyPresent();
+      } catch (error) {
+        // Never blocks recording: new visits go to the user-scoped layout,
+        // legacy dirs stay untouched, and the migration retries on next load.
+        console.error('[VHP][main] user-scope VH migration failed', error);
+      }
+      // Re-check after the migration await: unloading mid-migration must not
+      // activate recording (nor write the README) on a dead plugin.
+      if (this.unloaded) {
+        return;
+      }
+      factory.activateUserScopedRecording(userName);
+    } catch (error) {
+      console.error('[VHP][main] user-name resolution failed — no VH recording this session', error);
+    }
   }
 
   private initVaultTreeMapView(pluginFactory: PluginFactory) {
@@ -116,10 +152,12 @@ export default class VisitHistoryPlugin extends Plugin {
   }
 
   onunload() {
+    this.unloaded = true;
     // Best-effort flush of an in-progress V3 focus session. The append is
     // async and unload cannot await it — on a hard app quit the last open
-    // session may be lost (accepted limitation).
-    this.factory?.focusDurationTracker.dispose();
+    // session may be lost (accepted limitation). Safe with no pinned name
+    // (recording never activated). Also closes a still-open user-name modal.
+    this.factory?.dispose();
   }
 
   async loadSettings() {

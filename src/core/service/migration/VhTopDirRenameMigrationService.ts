@@ -11,9 +11,9 @@ import { VhUserPaths } from '../visitHistoryService/user/VhUserPaths';
  * VhUserPaths.TOP_DIR comment for the rationale and issue link.
  *
  * Runs FIRST in onload (main.ts) — BEFORE user-name resolution and BEFORE
- * VhUserScopeMigrationService: the mobile user-adoption path lists
- * `__visit_history/user`, so renaming later would make it miss the existing
- * user and mint a bogus `mobile-user-XXXXXXXX`.
+ * VhUserScopeMigrationService: the user-name modal lists
+ * `__visit_history/user` for joinable identities, so renaming later would
+ * hide the existing users from the prompt.
  *
  * When BOTH dirs exist (this vault was migrated by another synced device
  * while this one still held the legacy dir), the migration is SKIPPED:

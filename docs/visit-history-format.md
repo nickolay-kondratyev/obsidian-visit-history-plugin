@@ -33,11 +33,13 @@ __visit_history/
   works for visible folders too) — see `VhUserPaths`/`VhV3Paths` for the
   path layout.
 - **User name** (`UserNameProvider`): keeps the histories of different people
-  syncing one vault apart. Resolution — first resolution wins, persisted in
-  device-scoped localStorage so it can never flip later: desktop → OS account
-  user name; mobile → the single existing `user/<name>` dir if exactly one
-  exists, else a persisted `mobile-user-<random8>` (Obsidian mobile exposes
-  no user-identity API to plugins).
+  syncing one vault apart. Chosen by the human in a confirmation modal on
+  first plugin start: pick an existing `user/<name>` dir (joining that
+  identity) or type a new lowercase filename-safe name (`a-z0-9._-`,
+  `UserNameSafety`; desktop pre-filled with the sanitized OS login name).
+  The confirmed name is pinned in device-scoped localStorage — first pin
+  wins, it can never flip later. Until a name is pinned (modal dismissed),
+  NO visit history is recorded and the modal returns on the next start.
 - **Device name**: OS hostname on desktop; `mobile-<random8>` persisted in
   device-scoped localStorage on mobile. Must stay stable — it keys the
   directory (see `DeviceNameProvider`).
@@ -103,9 +105,10 @@ the rename is skipped: `.visit_history/` is kept untouched — never merged,
 never deleted — and the user is notified of the conflict.
 
 Also before July 2026, version dirs lived directly under the top dir.
-`VhUserScopeMigrationService` (run early in `onload`, before focus tracking
-starts) moves `__visit_history/v2` and `__visit_history/v3` under
-`user/<user-name>/`, attributing legacy data to the CURRENT user. The
+`VhUserScopeMigrationService` (run right after the user name is pinned,
+before recording activates) moves `__visit_history/v2` and
+`__visit_history/v3` under `user/<user-name>/`, attributing legacy data to
+the CURRENT user. The
 dormant v2 dir is moved too so it stays organized under the user tree, but
 its content is never read or written. The move never merges and never
 deletes: if a destination dir already exists, the legacy dir is kept and an

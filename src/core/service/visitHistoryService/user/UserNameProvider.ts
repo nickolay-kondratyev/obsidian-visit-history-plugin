@@ -1,4 +1,6 @@
 import { HiddenFileUtil } from '../../../util/file/hidden/HiddenFileUtil';
+import { UserNamePrompt } from './UserNamePrompt';
+import { UserNameSafety } from './UserNameSafety';
 import { VhUserPaths } from './VhUserPaths';
 
 /**
@@ -7,7 +9,12 @@ import { VhUserPaths } from './VhUserPaths';
  * device's history across two user trees.
  */
 export interface UserNameProvider {
-  getUserName(): Promise<string>;
+  /**
+   * The pinned (or newly confirmed) user name, or null when the human
+   * dismissed the prompt — nothing is pinned then and the caller must not
+   * record any visit history this session (re-prompted on next start).
+   */
+  getUserName(): Promise<string | null>;
 }
 
 /** System boundary: OS-level user name; null on mobile (no Node builtins). */
@@ -57,50 +64,58 @@ export class LocalStorageUserNameCache implements UserNameCache {
 }
 
 /**
- * User name resolution (owner decisions, docs/tickets/1_must-add-user-id.md):
+ * User name resolution (owner decisions, 2026-07 confirmation-modal flow):
  *
- *   1. Cached name (device-scoped localStorage) — FIRST RESOLUTION WINS, so
- *      the name can never flip later (e.g. when another user's dir syncs in).
- *   2. Desktop → OS account user name.
- *   3. Mobile → the single existing `__visit_history/user/<name>` dir, if
- *      exactly one exists (this device's history joins it).
- *   4. Mobile fallback → `mobile-user-<random>` persisted via the cache.
- *      WHY-NOT a device API: Obsidian mobile exposes no user-identity API to
- *      plugins (no Node 'os', no Capacitor Device access) — the OS lookup in
- *      step 2 IS the best available attempt and returns null there.
+ *   1. Cached name (device-scoped localStorage) — FIRST PIN WINS, so the
+ *      name can never flip later (e.g. when another user's dir syncs in).
+ *      An already-pinned device never sees the prompt.
+ *   2. Otherwise ASK via UserNamePrompt: pick an existing
+ *      `__visit_history/user/<name>` dir (joining that identity) or type a
+ *      new name (desktop pre-filled with the SANITIZED OS login name; on
+ *      mobile there is no pre-fill — Obsidian mobile exposes no
+ *      user-identity API to plugins). Only an explicit confirmation pins;
+ *      dismissal returns null and re-prompts on the next start.
  */
 export class UserNameProviderDefault implements UserNameProvider {
   constructor(
     private readonly hiddenFileUtil: HiddenFileUtil,
+    private readonly prompt: UserNamePrompt,
     private readonly osUserNameLookup: OsUserNameLookup = new OsUserNameLookupDefault(),
     private readonly cache: UserNameCache = new LocalStorageUserNameCache(),
   ) {
   }
 
-  async getUserName(): Promise<string> {
+  async getUserName(): Promise<string | null> {
     const cached = this.cache.get();
     if (cached) {
       return cached;
     }
-    const resolved = await this.resolveUserName();
-    this.cache.set(resolved);
-    return resolved;
-  }
 
-  // ── private ─────────────────────────────────────────────────────────────
-
-  private async resolveUserName(): Promise<string> {
+    const existingNames = await this.hiddenFileUtil.listSubfolderNames(VhUserPaths.USERS_DIR);
     const osUserName = this.osUserNameLookup.getOsUserName();
-    if (osUserName !== null) {
-      return osUserName;
+    const chosenName = await this.prompt.promptForUserName({
+      existingNames,
+      defaultName: osUserName === null ? null : UserNameSafety.sanitizeToValidOrNull(osUserName),
+    });
+    if (chosenName === null) {
+      return null;
     }
-
-    const existingUserNames = await this.hiddenFileUtil.listSubfolderNames(VhUserPaths.USERS_DIR);
-    const [singleExisting] = existingUserNames;
-    if (existingUserNames.length === 1 && singleExisting !== undefined) {
-      return singleExisting;
+    // FIRST PIN WINS across vaults too: while our prompt was open, another
+    // vault's prompt on this device may have pinned a name into the shared
+    // device-scoped cache — prefer that pin over our prompt's answer.
+    const pinnedWhilePromptOpen = this.cache.get();
+    if (pinnedWhilePromptOpen) {
+      return pinnedWhilePromptOpen;
     }
-
-    return 'mobile-user-' + crypto.randomUUID().slice(0, 8);
+    // An EXISTING dir name is pinnable even when outside the strict charset
+    // (it already is a working path segment — picking it joins that
+    // identity); anything else must pass validation. Defense in depth: the
+    // prompt's production impl is a thin untested Obsidian modal.
+    if (!existingNames.includes(chosenName) && !UserNameSafety.isValidUserName(chosenName)) {
+      console.error(`[VHP][UserNameProvider] prompt returned an invalid user name — not pinned userName=[${chosenName}]`);
+      return null;
+    }
+    this.cache.set(chosenName);
+    return chosenName;
   }
 }

@@ -10,10 +10,10 @@ import { VhUserPaths } from '../visitHistoryService/user/VhUserPaths';
  * (VhTopDirRenameMigrationService runs first, so by this point any legacy
  * `.visit_history` top dir has already been renamed to `__visit_history`.)
  *
- * Runs early in onload (main.ts), BEFORE focus tracking starts, so new
- * visits can never be written to the legacy location mid-move. Legacy data
- * is attributed to the CURRENT user — with the old layout there is no way
- * to know who produced it (owner decision).
+ * Runs right after the user name is pinned (main.ts), BEFORE recording
+ * activates, so new visits can never be written to the legacy location
+ * mid-move. Legacy data is attributed to the CURRENT user — with the old
+ * layout there is no way to know who produced it (owner decision).
  *
  * When a destination dir already exists (this vault was migrated by another
  * synced device while this one still held legacy dirs), the legacy dir is

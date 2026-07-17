@@ -1,8 +1,10 @@
 import { VhV3ReadmeWriter } from '../service/visitHistoryService/v3/VhV3ReadmeWriter';
 
 /**
- * Deferred plugin-load work, run once from main.ts via onLayoutReady — keeps
- * file IO off the load path. Error-isolated: load never crashes the plugin.
+ * Deferred plugin-load work, run once from
+ * PluginFactory.activateUserScopedRecording after the user name is pinned —
+ * keeps file IO off the load path (and off unpinned sessions).
+ * Error-isolated: it never crashes the plugin.
  */
 export class VhStartupTasks {
   constructor(

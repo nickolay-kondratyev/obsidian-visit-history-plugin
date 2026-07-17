@@ -21,6 +21,8 @@ export class VhV3DurationRecorder implements FocusDurationSink {
     private readonly vhV3DurationStore: VhV3DurationStore,
     private readonly lastVisitCache: LastVisitCache,
     private readonly deviceNameProvider: DeviceNameProvider,
+    /** The PINNED user name — the recorder only exists once a name is pinned. */
+    private readonly userName: string,
   ) {
   }
 
@@ -28,6 +30,7 @@ export class VhV3DurationRecorder implements FocusDurationSink {
     this.writeChain = this.writeChain
       .then(async () => {
         await this.vhV3DurationStore.appendFocusDuration(
+          this.userName,
           this.deviceNameProvider.getDeviceName(),
           docId,
           focusStartEpochMs,

@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { OsUserNameLookup, UserNameCache, UserNameProviderDefault } from './UserNameProvider';
 import { FakeHiddenFileUtil } from '../../../../testSupport/FakeHiddenFileUtil';
+import { FakeUserNamePrompt } from '../../../../testSupport/FakeUserNamePrompt';
 
 class FixedOsUserNameLookup implements OsUserNameLookup {
   constructor(private readonly name: string | null) {
@@ -29,80 +30,163 @@ class InMemoryUserNameCache implements UserNameCache {
 
 interface Setup {
   provider: UserNameProviderDefault;
+  prompt: FakeUserNamePrompt;
   hidden: FakeHiddenFileUtil;
   cache: InMemoryUserNameCache;
 }
 
-function setup(osUserName: string | null): Setup {
+function setup(osUserName: string | null, promptAnswer: string | null): Setup {
   const hidden = new FakeHiddenFileUtil();
   const cache = new InMemoryUserNameCache();
-  const provider = new UserNameProviderDefault(hidden, new FixedOsUserNameLookup(osUserName), cache);
-  return { provider, hidden, cache };
+  const prompt = new FakeUserNamePrompt(promptAnswer);
+  const provider = new UserNameProviderDefault(
+    hidden, prompt, new FixedOsUserNameLookup(osUserName), cache,
+  );
+  return { provider, prompt, hidden, cache };
 }
 
 /** Seeds one `__visit_history/user/<name>/...` tree (a folder implied by a file). */
 function seedVhUserTree(hidden: FakeHiddenFileUtil, userName: string): void {
-  hidden.seedFile(`__visit_history/user/${userName}/v2/focus_per_device/host/doc.vh_v2`, 'x\n');
+  hidden.seedFile(`__visit_history/user/${userName}/v3/focus_duration_per_device/host/doc.vh_v3`, 'x\n');
 }
 
 describe('UserNameProviderDefault', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   describe('getUserName', () => {
-    it('should return the cached name without re-resolving (first resolution wins)', async () => {
-      // GIVEN a previously persisted name, and an OS that would now resolve differently
-      const { provider, cache } = setup('different-os-name');
-      cache.seed('persisted-name');
-      // WHEN / THEN the cached name wins
-      expect(await provider.getUserName()).toBe('persisted-name');
+    it('should return the cached name (first pin wins)', async () => {
+      // GIVEN a previously pinned name
+      const { provider, cache } = setup('os-name', 'other-answer');
+      cache.seed('pinned-name');
+      // WHEN / THEN the pinned name wins
+      expect(await provider.getUserName()).toBe('pinned-name');
     });
 
-    it('should use the OS user name on desktop', async () => {
-      // GIVEN a desktop OS user
-      const { provider } = setup('nickolay');
-      // WHEN / THEN
-      expect(await provider.getUserName()).toBe('nickolay');
-    });
-
-    it('should persist the resolved name to the cache', async () => {
-      // GIVEN a first-ever resolution
-      const { provider, cache } = setup('nickolay');
+    it('should never prompt an already-pinned device', async () => {
+      // GIVEN a previously pinned name
+      const { provider, prompt, cache } = setup('os-name', 'other-answer');
+      cache.seed('pinned-name');
       // WHEN
       await provider.getUserName();
-      // THEN the name is cached for all future loads
-      expect(cache.get()).toBe('nickolay');
+      // THEN the modal is never shown
+      expect(prompt.promptCount).toBe(0);
     });
 
-    it('should adopt the single existing VH user name on mobile', async () => {
-      // GIVEN mobile (no OS user name) and exactly one user dir synced in
-      const { provider, hidden } = setup(null);
-      seedVhUserTree(hidden, 'nickolay');
-      // WHEN / THEN this device joins that user
-      expect(await provider.getUserName()).toBe('nickolay');
-    });
-
-    it('should fall back to a mobile-user id when multiple VH user names exist', async () => {
-      // GIVEN mobile and two user dirs — ambiguous, cannot pick one
-      const { provider, hidden } = setup(null);
+    it('should offer the existing VH user names to the prompt', async () => {
+      // GIVEN two user dirs synced into the vault
+      const { provider, prompt, hidden } = setup(null, 'alice');
       seedVhUserTree(hidden, 'alice');
       seedVhUserTree(hidden, 'bob');
-      // WHEN / THEN a generated persistent id is used instead
-      expect(await provider.getUserName()).toMatch(/^mobile-user-/);
+      // WHEN
+      await provider.getUserName();
+      // THEN both are offered as joinable identities
+      expect(prompt.lastRequest?.existingNames.sort()).toEqual(['alice', 'bob']);
     });
 
-    it('should fall back to a mobile-user id when no VH user dir exists yet', async () => {
-      // GIVEN mobile on a fresh vault
-      const { provider } = setup(null);
+    it('should pre-fill the prompt with the SANITIZED OS login name on desktop', async () => {
+      // GIVEN a desktop OS login name with uppercase and a space
+      const { provider, prompt } = setup('John Doe', 'john_doe');
+      // WHEN
+      await provider.getUserName();
+      // THEN the pre-fill is the sanitized form
+      expect(prompt.lastRequest?.defaultName).toBe('john_doe');
+    });
+
+    it('should pre-fill nothing on mobile (no OS user name)', async () => {
+      // GIVEN mobile — the OS lookup returns null
+      const { provider, prompt } = setup(null, 'alice');
+      // WHEN
+      await provider.getUserName();
+      // THEN there is no pre-fill
+      expect(prompt.lastRequest?.defaultName).toBeNull();
+    });
+
+    it('should return the confirmed name', async () => {
+      // GIVEN the human confirms a typed name
+      const { provider } = setup(null, 'alice');
       // WHEN / THEN
-      expect(await provider.getUserName()).toMatch(/^mobile-user-/);
+      expect(await provider.getUserName()).toBe('alice');
     });
 
-    it('should return the same generated name on subsequent calls (persisted)', async () => {
-      // GIVEN a generated mobile fallback name
-      const { provider } = setup(null);
-      const first = await provider.getUserName();
-      // WHEN resolving again
-      const second = await provider.getUserName();
-      // THEN the persisted name is stable
-      expect(second).toBe(first);
+    it('should pin the confirmed name to the cache', async () => {
+      // GIVEN the human confirms a typed name
+      const { provider, cache } = setup(null, 'alice');
+      // WHEN
+      await provider.getUserName();
+      // THEN the name is pinned for all future loads
+      expect(cache.get()).toBe('alice');
+    });
+
+    it('should return null when the prompt is dismissed', async () => {
+      // GIVEN the human dismisses the modal (Esc/close/cancel)
+      const { provider } = setup('os-name', null);
+      // WHEN / THEN no name this session
+      expect(await provider.getUserName()).toBeNull();
+    });
+
+    it('should pin nothing when the prompt is dismissed', async () => {
+      // GIVEN a dismissed modal
+      const { provider, cache } = setup('os-name', null);
+      // WHEN
+      await provider.getUserName();
+      // THEN the device stays unpinned
+      expect(cache.get()).toBeNull();
+    });
+
+    it('should prompt again on the next resolution after a dismissal', async () => {
+      // GIVEN a dismissed modal
+      const { provider, prompt } = setup('os-name', null);
+      await provider.getUserName();
+      // WHEN resolving again (next plugin start)
+      await provider.getUserName();
+      // THEN the modal is shown again
+      expect(prompt.promptCount).toBe(2);
+    });
+
+    it('should not pin an invalid name returned by the prompt (defense in depth)', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      // GIVEN a (buggy) prompt returning a name outside the strict charset
+      const { provider, cache } = setup(null, 'Bad Name!');
+      // WHEN
+      await provider.getUserName();
+      // THEN nothing is pinned
+      expect(cache.get()).toBeNull();
+    });
+
+    it('should return null when the prompt returns an invalid name', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      // GIVEN a (buggy) prompt returning an invalid name
+      const { provider } = setup(null, 'Bad Name!');
+      // WHEN / THEN
+      expect(await provider.getUserName()).toBeNull();
+    });
+
+    it('should prefer a pin made while the prompt was open (cross-vault first-pin-wins)', async () => {
+      // GIVEN another vault's prompt on this device pins a name while ours is open
+      const { provider, prompt, cache } = setup(null, 'alice');
+      prompt.onPrompt = () => cache.set('bob');
+      // WHEN / THEN the earlier pin wins over our prompt's answer
+      expect(await provider.getUserName()).toBe('bob');
+    });
+
+    it('should not overwrite a pin made while the prompt was open', async () => {
+      // GIVEN another vault's prompt on this device pins a name while ours is open
+      const { provider, prompt, cache } = setup(null, 'alice');
+      prompt.onPrompt = () => cache.set('bob');
+      // WHEN
+      await provider.getUserName();
+      // THEN the existing pin was not clobbered
+      expect(cache.get()).toBe('bob');
+    });
+
+    it('should pin an EXISTING dir name even when outside the strict charset (joining)', async () => {
+      // GIVEN an existing user dir named before the lowercase rule
+      const { provider, hidden } = setup(null, 'Nickolay');
+      seedVhUserTree(hidden, 'Nickolay');
+      // WHEN / THEN picking it joins that identity
+      expect(await provider.getUserName()).toBe('Nickolay');
     });
   });
 });
