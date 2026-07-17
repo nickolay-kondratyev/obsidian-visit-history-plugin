@@ -100,6 +100,13 @@ export class UserNameProviderDefault implements UserNameProvider {
     if (chosenName === null) {
       return null;
     }
+    // FIRST PIN WINS across vaults too: while our prompt was open, another
+    // vault's prompt on this device may have pinned a name into the shared
+    // device-scoped cache — prefer that pin over our prompt's answer.
+    const pinnedWhilePromptOpen = this.cache.get();
+    if (pinnedWhilePromptOpen) {
+      return pinnedWhilePromptOpen;
+    }
     // An EXISTING dir name is pinnable even when outside the strict charset
     // (it already is a working path segment — picking it joins that
     // identity); anything else must pass validation. Defense in depth: the

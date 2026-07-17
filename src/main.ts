@@ -16,6 +16,10 @@ export default class VisitHistoryPlugin extends Plugin {
   userNotifier!: UserNotifier;
   // Optional: onunload must not throw when onload failed before wiring.
   private factory?: PluginFactory;
+  // Guards pinUserNameAndStartRecording: its awaits (modal, migration) can
+  // straddle a plugin unload, and activating recording on an unloaded
+  // Component would leak its registered listeners forever.
+  private unloaded = false;
 
   async onload() {
     await this.loadSettings();
@@ -69,7 +73,7 @@ export default class VisitHistoryPlugin extends Plugin {
   ): Promise<void> {
     try {
       const userName = await factory.userNameProvider.getUserName();
-      if (userName === null) {
+      if (userName === null || this.unloaded) {
         return;
       }
       try {
@@ -81,6 +85,11 @@ export default class VisitHistoryPlugin extends Plugin {
         // Never blocks recording: new visits go to the user-scoped layout,
         // legacy dirs stay untouched, and the migration retries on next load.
         console.error('[VHP][main] user-scope VH migration failed', error);
+      }
+      // Re-check after the migration await: unloading mid-migration must not
+      // activate recording (nor write the README) on a dead plugin.
+      if (this.unloaded) {
+        return;
       }
       factory.activateUserScopedRecording(userName);
     } catch (error) {
@@ -138,10 +147,11 @@ export default class VisitHistoryPlugin extends Plugin {
   }
 
   onunload() {
+    this.unloaded = true;
     // Best-effort flush of an in-progress V3 focus session. The append is
     // async and unload cannot await it — on a hard app quit the last open
     // session may be lost (accepted limitation). Safe with no pinned name
-    // (recording never activated).
+    // (recording never activated). Also closes a still-open user-name modal.
     this.factory?.dispose();
   }
 

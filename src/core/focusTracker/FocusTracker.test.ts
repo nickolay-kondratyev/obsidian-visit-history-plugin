@@ -203,6 +203,20 @@ describe('FocusTracker', () => {
       expect(listener.calls).toEqual(['focus:a.md', 'unfocus:a.md']);
     });
 
+    it('should NOT deliver past events to a listener registered late (no implicit catch-up)', async () => {
+      // GIVEN note A focused before the listener exists
+      const { plugin, fireLeafChange } = makeStubPlugin();
+      const tracker = new FocusTracker(plugin, trackAllProvider);
+      fireLeafChange(makeLeaf(makeTFile({ path: 'a.md' })));
+      await tracker.whenIdle();
+      // WHEN a listener registers afterwards (no replay requested)
+      const lateListener = new RecordingListener();
+      tracker.registerListener(lateListener);
+      await tracker.whenIdle();
+      // THEN it saw nothing — catch-up is explicit via replayLastFocusTo
+      expect(lateListener.calls).toEqual([]);
+    });
+
     it('should keep dispatching after a leaf-change event whose listener threw', async () => {
       // GIVEN a listener that throws on the first focus
       const { plugin, fireLeafChange } = makeStubPlugin();
@@ -222,6 +236,94 @@ describe('FocusTracker', () => {
       await tracker.whenIdle();
       // THEN the recording listener still received everything in order
       expect(listener.calls).toEqual(['focus:a.md', 'unfocus:a.md', 'focus:b.md']);
+    });
+  });
+
+  describe('replayLastFocusTo', () => {
+    it('should deliver the last dispatched focus to a late-registered listener', async () => {
+      // GIVEN note A focused before the late listener exists
+      const { plugin, fireLeafChange } = makeStubPlugin();
+      const tracker = new FocusTracker(plugin, trackAllProvider);
+      fireLeafChange(makeLeaf(makeTFile({ path: 'a.md' })));
+      await tracker.whenIdle();
+      // WHEN the listener registers late and requests a replay
+      const lateListener = new RecordingListener();
+      tracker.registerListener(lateListener);
+      tracker.replayLastFocusTo(lateListener);
+      await tracker.whenIdle();
+      // THEN it received the missed focus
+      expect(lateListener.calls).toEqual(['focus:a.md']);
+    });
+
+    it('should deliver nothing when no focus event was ever dispatched', async () => {
+      // GIVEN a tracker that never saw a tracked leaf
+      const { plugin } = makeStubPlugin();
+      const tracker = new FocusTracker(plugin, trackAllProvider);
+      // WHEN a late listener requests a replay
+      const lateListener = new RecordingListener();
+      tracker.registerListener(lateListener);
+      tracker.replayLastFocusTo(lateListener);
+      await tracker.whenIdle();
+      // THEN nothing was delivered
+      expect(lateListener.calls).toEqual([]);
+    });
+
+    it('should deliver nothing when the doc was unfocused before the replay ran', async () => {
+      // GIVEN note A focused, then unfocused (active leaf gone)
+      const { plugin, fireLeafChange } = makeStubPlugin();
+      const tracker = new FocusTracker(plugin, trackAllProvider);
+      fireLeafChange(makeLeaf(makeTFile({ path: 'a.md' })));
+      fireLeafChange(null);
+      await tracker.whenIdle();
+      // WHEN a late listener requests a replay
+      const lateListener = new RecordingListener();
+      tracker.registerListener(lateListener);
+      tracker.replayLastFocusTo(lateListener);
+      await tracker.whenIdle();
+      // THEN no stale focus was delivered (a session must not open for an unfocused doc)
+      expect(lateListener.calls).toEqual([]);
+    });
+
+    it('should NOT re-deliver the focus to already-registered listeners', async () => {
+      // GIVEN an early listener that saw note A's focus live
+      const { plugin, fireLeafChange } = makeStubPlugin();
+      const tracker = new FocusTracker(plugin, trackAllProvider);
+      const earlyListener = new RecordingListener();
+      tracker.registerListener(earlyListener);
+      fireLeafChange(makeLeaf(makeTFile({ path: 'a.md' })));
+      await tracker.whenIdle();
+      // WHEN a late listener requests a replay
+      const lateListener = new RecordingListener();
+      tracker.registerListener(lateListener);
+      tracker.replayLastFocusTo(lateListener);
+      await tracker.whenIdle();
+      // THEN the early listener saw the focus exactly once
+      expect(earlyListener.calls).toEqual(['focus:a.md']);
+    });
+
+    it('should replay the focus CURRENT after pending leaf-changes settle (serialized with dispatch)', async () => {
+      // GIVEN an early listener blocking note A's focus while a change to note B is queued
+      const { plugin, fireLeafChange } = makeStubPlugin();
+      const tracker = new FocusTracker(plugin, trackAllProvider);
+      const earlyListener = new RecordingListener();
+      let releaseGate!: () => void;
+      earlyListener.gate = {
+        path: 'a.md',
+        promise: new Promise((resolve) => {
+          releaseGate = resolve;
+        }),
+      };
+      tracker.registerListener(earlyListener);
+      fireLeafChange(makeLeaf(makeTFile({ path: 'a.md' })));
+      fireLeafChange(makeLeaf(makeTFile({ path: 'b.md' })));
+      // WHEN a replay is requested before the queue drains (listener kept
+      // unregistered so it can ONLY receive the replayed event)
+      const lateListener = new RecordingListener();
+      tracker.replayLastFocusTo(lateListener);
+      releaseGate();
+      await tracker.whenIdle();
+      // THEN it got the focus current AFTER the queue — never stale note A
+      expect(lateListener.calls).toEqual(['focus:b.md']);
     });
   });
 });

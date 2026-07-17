@@ -196,7 +196,10 @@ After the pin, `main.ts` moves any pre-user-scoped `v2`/`v3` dirs under
 `user/<user-name>/` (`VhUserScopeMigrationService`) and only THEN calls
 `PluginFactory.activateUserScopedRecording`, so focus tracking can never
 write to the legacy location; activation also runs `VhStartupTasks`
-(rewrite the generated V3 format README). A dismissed modal pins nothing —
+(rewrite the generated V3 format README) and replays the last focus event
+to the late-registered V3 duration listener (on the serialized dispatch
+chain), so the doc already focused — restored at startup or opened while
+the modal was up — still opens its session. A dismissed modal pins nothing —
 no VH is recorded that session and the modal returns on the next start.
 
 

@@ -5,13 +5,30 @@ import { VhUserPaths } from '../VhUserPaths';
 
 /** UserNamePrompt backed by an Obsidian modal (one fresh modal per call). */
 export class ModalUserNamePrompt implements UserNamePrompt {
+  /** The currently open modal; null when none (or already resolved). */
+  private openModal: UserNamePromptModal | null = null;
+
   constructor(private readonly app: App) {
   }
 
   promptForUserName(request: UserNamePromptRequest): Promise<string | null> {
     return new Promise((resolve) => {
-      new UserNamePromptModal(this.app, request, resolve).open();
+      const modal = new UserNamePromptModal(this.app, request, (userName) => {
+        this.openModal = null;
+        resolve(userName);
+      });
+      this.openModal = modal;
+      modal.open();
     });
+  }
+
+  /**
+   * Closes a still-open prompt (resolving it as dismissed — nothing pinned).
+   * Called on plugin unload so the modal cannot outlive the plugin.
+   */
+  closeOpenPrompt(): void {
+    this.openModal?.close();
+    this.openModal = null;
   }
 }
 
@@ -110,6 +127,9 @@ class UserNamePromptModal extends Modal {
   }
 
   private resolveAndClose(userName: string): void {
+    // Guard against a rapid double-click resolving twice (symmetric with the
+    // onClose guard).
+    if (this.resolved) return;
     this.resolved = true;
     this.onResolve(userName);
     this.close();

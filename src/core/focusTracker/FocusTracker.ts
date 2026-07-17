@@ -78,6 +78,31 @@ export class FocusTracker {
     this.listeners.push(listener);
   }
 
+  /**
+   * Re-delivers the last dispatched focus event to ONE late-registered
+   * listener (the V3 duration listener joins only after the user-name pin —
+   * without a replay the startup-restored / modal-time focused doc's session
+   * would never open). Enqueued on the serialized dispatch chain, with the
+   * event read INSIDE the chain: pending leaf-changes settle first, so the
+   * listener never receives a stale focus and in-order delivery holds.
+   * Already-registered listeners saw the event live and are not re-notified.
+   */
+  replayLastFocusTo(listener: FocusListener): void {
+    this.dispatchChain = this.dispatchChain
+      .then(async () => {
+        const event = this.lastFocusEvent;
+        if (event === null) return;
+        try {
+          await listener.onFocus(event);
+        } catch (error) {
+          console.error(`[VHP][FocusTracker] focus replay failed for path=[${event.file?.path}]`, error);
+        }
+      })
+      .catch((error) => {
+        console.error('[VHP][FocusTracker] focus replay failed', error);
+      });
+  }
+
   /** Resolves once every leaf-change event received so far has been dispatched. */
   whenIdle(): Promise<void> {
     return this.dispatchChain;

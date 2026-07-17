@@ -53,6 +53,8 @@ export class PluginFactory {
   // Held for activateUserScopedRecording (post-pin wiring).
   private readonly plugin: VisitHistoryPlugin;
   private readonly hiddenFileUtil: HiddenFileUtil;
+  /** Concrete handle so dispose() can close a still-open user-name modal. */
+  private readonly modalUserNamePrompt: ModalUserNamePrompt;
   private readonly deviceNameProvider: DeviceNameProvider;
   private readonly lastVisitCache: LastVisitCache;
   private readonly vhV3DurationStore: VhV3DurationStore;
@@ -70,7 +72,8 @@ export class PluginFactory {
     this.hiddenFileUtil = new HiddenFileUtilDefault(app);
     this.deviceNameProvider = new DeviceNameProviderDefault();
     this.isTrackedProvider = new IsTrackedProviderDefault();
-    this.userNameProvider = new UserNameProviderDefault(this.hiddenFileUtil, new ModalUserNamePrompt(app));
+    this.modalUserNamePrompt = new ModalUserNamePrompt(app);
+    this.userNameProvider = new UserNameProviderDefault(this.hiddenFileUtil, this.modalUserNamePrompt);
 
     // obsidian-id-lib default wiring: generator + stores + the cross-plugin
     // per-path window lock guarding ensureDocId.
@@ -121,9 +124,12 @@ export class PluginFactory {
     // it registers popout windows itself (incl. ones already open by now).
     // eslint-disable-next-line obsidianmd/prefer-active-doc
     new WindowActivityMonitor(this.plugin, this.focusDurationTracker, window, document);
-    this.focusTracker.registerListener(
-      new VhV3FocusDurationListener(this.docIdService, this.focusDurationTracker),
-    );
+    const durationListener = new VhV3FocusDurationListener(this.docIdService, this.focusDurationTracker);
+    this.focusTracker.registerListener(durationListener);
+    // Replay: this listener registers AFTER workspace-layout restore (and
+    // after any time the user-name modal was open), so the currently focused
+    // doc's focus event already fired — replay it so its session opens.
+    this.focusTracker.replayLastFocusTo(durationListener);
 
     void new VhStartupTasks(new VhV3ReadmeWriter(this.hiddenFileUtil, userName)).run();
   }
@@ -131,8 +137,11 @@ export class PluginFactory {
   /**
    * Best-effort flush of an in-progress V3 focus session (main.ts onunload).
    * Safe when recording was never activated (no pinned name this session).
+   * Also closes a still-open user-name modal — it must not outlive the
+   * plugin (a post-unload confirm would pin and activate on a dead plugin).
    */
   dispose(): void {
+    this.modalUserNamePrompt.closeOpenPrompt();
     this.focusDurationTracker?.dispose();
   }
 }

@@ -163,6 +163,24 @@ describe('UserNameProviderDefault', () => {
       expect(await provider.getUserName()).toBeNull();
     });
 
+    it('should prefer a pin made while the prompt was open (cross-vault first-pin-wins)', async () => {
+      // GIVEN another vault's prompt on this device pins a name while ours is open
+      const { provider, prompt, cache } = setup(null, 'alice');
+      prompt.onPrompt = () => cache.set('bob');
+      // WHEN / THEN the earlier pin wins over our prompt's answer
+      expect(await provider.getUserName()).toBe('bob');
+    });
+
+    it('should not overwrite a pin made while the prompt was open', async () => {
+      // GIVEN another vault's prompt on this device pins a name while ours is open
+      const { provider, prompt, cache } = setup(null, 'alice');
+      prompt.onPrompt = () => cache.set('bob');
+      // WHEN
+      await provider.getUserName();
+      // THEN the existing pin was not clobbered
+      expect(cache.get()).toBe('bob');
+    });
+
     it('should pin an EXISTING dir name even when outside the strict charset (joining)', async () => {
       // GIVEN an existing user dir named before the lowercase rule
       const { provider, hidden } = setup(null, 'Nickolay');
