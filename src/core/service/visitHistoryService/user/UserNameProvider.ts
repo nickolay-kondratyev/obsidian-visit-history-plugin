@@ -2,7 +2,7 @@ import { HiddenFileUtil } from '../../../util/file/hidden/HiddenFileUtil';
 import { VhUserPaths } from './VhUserPaths';
 
 /**
- * Resolves the stable user name that keys `.visit_history/user/<user-name>/`.
+ * Resolves the stable user name that keys `__visit_history/user/<user-name>/`.
  * MUST stay stable for a device across restarts — a change would split the
  * device's history across two user trees.
  */
@@ -62,7 +62,7 @@ export class LocalStorageUserNameCache implements UserNameCache {
  *   1. Cached name (device-scoped localStorage) — FIRST RESOLUTION WINS, so
  *      the name can never flip later (e.g. when another user's dir syncs in).
  *   2. Desktop → OS account user name.
- *   3. Mobile → the single existing `.visit_history/user/<name>` dir, if
+ *   3. Mobile → the single existing `__visit_history/user/<name>` dir, if
  *      exactly one exists (this device's history joins it).
  *   4. Mobile fallback → `mobile-user-<random>` persisted via the cache.
  *      WHY-NOT a device API: Obsidian mobile exposes no user-identity API to

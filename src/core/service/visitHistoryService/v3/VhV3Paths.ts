@@ -4,10 +4,10 @@ import { VhUserPaths } from '../user/VhUserPaths';
  * Path layout of visit history V3 — focus DURATIONS
  * (see docs/visit-history-format.md):
  *
- *   .visit_history/user/<user-name>/v3/README__generated__vh_v3_format.md
- *   .visit_history/user/<user-name>/v3/focus_duration_per_device/<device-name>/<doc-id>.vh_v3
+ *   __visit_history/user/<user-name>/v3/README__generated__vh_v3_format.md
+ *   __visit_history/user/<user-name>/v3/focus_duration_per_device/<device-name>/<doc-id>.vh_v3
  *
- * User level owned by VhUserPaths (dot-folder rationale there). The doc id
+ * User level owned by VhUserPaths (top-dir naming rationale there). The doc id
  * IS the filename (survives renames; no backlink indirection). Every method
  * takes the user name explicitly: writes always target the CURRENT user,
  * while reads aggregate across ALL user dirs (owner decision — the heatmap

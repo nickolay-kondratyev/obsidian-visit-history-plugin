@@ -9,7 +9,7 @@ const README_CONTENT = `<!--
 # Visit History V3 — focus durations: layout & format
 
 \`\`\`
-.visit_history/
+__visit_history/
   user/
     <user-name>/                          # OS user name on desktop; see the user bullet for mobile
       v3/
@@ -20,10 +20,13 @@ const README_CONTENT = `<!--
 \`\`\`
 
 - V3 is the ONLY visit history the plugin reads and writes. The filename is
-  the document's persistent id. Any \`v2/\` folder — under \`.visit_history/\`
+  the document's persistent id. Any \`v2/\` folder — under \`__visit_history/\`
   or under a \`user/<user-name>/\` dir — and any top-level \`_visit_history/\`
-  folder is legacy data from older plugin versions — no longer read or
-  written, left untouched.
+  or \`.visit_history/\` folder is legacy data from older plugin versions —
+  no longer read or written, left untouched.
+- WHY the folder is named \`__visit_history\` (not dot-hidden): Obsidian Sync
+  does not sync folders starting with a dot, so the history must be visible
+  to sync across devices. The plugin's own tracking and heatmap exclude it.
 - Per-user directories keep the histories of different people syncing one
   vault apart. Mobile devices adopt the single existing user name when there
   is exactly one, otherwise fall back to a persisted \`mobile-user-XXXXXXXX\`.

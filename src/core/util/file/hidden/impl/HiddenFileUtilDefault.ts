@@ -3,7 +3,7 @@ import { HiddenFileUtil } from '../HiddenFileUtil';
 
 /**
  * DataAdapter-backed HiddenFileUtil. See the interface for WHY the adapter
- * (not the Vault API) is required for dot-folder paths.
+ * (not the Vault API) is used for all VH data paths.
  */
 export class HiddenFileUtilDefault implements HiddenFileUtil {
   constructor(private readonly app: App) {

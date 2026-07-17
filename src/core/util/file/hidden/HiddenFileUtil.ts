@@ -1,13 +1,18 @@
 /**
- * File I/O for HIDDEN vault paths — dot-folders like `.visit_history/`.
+ * File I/O for the plugin's own data paths (outside the tracked note space),
+ * wrapping Obsidian's DataAdapter.
  *
- * WHY this exists: Obsidian's Vault API (getFiles, getAbstractFileByPath,
- * create, process, metadataCache) does NOT see dot-folders. All access to
- * hidden paths must go through the DataAdapter, which this interface wraps.
+ * WHY the DataAdapter (not the Vault API): Obsidian's Vault API (getFiles,
+ * getAbstractFileByPath, create, process, metadataCache) does NOT see
+ * dot-folders — historically the VH top dir was the dot-hidden
+ * `.visit_history/`. Today's `__visit_history/` IS Vault-API visible
+ * (renamed so Obsidian Sync syncs it — see VhUserPaths.TOP_DIR), but the
+ * DataAdapter works for visible folders too, and legacy dot-dir paths (e.g.
+ * the rename migration source) still need it — so all VH I/O stays here.
  * Keeping it as a seam lets everything above stay Obsidian-agnostic and
  * unit-testable (FakeHiddenFileUtil).
  *
- * All paths are vault-relative (e.g. ".visit_history/user/<user>/v3/...").
+ * All paths are vault-relative (e.g. "__visit_history/user/<user>/v3/...").
  */
 export interface HiddenFileUtil {
   /** File content, or null when the file does not exist. */
