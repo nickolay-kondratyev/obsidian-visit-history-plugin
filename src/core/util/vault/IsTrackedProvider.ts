@@ -42,6 +42,17 @@ export class IsTrackedProviderDefault implements IsTrackedProvider {
    * (V1) stays on disk untouched and stays excluded too.
    */
   private static isVisitHistoryPath(path: string): boolean {
-    return path.startsWith(VhUserPaths.TOP_DIR) || path.startsWith(VISIT_HISTORY_TOP_DIR);
+    return (
+      IsTrackedProviderDefault.isUnderDir(path, VhUserPaths.TOP_DIR) ||
+      IsTrackedProviderDefault.isUnderDir(path, VISIT_HISTORY_TOP_DIR)
+    );
+  }
+
+  /**
+   * Boundary-aware containment check: a bare prefix test would also exclude
+   * sibling paths that merely share the prefix (e.g. `__visit_history_notes/x.md`).
+   */
+  private static isUnderDir(path: string, dir: string): boolean {
+    return path === dir || path.startsWith(dir + "/");
   }
 }

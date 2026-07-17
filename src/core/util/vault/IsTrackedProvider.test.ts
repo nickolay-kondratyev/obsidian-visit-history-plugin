@@ -36,6 +36,14 @@ describe('IsTrackedProviderDefault', () => {
     it('should NOT track unsupported extensions', () => {
       expect(provider.isTrackedFile(makeTFile({ path: 'image.png' }))).toBe(false);
     });
+
+    it('should track files in a sibling dir sharing the __visit_history prefix', () => {
+      expect(provider.isTrackedFile(makeTFile({ path: '__visit_history_notes/note.md' }))).toBe(true);
+    });
+
+    it('should track files in a sibling dir sharing the legacy _visit_history prefix', () => {
+      expect(provider.isTrackedFile(makeTFile({ path: '_visit_history_notes/note.md' }))).toBe(true);
+    });
   });
 
   describe('isTrackedView', () => {
@@ -63,6 +71,14 @@ describe('IsTrackedProviderDefault', () => {
       expect(provider.isTrackedView(
         makeView('markdown', '__visit_history/user/alice/v3/README__generated__vh_v3_format.md'),
       )).toBe(false);
+    });
+
+    it('should track a view showing a file in a sibling dir sharing the __visit_history prefix', () => {
+      expect(provider.isTrackedView(makeView('markdown', '__visit_history_notes/note.md'))).toBe(true);
+    });
+
+    it('should track a view showing a file in a sibling dir sharing the legacy _visit_history prefix', () => {
+      expect(provider.isTrackedView(makeView('markdown', '_visit_history_notes/note.md'))).toBe(true);
     });
   });
 });
