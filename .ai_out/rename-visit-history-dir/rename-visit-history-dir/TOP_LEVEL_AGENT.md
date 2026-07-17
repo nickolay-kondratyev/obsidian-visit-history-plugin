@@ -10,9 +10,10 @@ EXPLORATION → CLARIFICATION → IMPLEMENTATION_WITH_SELF_PLAN → IMPLEMENTATI
 
 ## Status log
 - [x] Branch `rename-visit-history-dir` created off master (955a634)
-- [~] EXPLORATION: Explore sub-agent running in background → EXPLORATION_PUBLIC.md
-- [ ] CLARIFICATION (with HUMAN)
-- [ ] IMPLEMENTATION_WITH_SELF_PLAN
+- [x] EXPLORATION → EXPLORATION_PUBLIC.md (Explore agent was read-only; TOP_LEVEL persisted its report verbatim)
+- [x] CLARIFICATION (HUMAN aligned) → CLARIFICATION__PUBLIC.md
+      1) visibility accepted; 2) both-exist → skip + console.error + user-facing dialog; 3) cleanup horizon stays 2026-October
+- [~] IMPLEMENTATION_WITH_SELF_PLAN: sub-agent running in background → 1_IMPLEMENTATION_WITH_SELF_PLAN__PUBLIC.md
 - [ ] IMPLEMENTATION_REVIEW
 - [ ] IMPLEMENTATION_ITERATION
 - [ ] Final: change log entry (single, by TOP_LEVEL_AGENT), tickets, callouts
