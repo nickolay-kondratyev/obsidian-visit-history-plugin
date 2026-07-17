@@ -17,9 +17,10 @@ function setup(): {
   const hidden = new FakeHiddenFileUtil();
   const cache = new LastVisitCache();
   const recorder = new VhV3DurationRecorder(
-    new VhV3DurationStore(hidden, USER),
+    new VhV3DurationStore(hidden),
     cache,
     new FixedDeviceNameProvider(DEVICE),
+    USER,
   );
   return { recorder, hidden, cache };
 }

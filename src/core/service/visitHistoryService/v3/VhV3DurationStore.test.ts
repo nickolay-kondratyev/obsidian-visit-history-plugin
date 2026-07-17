@@ -9,7 +9,7 @@ const FILE_PATH = `__visit_history/user/${USER}/v3/focus_duration_per_device/${D
 
 function setup(): { store: VhV3DurationStore; hidden: FakeHiddenFileUtil } {
   const hidden = new FakeHiddenFileUtil();
-  return { store: new VhV3DurationStore(hidden, USER), hidden };
+  return { store: new VhV3DurationStore(hidden), hidden };
 }
 
 describe('VhV3DurationStore', () => {
@@ -18,7 +18,7 @@ describe('VhV3DurationStore', () => {
       // GIVEN an empty store
       const { store, hidden } = setup();
       // WHEN one session is appended
-      await store.appendFocusDuration(DEVICE, DOC_ID, Date.parse('2026-07-09T22:02:15.745Z'), 5600);
+      await store.appendFocusDuration(USER, DEVICE, DOC_ID, Date.parse('2026-07-09T22:02:15.745Z'), 5600);
       // THEN the line matches the documented format exactly
       expect(hidden.getContent(FILE_PATH)).toBe('2026-07-09T22:02:15.745Z D:5600\n');
     });
@@ -26,9 +26,9 @@ describe('VhV3DurationStore', () => {
     it('should append sessions as separate lines in call order', async () => {
       // GIVEN one recorded session
       const { store, hidden } = setup();
-      await store.appendFocusDuration(DEVICE, DOC_ID, Date.parse('2026-07-09T22:02:15.745Z'), 5600);
+      await store.appendFocusDuration(USER, DEVICE, DOC_ID, Date.parse('2026-07-09T22:02:15.745Z'), 5600);
       // WHEN a later session is appended
-      await store.appendFocusDuration(DEVICE, DOC_ID, Date.parse('2026-07-09T22:05:00.000Z'), 120);
+      await store.appendFocusDuration(USER, DEVICE, DOC_ID, Date.parse('2026-07-09T22:05:00.000Z'), 120);
       // THEN both lines are present in order
       expect(hidden.getContent(FILE_PATH)).toBe(
         '2026-07-09T22:02:15.745Z D:5600\n2026-07-09T22:05:00.000Z D:120\n',
@@ -39,7 +39,7 @@ describe('VhV3DurationStore', () => {
       // GIVEN an empty store
       const { store, hidden } = setup();
       // WHEN a pass-through visit records zero millis
-      await store.appendFocusDuration(DEVICE, DOC_ID, Date.parse('2026-07-09T22:02:15.745Z'), 0);
+      await store.appendFocusDuration(USER, DEVICE, DOC_ID, Date.parse('2026-07-09T22:02:15.745Z'), 0);
       // THEN the truthful zero is written
       expect(hidden.getContent(FILE_PATH)).toBe('2026-07-09T22:02:15.745Z D:0\n');
     });
@@ -48,7 +48,7 @@ describe('VhV3DurationStore', () => {
       // GIVEN a store
       const { store } = setup();
       // WHEN/THEN appending under an unsafe id is a programming error
-      await expect(store.appendFocusDuration(DEVICE, 'a/b', 0, 1))
+      await expect(store.appendFocusDuration(USER, DEVICE, 'a/b', 0, 1))
         .rejects.toThrow('not filename-safe');
     });
   });
@@ -57,11 +57,11 @@ describe('VhV3DurationStore', () => {
     it('should round-trip appended sessions', async () => {
       // GIVEN two appended sessions
       const { store } = setup();
-      await store.appendFocusDuration(DEVICE, DOC_ID, Date.parse('2026-07-09T22:02:15.745Z'), 5600);
-      await store.appendFocusDuration(DEVICE, DOC_ID, Date.parse('2026-07-09T22:05:00.000Z'), 120);
+      await store.appendFocusDuration(USER, DEVICE, DOC_ID, Date.parse('2026-07-09T22:02:15.745Z'), 5600);
+      await store.appendFocusDuration(USER, DEVICE, DOC_ID, Date.parse('2026-07-09T22:05:00.000Z'), 120);
       // WHEN read back
       // THEN both parse to their start + duration
-      expect(await store.readSessions(DEVICE, DOC_ID)).toEqual([
+      expect(await store.readSessions(USER, DEVICE, DOC_ID)).toEqual([
         { focusStartEpochMs: Date.parse('2026-07-09T22:02:15.745Z'), durationMs: 5600 },
         { focusStartEpochMs: Date.parse('2026-07-09T22:05:00.000Z'), durationMs: 120 },
       ]);
@@ -69,7 +69,7 @@ describe('VhV3DurationStore', () => {
 
     it('should return [] when the doc has no file on the device', async () => {
       const { store } = setup();
-      expect(await store.readSessions(DEVICE, DOC_ID)).toEqual([]);
+      expect(await store.readSessions(USER, DEVICE, DOC_ID)).toEqual([]);
     });
 
     it('should skip malformed lines without throwing', async () => {
@@ -81,12 +81,12 @@ describe('VhV3DurationStore', () => {
       );
       // WHEN read
       // THEN only the valid sessions survive
-      expect(await store.readSessions(DEVICE, DOC_ID)).toHaveLength(2);
+      expect(await store.readSessions(USER, DEVICE, DOC_ID)).toHaveLength(2);
     });
 
     it('should treat an unsafe doc id as "no file"', async () => {
       const { store } = setup();
-      expect(await store.readSessions(DEVICE, 'a/b')).toEqual([]);
+      expect(await store.readSessions(USER, DEVICE, 'a/b')).toEqual([]);
     });
   });
 

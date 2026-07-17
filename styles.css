@@ -878,3 +878,12 @@ body.theme-light .vault-heatmap-view {
   color: var(--vt-text-dim) !important;
   font-style: italic;
 }
+
+/* ── User-name prompt modal ─────────────────────────────────────────────── */
+
+.vh-user-name-prompt-error {
+  color: var(--text-error);
+  font-size: var(--font-ui-small);
+  min-height: 1.4em;
+  margin: 0;
+}

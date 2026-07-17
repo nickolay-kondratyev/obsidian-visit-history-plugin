@@ -26,7 +26,7 @@ function setup(): {
   const cache = new LastVisitCache();
   const service = new VisitHistoryServiceV3(
     docIdService,
-    new VhV3DurationStore(hidden, USER),
+    new VhV3DurationStore(hidden),
     cache,
   );
   return { service, hidden, docIdService, cache };

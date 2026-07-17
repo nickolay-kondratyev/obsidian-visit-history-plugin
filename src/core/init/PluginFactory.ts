@@ -4,8 +4,9 @@ import { FocusTracker } from '../focusTracker/FocusTracker';
 import { UserNotifier } from '../util/userComm/UserNotifier';
 import { UserNotifierDefault } from '../util/userComm/impl/UserNotifierDefault';
 import { NoteFileUtilDefault } from '../util/file/note/impl/NoteFileUtilDefault';
+import { HiddenFileUtil } from '../util/file/hidden/HiddenFileUtil';
 import { HiddenFileUtilDefault } from '../util/file/hidden/impl/HiddenFileUtilDefault';
-import { DeviceNameProviderDefault } from '../util/env/DeviceNameProvider';
+import { DeviceNameProvider, DeviceNameProviderDefault } from '../util/env/DeviceNameProvider';
 import { VhV3DurationStore } from '../service/visitHistoryService/v3/VhV3DurationStore';
 import { VhV3ReadmeWriter } from '../service/visitHistoryService/v3/VhV3ReadmeWriter';
 import { VisitHistoryServiceV3 } from '../service/visitHistoryService/v3/VisitHistoryServiceV3';
@@ -22,10 +23,19 @@ import { DocIdBackfillService, DocIdBackfillServiceDefault } from '../service/do
 import { VhStartupTasks } from './VhStartupTasks';
 import { HeatmapConfigStore, PluginHeatmapConfigStore } from '../../viewModel/HeatmapConfigStore';
 import { ContentTermMatcher, ContentTermMatcherDefault } from '../../viewModel/ContentTermMatcher';
+import { UserNameProvider, UserNameProviderDefault } from '../service/visitHistoryService/user/UserNameProvider';
+import { ModalUserNamePrompt } from '../service/visitHistoryService/user/impl/ModalUserNamePrompt';
 
 // ── PluginFactory ─────────────────────────────────────────────────────────────
 // Constructs and wires all plugin dependencies.
 // The plugin's onload() calls this once and reads from the resulting instance.
+//
+// Wiring is split around the user-name pin: the constructor wires everything
+// NAME-INDEPENDENT (heatmap reads aggregate across all users; doc-id
+// assignment is user-agnostic), while everything that writes user-scoped VH
+// data waits for activateUserScopedRecording(userName) — called by main.ts
+// once the human confirms a name in the user-name modal. With no pinned name
+// (modal dismissed) recording machinery is simply never constructed.
 export class PluginFactory {
   readonly userNotifier: UserNotifier;
   readonly focusTracker: FocusTracker;
@@ -33,25 +43,34 @@ export class PluginFactory {
   readonly docIdService: DocIdService;
   readonly docIdBackfillService: DocIdBackfillService;
   readonly isTrackedProvider: IsTrackedProvider;
-  readonly vhStartupTasks: VhStartupTasks;
-  /** V3 duration state machine — main.ts flushes it on unload (dispose()). */
-  readonly focusDurationTracker: FocusDurationTracker;
+  /** Resolves the pinned user name, prompting via the modal when unpinned. */
+  readonly userNameProvider: UserNameProvider;
   /** Persists the heatmap view's config panel state across restarts. */
   readonly heatmapConfigStore: HeatmapConfigStore;
   /** Resolves the heatmap's CONTENT filter terms to matching file paths. */
   readonly contentTermMatcher: ContentTermMatcher;
 
-  /** userName: resolved once in main.ts (UserNameProvider) before wiring. */
-  constructor(plugin: VisitHistoryPlugin, userName: string) {
+  // Held for activateUserScopedRecording (post-pin wiring).
+  private readonly plugin: VisitHistoryPlugin;
+  private readonly hiddenFileUtil: HiddenFileUtil;
+  private readonly deviceNameProvider: DeviceNameProvider;
+  private readonly lastVisitCache: LastVisitCache;
+  private readonly vhV3DurationStore: VhV3DurationStore;
+  /** V3 duration state machine; undefined until a user name is pinned. */
+  private focusDurationTracker?: FocusDurationTracker;
+
+  constructor(plugin: VisitHistoryPlugin) {
     const app: App = plugin.app;
+    this.plugin = plugin;
 
     this.userNotifier = new UserNotifierDefault(plugin);
     this.heatmapConfigStore = new PluginHeatmapConfigStore(plugin);
 
     const noteFileUtil = new NoteFileUtilDefault(app);
-    const hiddenFileUtil = new HiddenFileUtilDefault(app);
-    const deviceNameProvider = new DeviceNameProviderDefault();
+    this.hiddenFileUtil = new HiddenFileUtilDefault(app);
+    this.deviceNameProvider = new DeviceNameProviderDefault();
     this.isTrackedProvider = new IsTrackedProviderDefault();
+    this.userNameProvider = new UserNameProviderDefault(this.hiddenFileUtil, new ModalUserNamePrompt(app));
 
     // obsidian-id-lib default wiring: generator + stores + the cross-plugin
     // per-path window lock guarding ensureDocId.
@@ -59,36 +78,61 @@ export class PluginFactory {
 
     // Shared by the V3 read path (heatmap last-visit lookups) and the write
     // path (recorder write-through on every recorded session).
-    const lastVisitCache = new LastVisitCache();
-    const vhV3DurationStore = new VhV3DurationStore(hiddenFileUtil, userName);
-
-    this.focusDurationTracker = new FocusDurationTracker(
-      new VhV3DurationRecorder(vhV3DurationStore, lastVisitCache, deviceNameProvider),
-      // Live read: a settings-tab change applies without plugin reload.
-      () => plugin.settings.idleTimeoutSeconds * 1000,
-    );
-    // WHY-NOT activeDocument: the monitor needs the MAIN window specifically;
-    // it registers popout windows itself.
-    // eslint-disable-next-line obsidianmd/prefer-active-doc
-    new WindowActivityMonitor(plugin, this.focusDurationTracker, window, document);
+    this.lastVisitCache = new LastVisitCache();
+    // Name-free store: the aggregate read spans ALL users, so the heatmap
+    // works even before (or without) a pinned user name.
+    this.vhV3DurationStore = new VhV3DurationStore(this.hiddenFileUtil);
 
     this.focusTracker = new FocusTracker(plugin, this.isTrackedProvider);
     // Doc id listener FIRST: assigning the id is the first thing that happens
-    // when a file gains focus (listeners are dispatched in order).
+    // when a file gains focus (listeners are dispatched in order). The V3
+    // duration listener joins LATE, in activateUserScopedRecording — its
+    // registration order relative to this one is preserved by the push.
     this.focusTracker.registerListener(new DocIdFocusListener(this.docIdService));
-    this.focusTracker.registerListener(
-      new VhV3FocusDurationListener(this.docIdService, this.focusDurationTracker),
-    );
 
     const lastVisitProvider = new VisitHistoryServiceV3(
       this.docIdService,
-      vhV3DurationStore,
-      lastVisitCache,
+      this.vhV3DurationStore,
+      this.lastVisitCache,
     );
     this.vaultUtil = new VaultUtilDefault(app, lastVisitProvider, this.isTrackedProvider);
     this.docIdBackfillService = new DocIdBackfillServiceDefault(this.vaultUtil, this.docIdService);
     this.contentTermMatcher = new ContentTermMatcherDefault(this.vaultUtil, noteFileUtil);
+  }
 
-    this.vhStartupTasks = new VhStartupTasks(new VhV3ReadmeWriter(hiddenFileUtil, userName));
+  /**
+   * Wires everything that writes user-scoped VH data. Called ONCE by main.ts
+   * after a user name is pinned (never with a dismissed modal). From here on
+   * focus sessions are tracked and recorded; the V3 README write is kicked
+   * off fire-and-forget (VhStartupTasks is error-isolated).
+   */
+  activateUserScopedRecording(userName: string): void {
+    if (this.focusDurationTracker !== undefined) {
+      console.error('[VHP][PluginFactory] recording already activated — ignoring repeat activation');
+      return;
+    }
+
+    this.focusDurationTracker = new FocusDurationTracker(
+      new VhV3DurationRecorder(this.vhV3DurationStore, this.lastVisitCache, this.deviceNameProvider, userName),
+      // Live read: a settings-tab change applies without plugin reload.
+      () => this.plugin.settings.idleTimeoutSeconds * 1000,
+    );
+    // WHY-NOT activeDocument: the monitor needs the MAIN window specifically;
+    // it registers popout windows itself (incl. ones already open by now).
+    // eslint-disable-next-line obsidianmd/prefer-active-doc
+    new WindowActivityMonitor(this.plugin, this.focusDurationTracker, window, document);
+    this.focusTracker.registerListener(
+      new VhV3FocusDurationListener(this.docIdService, this.focusDurationTracker),
+    );
+
+    void new VhStartupTasks(new VhV3ReadmeWriter(this.hiddenFileUtil, userName)).run();
+  }
+
+  /**
+   * Best-effort flush of an in-progress V3 focus session (main.ts onunload).
+   * Safe when recording was never activated (no pinned name this session).
+   */
+  dispose(): void {
+    this.focusDurationTracker?.dispose();
   }
 }
