@@ -40,9 +40,9 @@ function setup(osUserName: string | null): Setup {
   return { provider, hidden, cache };
 }
 
-/** Seeds one `.visit_history/user/<name>/...` tree (a folder implied by a file). */
+/** Seeds one `__visit_history/user/<name>/...` tree (a folder implied by a file). */
 function seedVhUserTree(hidden: FakeHiddenFileUtil, userName: string): void {
-  hidden.seedFile(`.visit_history/user/${userName}/v2/focus_per_device/host/doc.vh_v2`, 'x\n');
+  hidden.seedFile(`__visit_history/user/${userName}/v2/focus_per_device/host/doc.vh_v2`, 'x\n');
 }
 
 describe('UserNameProviderDefault', () => {

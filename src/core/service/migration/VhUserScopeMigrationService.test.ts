@@ -4,10 +4,10 @@ import { FakeHiddenFileUtil } from '../../../testSupport/FakeHiddenFileUtil';
 
 const USER = 'alice';
 
-const LEGACY_V2_FILE = '.visit_history/v2/focus_per_device/mac/doc-a.vh_v2';
-const USER_V2_FILE = `.visit_history/user/${USER}/v2/focus_per_device/mac/doc-a.vh_v2`;
-const LEGACY_V3_FILE = '.visit_history/v3/focus_duration_per_device/mac/doc-a.vh_v3';
-const USER_V3_FILE = `.visit_history/user/${USER}/v3/focus_duration_per_device/mac/doc-a.vh_v3`;
+const LEGACY_V2_FILE = '__visit_history/v2/focus_per_device/mac/doc-a.vh_v2';
+const USER_V2_FILE = `__visit_history/user/${USER}/v2/focus_per_device/mac/doc-a.vh_v2`;
+const LEGACY_V3_FILE = '__visit_history/v3/focus_duration_per_device/mac/doc-a.vh_v3';
+const USER_V3_FILE = `__visit_history/user/${USER}/v3/focus_duration_per_device/mac/doc-a.vh_v3`;
 
 interface Setup {
   migration: VhUserScopeMigrationService;
@@ -38,7 +38,7 @@ describe('VhUserScopeMigrationService', () => {
       // WHEN
       await migration.migrateIfLegacyPresent();
       // THEN the legacy location is gone
-      expect(await hidden.exists('.visit_history/v2')).toBe(false);
+      expect(await hidden.exists('__visit_history/v2')).toBe(false);
     });
 
     it('should move a legacy v3 tree under the current user', async () => {

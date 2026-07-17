@@ -3,8 +3,10 @@ import { SettingsSanitizer, VisitHistoryPluginSettings } from './settings';
 import { PluginFactory } from './core/init/PluginFactory';
 import { HiddenFileUtilDefault } from './core/util/file/hidden/impl/HiddenFileUtilDefault';
 import { UserNameProviderDefault } from './core/service/visitHistoryService/user/UserNameProvider';
+import { VhTopDirRenameMigrationService } from './core/service/migration/VhTopDirRenameMigrationService';
 import { VhUserScopeMigrationService } from './core/service/migration/VhUserScopeMigrationService';
 import { UserNotifier } from './core/util/userComm/UserNotifier';
+import { UserNotifierDefault } from './core/util/userComm/impl/UserNotifierDefault';
 import { CSS_CLASS_HEATMAP_ACTIVE, VaultTreemapView, VIEW_TYPE_TREEMAP } from './view/VaultTreemapView';
 import { VisitHistorySettingTab } from './settingsTab/VisitHistorySettingTab';
 
@@ -18,10 +20,22 @@ export default class VisitHistoryPlugin extends Plugin {
   async onload() {
     await this.loadSettings();
 
-    // User name FIRST: it keys `.visit_history/user/<user-name>/` and the
+    const hiddenFileUtil = new HiddenFileUtilDefault(this.app);
+    // Top-dir rename FIRST — before user-name resolution: mobile user
+    // adoption lists `__visit_history/user`, so a still-dot-named dir would
+    // be missed and a bogus mobile user minted.
+    try {
+      // TODO(cleanup): remove after 2026-October (see VhTopDirRenameMigrationService).
+      await new VhTopDirRenameMigrationService(hiddenFileUtil, new UserNotifierDefault(this))
+        .migrateIfLegacyPresent();
+    } catch (error) {
+      // Never blocks load: legacy dir stays untouched, retried on next load.
+      console.error('[VHP][main] VH top-dir rename migration failed', error);
+    }
+
+    // User name next: it keys `__visit_history/user/<user-name>/` and the
     // legacy-layout move below — both must be settled before any focus
     // tracking writes (cheap: cached in localStorage after first resolution).
-    const hiddenFileUtil = new HiddenFileUtilDefault(this.app);
     const userName = await new UserNameProviderDefault(hiddenFileUtil).getUserName();
     try {
       // TODO(cleanup): remove after 2026-October (see VhUserScopeMigrationService).

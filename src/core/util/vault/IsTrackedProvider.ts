@@ -1,5 +1,6 @@
 import { TFile, View } from "obsidian";
 import { TRACKED_EXTENSIONS, TRACKED_VIEW_TYPES, VISIT_HISTORY_TOP_DIR } from "../../../Constants";
+import { VhUserPaths } from "../../service/visitHistoryService/user/VhUserPaths";
 
 export interface IsTrackedProvider {
   isTrackedFile(file: TFile): boolean;
@@ -9,10 +10,9 @@ export interface IsTrackedProvider {
 
 export class IsTrackedProviderDefault implements IsTrackedProvider {
   isTrackedFile(file: TFile): boolean {
-    const notVisitHistoryFile = !file.path.startsWith(VISIT_HISTORY_TOP_DIR);
     const hasTrackedExtension = TRACKED_EXTENSIONS.has(file.extension);
 
-    return hasTrackedExtension && notVisitHistoryFile;
+    return hasTrackedExtension && !IsTrackedProviderDefault.isVisitHistoryPath(file.path);
   }
 
   isTrackedView(view: View | null): boolean {
@@ -31,6 +31,17 @@ export class IsTrackedProviderDefault implements IsTrackedProvider {
       return false;
     }
 
-    return !file.path.startsWith(VISIT_HISTORY_TOP_DIR);
+    return !IsTrackedProviderDefault.isVisitHistoryPath(file.path);
+  }
+
+  /**
+   * The plugin's own visit-history files must never be tracked (no
+   * self-tracking loops, never shown in the heatmap). `__visit_history/` is
+   * VISIBLE to the Vault API (not a dot-folder, so Obsidian Sync syncs it) —
+   * this exclusion is the only gate keeping it out. Legacy `_visit_history/`
+   * (V1) stays on disk untouched and stays excluded too.
+   */
+  private static isVisitHistoryPath(path: string): boolean {
+    return path.startsWith(VhUserPaths.TOP_DIR) || path.startsWith(VISIT_HISTORY_TOP_DIR);
   }
 }

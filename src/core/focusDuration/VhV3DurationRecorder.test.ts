@@ -7,7 +7,7 @@ import { FixedDeviceNameProvider } from '../../testSupport/fakes';
 
 const USER = 'alice';
 const DEVICE = 'my-host';
-const DOC_FILE = `.visit_history/user/${USER}/v3/focus_duration_per_device/${DEVICE}/docid_A_E.vh_v3`;
+const DOC_FILE = `__visit_history/user/${USER}/v3/focus_duration_per_device/${DEVICE}/docid_A_E.vh_v3`;
 
 function setup(): {
   recorder: VhV3DurationRecorder;

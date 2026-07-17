@@ -5,7 +5,7 @@ import { FakeHiddenFileUtil } from '../../../../testSupport/FakeHiddenFileUtil';
 const USER = 'alice';
 const DEVICE = 'my-host';
 const DOC_ID = 'docid_ABC123_E';
-const FILE_PATH = `.visit_history/user/${USER}/v3/focus_duration_per_device/${DEVICE}/${DOC_ID}.vh_v3`;
+const FILE_PATH = `__visit_history/user/${USER}/v3/focus_duration_per_device/${DEVICE}/${DOC_ID}.vh_v3`;
 
 function setup(): { store: VhV3DurationStore; hidden: FakeHiddenFileUtil } {
   const hidden = new FakeHiddenFileUtil();
@@ -92,8 +92,8 @@ describe('VhV3DurationStore', () => {
 
   describe('getLastFocusStartMsAcrossUsersAndDevices', () => {
     const OTHER_DEVICE = 'other-host';
-    const OTHER_DEVICE_FILE_PATH = `.visit_history/user/${USER}/v3/focus_duration_per_device/${OTHER_DEVICE}/${DOC_ID}.vh_v3`;
-    const OTHER_USER_FILE_PATH = `.visit_history/user/bob/v3/focus_duration_per_device/bobs-host/${DOC_ID}.vh_v3`;
+    const OTHER_DEVICE_FILE_PATH = `__visit_history/user/${USER}/v3/focus_duration_per_device/${OTHER_DEVICE}/${DOC_ID}.vh_v3`;
+    const OTHER_USER_FILE_PATH = `__visit_history/user/bob/v3/focus_duration_per_device/bobs-host/${DOC_ID}.vh_v3`;
 
     it('should return null when no user folders exist at all (fresh vault)', async () => {
       const { store } = setup();
@@ -104,7 +104,7 @@ describe('VhV3DurationStore', () => {
       // GIVEN a device folder holding only another doc
       const { store, hidden } = setup();
       hidden.seedFile(
-        `.visit_history/user/${USER}/v3/focus_duration_per_device/${DEVICE}/docid_OTHER_E.vh_v3`,
+        `__visit_history/user/${USER}/v3/focus_duration_per_device/${DEVICE}/docid_OTHER_E.vh_v3`,
         '2026-07-09T22:02:15.745Z D:5600\n',
       );
       // WHEN looked up
@@ -116,7 +116,7 @@ describe('VhV3DurationStore', () => {
       // GIVEN a user tree holding only the generated README (no device dirs)
       const { store, hidden } = setup();
       hidden.seedFile(
-        `.visit_history/user/${USER}/v3/README__generated__vh_v3_format.md`,
+        `__visit_history/user/${USER}/v3/README__generated__vh_v3_format.md`,
         'readme\n',
       );
       // WHEN looked up
@@ -151,7 +151,7 @@ describe('VhV3DurationStore', () => {
       const { store, hidden } = setup();
       hidden.seedFile(FILE_PATH, '2026-07-09T10:00:00.000Z D:100\n');
       hidden.seedFile(
-        `.visit_history/user/${USER}/v3/focus_duration_per_device/${OTHER_DEVICE}/docid_OTHER_E.vh_v3`,
+        `__visit_history/user/${USER}/v3/focus_duration_per_device/${OTHER_DEVICE}/docid_OTHER_E.vh_v3`,
         '2026-07-11T10:00:00.000Z D:100\n',
       );
       // WHEN looked up
