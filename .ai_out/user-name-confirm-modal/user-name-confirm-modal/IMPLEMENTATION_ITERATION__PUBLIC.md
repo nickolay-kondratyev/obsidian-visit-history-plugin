@@ -44,3 +44,7 @@ All new tests were verified FAILING before the fixes (7 runtime failures observe
 **READY for re-review.** All four findings applied as directed; no scope expansion; no deviations. The reviewer's `#QUESTION_FOR_HUMAN` on B1 is moot — the recommended replay was implemented, so no behavior loss needs human acceptance.
 
 No `#QUESTION_FOR_HUMAN`.
+
+## N1 follow-up
+Round-2 suggestion N1 applied: `pinUserNameAndStartRecording` now early-returns on `this.unloaded` BEFORE `getUserName()` (onLayoutReady is not Component-tied), with WHY comment. Commit `4a121d3`.
+Verified: vitest 355/355 passed, eslint 0 errors (2 pre-existing warnings), tsc clean. No tests added (main.ts wiring is a documented untested seam).
