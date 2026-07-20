@@ -44,9 +44,9 @@
   <g font-size="9" fill="#ffffff">
     <rect x="237" y="72" width="228" height="148" rx="2" fill="#1c995e"/>
     <text x="243" y="86" fill-opacity="0.82" paint-order="stroke" stroke="#000000" stroke-opacity="0.5" stroke-width="2.5" stroke-linejoin="round">mobile-app.md</text>
-    <rect x="237" y="224" width="110" height="90" rx="2" fill="#be7220"/>
+    <rect x="237" y="224" width="110" height="90" rx="2" fill="#1c7a67"/>
     <text x="243" y="238" fill-opacity="0.82" paint-order="stroke" stroke="#000000" stroke-opacity="0.5" stroke-width="2.5" stroke-linejoin="round">flows.canvas</text>
-    <rect x="351" y="224" width="114" height="90" rx="2" fill="#1e9e8e"/>
+    <rect x="351" y="224" width="114" height="90" rx="2" fill="#1c995e"/>
     <text x="357" y="238" fill-opacity="0.82" paint-order="stroke" stroke="#000000" stroke-opacity="0.5" stroke-width="2.5" stroke-linejoin="round">sketch.excalidraw</text>
     <rect x="237" y="318" width="228" height="86" rx="2" fill="#1a3a7a"/>
     <text x="243" y="332" fill-opacity="0.82" paint-order="stroke" stroke="#000000" stroke-opacity="0.5" stroke-width="2.5" stroke-linejoin="round">backlog.md</text>
@@ -102,7 +102,7 @@
     <rect x="483" y="458" width="160" height="168" rx="2" fill="#1c995e" stroke="none"/><text x="489" y="472" stroke="none">reading-list.md</text>
     <rect x="647" y="458" width="180" height="80" rx="2" fill="#1a3a7a" stroke="none"/><text x="653" y="472" stroke="none">clippings.md</text>
     <rect x="647" y="542" width="180" height="84" rx="2" fill="#1a1a20" stroke="none"/><text x="653" y="556" stroke="none" fill-opacity="0.5">web-clips.md</text>
-    <rect x="831" y="458" width="156" height="80" rx="2" fill="#1e9e8e" stroke="none"/><text x="837" y="472" stroke="none">diagram.excalidraw</text>
-    <rect x="831" y="542" width="156" height="84" rx="2" fill="#be7220" stroke="none"/><text x="837" y="556" stroke="none">references.canvas</text>
+    <rect x="831" y="458" width="156" height="80" rx="2" fill="#1c7a67" stroke="none"/><text x="837" y="472" stroke="none">diagram.excalidraw</text>
+    <rect x="831" y="542" width="156" height="84" rx="2" fill="#1b5a71" stroke="none"/><text x="837" y="556" stroke="none">references.canvas</text>
   </g>
 </svg>
