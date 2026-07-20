@@ -48,13 +48,13 @@ hot/cold thresholds.*
 
 ## Your history survives renames
 
-Notes get renamed. Folders get reorganised. Most tools lose track of a file the
+Notes get renamed. Folders get reorganised. Many tools lose track of a file the
 moment you move it — Visit History doesn't.
 
 The first time you open a note or canvas, the plugin assigns it a small,
 permanent **id** (kept in the note's frontmatter, or in the canvas's metadata).
 Your visit history is filed under that id, **not** the file's path — so you can
-rename, move, or refactor a file freely and it keeps every minute of its history.
+rename, move, or refactor a file freely, and it keeps every second of its history.
 
 ## Where your data is saved
 
