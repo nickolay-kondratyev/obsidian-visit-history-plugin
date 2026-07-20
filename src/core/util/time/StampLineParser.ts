@@ -11,6 +11,13 @@ export class StampLineParser {
   /** ISO 8601 line → epoch ms, or null. */
   static parseIsoMs(rawLine: string): number | null {
     const line = rawLine.trim();
-    return ISO_8601_PATTERN.test(line) ? Date.parse(line) : null;
+    if (!ISO_8601_PATTERN.test(line)) {
+      return null;
+    }
+    // The pattern only checks digit SHAPE — a calendar-impossible stamp
+    // (month 13, hour 25) still parses to NaN, which must map to null: a NaN
+    // stamp would poison every max-aggregation downstream (last-visit).
+    const epochMs = Date.parse(line);
+    return Number.isNaN(epochMs) ? null : epochMs;
   }
 }
