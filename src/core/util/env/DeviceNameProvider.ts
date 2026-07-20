@@ -1,3 +1,5 @@
+import { Platform } from 'obsidian';
+
 export interface DeviceNameProvider {
   getDeviceName(): string;
 }
@@ -27,6 +29,12 @@ export class DeviceNameProviderDefault implements DeviceNameProvider {
 
   /** OS hostname, or null on mobile where Node builtins don't exist. */
   private static desktopHostname(): string | null {
+    // Node builtins ('os') exist only in the desktop Electron app; guard the
+    // mobile-compat scan explicitly (behavior-preserving — mobile already
+    // returned null via the catch below).
+    if (!Platform.isDesktopApp) {
+      return null;
+    }
     try {
       // System boundary: Node's 'os' module is only available in the desktop
       // (Electron) app. Existing users' VH directories are named after the

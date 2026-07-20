@@ -35,3 +35,15 @@ export class Notice {
   constructor(readonly message: string) {
   }
 }
+
+/**
+ * Stand-in for Obsidian's `Platform`. Defaults to desktop so code guarded by
+ * `Platform.isDesktopApp` runs its desktop path in tests (matching the real
+ * environment tests emulate). Mutable so a test can flip it if needed.
+ */
+export const Platform = {
+  isDesktopApp: true,
+  isMobileApp: false,
+  isMobile: false,
+  isDesktop: true,
+};

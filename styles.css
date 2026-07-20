@@ -280,6 +280,11 @@ body.theme-light .vault-heatmap-view {
   scrollbar-width: none; /* chips scroll on wheel/drag; a bar would break the 42px row */
 }
 
+/* WebKit fallback for scrollbar-width:none (partially supported in older Obsidian). */
+.vault-heatmap-view .filter-chips::-webkit-scrollbar {
+  display: none;
+}
+
 .vault-heatmap-view .filter-chip {
   display: inline-flex;
   align-items: center;
@@ -883,7 +888,7 @@ body.theme-light .vault-heatmap-view {
 }
 
 .vault-heatmap-view .tt-null {
-  color: var(--vt-text-dim) !important;
+  color: var(--vt-text-dim);
   font-style: italic;
 }
 
