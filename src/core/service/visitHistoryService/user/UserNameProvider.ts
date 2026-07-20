@@ -1,3 +1,4 @@
+import { Platform } from 'obsidian';
 import { HiddenFileUtil } from '../../../util/file/hidden/HiddenFileUtil';
 import { UserNamePrompt } from './UserNamePrompt';
 import { UserNameSafety } from './UserNameSafety';
@@ -24,6 +25,12 @@ export interface OsUserNameLookup {
 
 export class OsUserNameLookupDefault implements OsUserNameLookup {
   getOsUserName(): string | null {
+    // Node builtins ('os') exist only in the desktop Electron app; guard the
+    // mobile-compat scan explicitly (behavior-preserving — mobile already
+    // returned null via the catch below).
+    if (!Platform.isDesktopApp) {
+      return null;
+    }
     try {
       // System boundary: Node's 'os' module is only available in the desktop
       // (Electron) app. OS user names cannot contain path separators on any
