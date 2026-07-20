@@ -47,6 +47,35 @@ RESEARCH_LICENSE / CLARIFICATION (do not re-read those here).
 - `release.sh` first-release branch (arg == current version) tags without `npm version` — confirm that matches how you want the very first 1.0.0 cut.
 - Since gh is unauthenticated in this env, neither script was executed end-to-end (would push/hit GitHub). Syntax-only verified.
 
+## Review iteration (IMPLEMENTATION_ITERATION — post-c94cf9a)
+Acted on IMPLEMENTATION_REVIEW (verdict READY; 1 SHOULD-FIX + 3 NICE-TO-HAVE).
+
+- **S1 (SHOULD-FIX) — APPLIED.** `scripts/verify-release.sh` now attestation-verifies
+  `SHA256SUMS` (`gh attestation verify SHA256SUMS --repo …`) BEFORE `sha256sum -c`,
+  so manifest.json/styles.css authenticity is rooted in provenance, not an
+  unauthenticated sums file. Order is now: verify main.js attestation → verify
+  SHA256SUMS attestation → `sha256sum -c SHA256SUMS`. `set -euo pipefail` kept;
+  the `[ -f SHA256SUMS ]` existence check moved ahead of the new attest step.
+  `docs/how-to-publish.md` "Verifiable builds" updated to match (shows both
+  `gh attestation verify` commands, then `sha256sum -c`).
+- **N1 (build/test gate before tagging) — ACCEPTED.** Added `npm run build` +
+  `npm test` gate in `scripts/release.sh` right after the clean-tree check,
+  before the version bump/tag. Cheap, and it directly prevents the exact
+  bad-remote-tag failure that N2 warns is painful to undo.
+- **N2 (re-running release.sh for a pushed version fails noisily) — REJECTED.**
+  Fail-loud on a duplicate remote tag is the correct/safe behavior; auto-deleting
+  or force-pushing a published tag would be dangerous. No code change (already
+  noted as a caveat).
+- **N3 (stale "Visit History Plugin" H1 branding) — REJECTED.** A repo-README H1
+  ("… Plugin") is a descriptive project title where "Plugin" aids reader clarity;
+  the manifest `name` Obsidian displays is already exactly "Visit History".
+  Cosmetic-only, no functional benefit → left as-is (still listed under Open
+  callouts for the owner).
+
+Verification (iteration): `bash -n` passes on both scripts; shellcheck not
+installed. Only scripts + docs touched → plugin build/lint/test unaffected
+(green at c94cf9a). Changes left uncommitted for TOP_LEVEL_AGENT.
+
 ## Open callouts (non-blocking)
 - H1 title "Visit History Plugin" in README.md / docs/README.md / AGENTS.md left unchanged (branding). Rename to "Visit History" if you want strict consistency with the manifest name.
 - `README_ORIGINAL.md` (sample boilerplate) still present and now superseded by docs/how-to-publish.md. Consider deleting (deferred — owner call, not done).

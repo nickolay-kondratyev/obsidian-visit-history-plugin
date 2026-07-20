@@ -92,19 +92,23 @@ provenance binding each artifact's SHA-256 digest to the exact repo, commit,
 and workflow that produced it, signed keylessly via Sigstore (no keys to
 manage). It only works for builds that run on GitHub's runners.
 
-Anyone can verify a downloaded asset:
+Anyone can verify a downloaded asset. `main.js` and `SHA256SUMS` are both
+attested directly:
 
 ```bash
 gh attestation verify main.js --repo nickolay-kondratyev/obsidian-visit-history-plugin
+gh attestation verify SHA256SUMS --repo nickolay-kondratyev/obsidian-visit-history-plugin
 ```
 
-And confirm integrity of every asset against the checksums file:
+Once `SHA256SUMS` itself is attested, confirm the integrity of every other
+asset (manifest.json, styles.css) against it:
 
 ```bash
 sha256sum -c SHA256SUMS
 ```
 
-`scripts/verify-release.sh <version>` does both after downloading the release.
+`scripts/verify-release.sh <version>` does all of this after downloading the
+release.
 Note: Obsidian's installer does not yet check attestations automatically —
 this is for security-conscious users and auditors.
 

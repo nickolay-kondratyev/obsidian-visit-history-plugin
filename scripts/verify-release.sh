@@ -35,8 +35,14 @@ echo "verify-release.sh: verifying build-provenance attestation for main.js..."
 gh attestation verify main.js --repo "$REPO"
 
 echo
-echo "verify-release.sh: verifying checksums (SHA256SUMS)..."
+echo "verify-release.sh: verifying build-provenance attestation for SHA256SUMS..."
+# Attest SHA256SUMS itself BEFORE trusting it, so the checksums that vouch for
+# manifest.json / styles.css are rooted in provenance, not an unauthenticated file.
 [ -f SHA256SUMS ] || die "SHA256SUMS not found in release assets"
+gh attestation verify SHA256SUMS --repo "$REPO"
+
+echo
+echo "verify-release.sh: verifying checksums (SHA256SUMS)..."
 sha256sum -c SHA256SUMS
 
 echo

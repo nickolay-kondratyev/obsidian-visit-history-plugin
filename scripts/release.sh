@@ -33,6 +33,12 @@ command -v jq >/dev/null 2>&1 || die "jq is required"
 # Preconditions: clean tree.
 [ -z "$(git status --porcelain)" ] || die "working tree not clean — commit or stash first"
 
+# Gate on a green build + tests BEFORE tagging, so a broken build never reaches
+# the remote as a pushed tag (undoing a pushed tag needs a manual delete).
+echo "release.sh: verifying build + tests before tagging..."
+npm run build || die "build failed — not tagging"
+npm test || die "tests failed — not tagging"
+
 # Warn (do not block) if not on the default branch.
 CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
 if [ "$CURRENT_BRANCH" != "$DEFAULT_BRANCH" ]; then
