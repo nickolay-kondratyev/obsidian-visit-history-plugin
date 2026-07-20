@@ -17,8 +17,8 @@ protocol structure (sub-agents do the work; TOP_LEVEL orchestrates; PUBLIC/PRIVA
 
 ## Phase log
 - [x] EXPLORATION (done by TOP_LEVEL to gauge feasibility / rule semantics) → EXPLORATION_PUBLIC.md. No hacks forced.
-- [ ] DETAILED_PLANNING (PLANNER)
-- [ ] DETAILED_PLAN_REVIEW (PLAN_REVIEWER)
+- [x] DETAILED_PLANNING (PLANNER) → DETAILED_PLANNING__PUBLIC.md. Design: inject `WindowTimers` interface (Window timer-subset); prod passes `rootSplit.win`; test uses `{ setTimeout, clearTimeout }` post-useFakeTimers.
+- [x] DETAILED_PLAN_REVIEW (PLAN_REVIEWER) → APPROVED, no changes. PLAN_ITERATION skipped.
 - [ ] IMPLEMENTATION
 - [ ] IMPLEMENTATION_REVIEW
 - [ ] PARETO_COMPLEXITY_ANALYSIS
