@@ -28,6 +28,21 @@ export const UNFOCUS_GRACE_MS = 10_000;
  */
 export type WindowHandle = object;
 
+/**
+ * The subset of a browser Window's timer API the tracker needs, INJECTED so
+ * the class stays DOM-agnostic (unit-testable in plain node) AND rule-clean:
+ * `this.timers.setTimeout(...)` is a member call, whereas a bare setTimeout()
+ * trips obsidianmd/prefer-window-timers. Production passes the MAIN Obsidian
+ * window (which structurally satisfies this); tests pass the vitest fake clock.
+ */
+export interface WindowTimers {
+  setTimeout(callback: () => void, delayMs: number): TimerHandle;
+  clearTimeout(handle: TimerHandle): void;
+}
+
+/** Opaque timer handle: produced by setTimeout, passed back to clearTimeout. */
+export type TimerHandle = unknown;
+
 interface CurrentDoc {
   docId: string;
   /** The window hosting the doc's leaf — sessions live and die with ITS focus. */
@@ -89,17 +104,20 @@ export class FocusDurationTracker {
   private readonly focusedWindows = new Set<WindowHandle>();
   private session: ActiveSession | null = null;
   private lastActivityMs = 0;
-  private idleTimer: ReturnType<typeof setTimeout> | null = null;
+  // `TimerHandle` (unknown) already admits null — no `| null` (it'd be a
+  // redundant union); null still means "no timer armed" (see the checks below).
+  private idleTimer: TimerHandle = null;
   // Invariants: pendingClose !== null ⇒ session !== null (pending is created
   // only on unfocus of an open session; every close path with a pending goes
   // through finalizePendingClose, which clears both). graceTimer !== null ⇔
   // pendingClose !== null.
   private pendingClose: PendingClose | null = null;
-  private graceTimer: ReturnType<typeof setTimeout> | null = null;
+  private graceTimer: TimerHandle = null;
 
   constructor(
     private readonly sink: FocusDurationSink,
     private readonly getIdleTimeoutMs: IdleTimeoutMsProvider,
+    private readonly timers: WindowTimers,
   ) {
   }
 
@@ -248,17 +266,12 @@ export class FocusDurationTracker {
 
   private armIdleTimer(delayMs: number): void {
     this.clearIdleTimer();
-    // WHY-NOT window.setTimeout: the idle timer is app-wide logic, not tied
-    // to any (popout) window's lifetime, and this class stays DOM-agnostic
-    // so it is unit-testable in a plain node environment.
-    // eslint-disable-next-line obsidianmd/prefer-window-timers
-    this.idleTimer = setTimeout(() => this.onIdleTimerFired(), delayMs);
+    this.idleTimer = this.timers.setTimeout(() => this.onIdleTimerFired(), delayMs);
   }
 
   private clearIdleTimer(): void {
     if (this.idleTimer !== null) {
-      // eslint-disable-next-line obsidianmd/prefer-window-timers -- see armIdleTimer
-      clearTimeout(this.idleTimer);
+      this.timers.clearTimeout(this.idleTimer);
       this.idleTimer = null;
     }
   }
@@ -319,14 +332,12 @@ export class FocusDurationTracker {
 
   private armGraceTimer(): void {
     this.clearGraceTimer();
-    // eslint-disable-next-line obsidianmd/prefer-window-timers -- see armIdleTimer
-    this.graceTimer = setTimeout(() => this.onGraceTimerFired(), UNFOCUS_GRACE_MS);
+    this.graceTimer = this.timers.setTimeout(() => this.onGraceTimerFired(), UNFOCUS_GRACE_MS);
   }
 
   private clearGraceTimer(): void {
     if (this.graceTimer !== null) {
-      // eslint-disable-next-line obsidianmd/prefer-window-timers -- see armIdleTimer
-      clearTimeout(this.graceTimer);
+      this.timers.clearTimeout(this.graceTimer);
       this.graceTimer = null;
     }
   }

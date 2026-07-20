@@ -1,9 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Plugin, WorkspaceLeaf } from 'obsidian';
 import { WindowActivityMonitor } from './WindowActivityMonitor';
-import { FocusDurationSink, FocusDurationTracker, UNFOCUS_GRACE_MS } from './FocusDurationTracker';
+import { FocusDurationSink, FocusDurationTracker, UNFOCUS_GRACE_MS, WindowTimers } from './FocusDurationTracker';
 
 const IDLE_MS = 180_000;
+
+// Built at CALL time (inside a test, after vi.useFakeTimers) so the shorthand
+// captures the FAKE clock; advanceTimersByTime then drives the tracker.
+function fakeTimers(): WindowTimers {
+  return { setTimeout, clearTimeout };
+}
 
 interface FakeWindowBundle {
   win: Window;
@@ -84,7 +90,7 @@ describe('WindowActivityMonitor', () => {
       const popout = makeFakeWindow('popout', true);
       const { plugin } = makeStubPlugin([popout.doc]);
       const sink = new RecordingSink();
-      const tracker = new FocusDurationTracker(sink, () => IDLE_MS);
+      const tracker = new FocusDurationTracker(sink, () => IDLE_MS, fakeTimers());
       new WindowActivityMonitor(plugin, tracker, main.win, main.doc);
       // WHEN a doc hosted in that popout is focused for 5s, unfocused, and
       // the unfocus grace resolves
@@ -102,7 +108,7 @@ describe('WindowActivityMonitor', () => {
       const popout = makeFakeWindow('popout', false);
       const { plugin, domRegistrations } = makeStubPlugin([popout.doc]);
       // WHEN the monitor is constructed
-      new WindowActivityMonitor(plugin, new FocusDurationTracker(new RecordingSink(), () => IDLE_MS), main.win, main.doc);
+      new WindowActivityMonitor(plugin, new FocusDurationTracker(new RecordingSink(), () => IDLE_MS, fakeTimers()), main.win, main.doc);
       // THEN the popout window got its blur listener (focus/activity come with it)
       expect(domRegistrations.filter(r => r.target === popout.win && r.type === 'blur')).toHaveLength(1);
     });
@@ -113,7 +119,7 @@ describe('WindowActivityMonitor', () => {
       const popout = makeFakeWindow('popout', false);
       const { plugin, domRegistrations } = makeStubPlugin([popout.doc, popout.doc, main.doc]);
       // WHEN the monitor is constructed
-      new WindowActivityMonitor(plugin, new FocusDurationTracker(new RecordingSink(), () => IDLE_MS), main.win, main.doc);
+      new WindowActivityMonitor(plugin, new FocusDurationTracker(new RecordingSink(), () => IDLE_MS, fakeTimers()), main.win, main.doc);
       // THEN no window carries duplicate listeners (events would double-fire)
       expect(domRegistrations.filter(r => r.type === 'blur').map(r => r.target)).toEqual([main.win, popout.win]);
     });

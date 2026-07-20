@@ -4,6 +4,7 @@ import {
   FocusDurationTracker,
   UNFOCUS_GRACE_MS,
   WindowHandle,
+  WindowTimers,
 } from './FocusDurationTracker';
 
 const T0 = Date.parse('2026-07-09T22:00:00.000Z');
@@ -39,7 +40,11 @@ describe('FocusDurationTracker', () => {
     vi.useFakeTimers({ now: T0 });
     sink = new RecordingSink();
     idleTimeoutMs = IDLE_MS;
-    tracker = new FocusDurationTracker(sink, () => idleTimeoutMs);
+    // Built AFTER useFakeTimers so these references capture the FAKE clock (vi
+    // replaced the globals); advanceTimersByTime drives them. Object-shorthand
+    // references (not calls) don't trip obsidianmd/prefer-window-timers.
+    const fakeTimers: WindowTimers = { setTimeout, clearTimeout };
+    tracker = new FocusDurationTracker(sink, () => idleTimeoutMs, fakeTimers);
     // Mirrors WindowActivityMonitor's hasFocus() seeding at plugin load.
     tracker.onWindowFocused(MAIN_WIN);
   });

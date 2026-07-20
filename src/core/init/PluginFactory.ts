@@ -115,15 +115,19 @@ export class PluginFactory {
       return;
     }
 
+    // The MAIN Obsidian window — rootSplit is ready by onLayoutReady (when this
+    // runs). WHY-NOT activeDocument: both the tracker's timers and the monitor
+    // need the MAIN window specifically; the monitor registers popouts itself.
+    const mainWindow = this.plugin.app.workspace.rootSplit.win;
+    const mainDocument = this.plugin.app.workspace.rootSplit.doc;
+
     this.focusDurationTracker = new FocusDurationTracker(
       new VhV3DurationRecorder(this.vhV3DurationStore, this.lastVisitCache, this.deviceNameProvider, userName),
       // Live read: a settings-tab change applies without plugin reload.
       () => this.plugin.settings.idleTimeoutSeconds * 1000,
+      mainWindow,
     );
-    // WHY-NOT activeDocument: the monitor needs the MAIN window specifically;
-    // it registers popout windows itself (incl. ones already open by now).
-    // eslint-disable-next-line obsidianmd/prefer-active-doc
-    new WindowActivityMonitor(this.plugin, this.focusDurationTracker, window, document);
+    new WindowActivityMonitor(this.plugin, this.focusDurationTracker, mainWindow, mainDocument);
     const durationListener = new VhV3FocusDurationListener(this.docIdService, this.focusDurationTracker);
     this.focusTracker.registerListener(durationListener);
     // Replay: this listener registers AFTER workspace-layout restore (and

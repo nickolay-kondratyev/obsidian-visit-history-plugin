@@ -34,7 +34,9 @@ interface Setup {
 function setup(): Setup {
   const docIdService = new FakeDocIdService();
   const sink = new RecordingSink();
-  const tracker = new FocusDurationTracker(sink, () => 180_000);
+  // setup() is called inside each test (after vi.useFakeTimers), so this
+  // shorthand captures the FAKE clock; advanceTimersByTime drives the tracker.
+  const tracker = new FocusDurationTracker(sink, () => 180_000, { setTimeout, clearTimeout });
   // Mirrors WindowActivityMonitor's hasFocus() seeding at plugin load.
   tracker.onWindowFocused(OWNER_DOC);
   const listener = new VhV3FocusDurationListener(docIdService, tracker);
