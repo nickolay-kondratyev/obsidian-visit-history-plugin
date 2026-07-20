@@ -1,7 +1,7 @@
 {
 	"id": "visit-history",
 	"name": "Visit History",
-	"version": "1.0.2",
+	"version": "1.0.3",
 	"minAppVersion": "1.5.7",
 	"description": "Records the visit history of notes and canvases, and visualizes vault activity as a treemap heatmap.",
 	"author": "Nickolay Kondratyev",

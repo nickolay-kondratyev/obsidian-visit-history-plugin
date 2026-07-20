@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-visit-history-plugin",
-	"version": "1.0.2",
+	"version": "1.0.3",
 	"description": "Records the visit history of notes and canvases, and visualizes vault activity as a treemap heatmap.",
 	"main": "main.js",
 	"type": "module",
