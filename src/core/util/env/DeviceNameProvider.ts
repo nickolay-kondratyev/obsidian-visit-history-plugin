@@ -15,15 +15,13 @@ export class DeviceNameProviderDefault implements DeviceNameProvider {
     // WHY raw localStorage (not App#loadLocalStorage): the device name must be
     // DEVICE-scoped so the same machine writes to the same VH directory in
     // every vault; App#loadLocalStorage is vault-scoped.
-    // eslint-disable-next-line no-restricted-globals
-    const cached = localStorage.getItem(DeviceNameProviderDefault.STORAGE_KEY);
+    const cached = window.localStorage.getItem(DeviceNameProviderDefault.STORAGE_KEY);
     if (cached) return cached;
 
     const name = DeviceNameProviderDefault.desktopHostname()
       ?? "mobile-" + crypto.randomUUID().slice(0, 8);
 
-    // eslint-disable-next-line no-restricted-globals
-    localStorage.setItem(DeviceNameProviderDefault.STORAGE_KEY, name);
+    window.localStorage.setItem(DeviceNameProviderDefault.STORAGE_KEY, name);
     return name;
   }
 
@@ -33,7 +31,7 @@ export class DeviceNameProviderDefault implements DeviceNameProvider {
       // System boundary: Node's 'os' module is only available in the desktop
       // (Electron) app. Existing users' VH directories are named after the
       // hostname — do not change this resolution order.
-      // eslint-disable-next-line import/no-nodejs-modules, @typescript-eslint/no-require-imports, no-undef
+      // eslint-disable-next-line import/no-nodejs-modules, @typescript-eslint/no-require-imports, no-undef -- 'os' is a desktop-only Electron builtin, guarded by try/catch for mobile
       return (require("os") as { hostname(): string }).hostname();
     } catch {
       return null;

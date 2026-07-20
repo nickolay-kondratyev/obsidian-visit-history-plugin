@@ -28,7 +28,7 @@ export class OsUserNameLookupDefault implements OsUserNameLookup {
       // System boundary: Node's 'os' module is only available in the desktop
       // (Electron) app. OS user names cannot contain path separators on any
       // supported OS, so the name is safe as a directory name.
-      // eslint-disable-next-line import/no-nodejs-modules, @typescript-eslint/no-require-imports, no-undef
+      // eslint-disable-next-line import/no-nodejs-modules, @typescript-eslint/no-require-imports, no-undef -- 'os' is a desktop-only Electron builtin, guarded by try/catch for mobile
       return (require('os') as { userInfo(): { username: string } }).userInfo().username;
     } catch {
       return null;
@@ -53,13 +53,11 @@ export class LocalStorageUserNameCache implements UserNameCache {
     // DEVICE-scoped so the same device writes to the same VH user dir in
     // every vault; App#loadLocalStorage is vault-scoped. (Same rationale as
     // DeviceNameProviderDefault.)
-    // eslint-disable-next-line no-restricted-globals
-    return localStorage.getItem(LocalStorageUserNameCache.STORAGE_KEY);
+    return window.localStorage.getItem(LocalStorageUserNameCache.STORAGE_KEY);
   }
 
   set(userName: string): void {
-    // eslint-disable-next-line no-restricted-globals
-    localStorage.setItem(LocalStorageUserNameCache.STORAGE_KEY, userName);
+    window.localStorage.setItem(LocalStorageUserNameCache.STORAGE_KEY, userName);
   }
 }
 
