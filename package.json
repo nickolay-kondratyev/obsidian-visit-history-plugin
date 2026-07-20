@@ -11,7 +11,8 @@
 		"lint": "eslint .",
 		"test": "vitest run",
 		"test:watch": "vitest",
-		"test:lib": "npm --prefix submodules/obsidian-id-lib run test"
+		"test:lib": "npm --prefix submodules/obsidian-id-lib run test",
+		"download-sonar-issues": "./scripts/sonarqube/fetch_sonar_findings.py"
 	},
 	"keywords": [],
 	"license": "LicenseRef-KSAL-2.3",
