@@ -9,6 +9,7 @@ main() {
   eai2 npm install
 
   eai2 npm run dev
+  return
 }
 
 main "${@}"
