@@ -5,7 +5,8 @@
 # Bumps the version (package.json + manifest.json + versions.json via
 # version-bump.mjs), commits, creates a NO-'v'-prefix git tag matching the
 # manifest version, and pushes branch + tag so .github/workflows/release.yml
-# builds, attests provenance, generates SHA256SUMS, and opens a DRAFT release.
+# builds, attests provenance, generates SHA256SUMS, and publishes the release
+# (with assets) as 'latest'.
 #
 # Usage:
 #   scripts/release.sh <patch|minor|major|x.y.z>
@@ -15,7 +16,8 @@
 #   scripts/release.sh 1.0.0      # first release: files already at 1.0.0 -> just tag
 #
 # Prereqs: clean working tree, git remote 'origin', push rights. The tag push
-# fires the release workflow; you then review and PUBLISH the draft release.
+# fires the release workflow, which publishes the release with assets. The
+# workflow fails if a release already exists for the tag (delete it first).
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -82,8 +84,7 @@ cat <<EOF
 Done. Tag $NEW_VERSION pushed.
 Next steps:
   1. Watch the release workflow:  gh run watch  (or the Actions tab)
-  2. Review the DRAFT release GitHub created (assets: main.js, manifest.json,
-     styles.css, SHA256SUMS + attestation).
+  2. The workflow publishes the release as 'latest' with assets: main.js,
+     manifest.json, styles.css, SHA256SUMS + attestation.
   3. Verify locally once published:  scripts/verify-release.sh $NEW_VERSION
-  4. Publish the draft release when satisfied.
 EOF

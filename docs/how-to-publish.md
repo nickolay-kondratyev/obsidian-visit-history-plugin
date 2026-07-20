@@ -40,9 +40,11 @@ by pushing a tag. The workflow:
 4. Generates `SHA256SUMS` over the assets.
 5. Attests **SLSA build provenance** (`actions/attest`) for `main.js`,
    `SHA256SUMS`, and `styles.css`.
-6. Creates a **DRAFT** GitHub release with all assets attached.
+6. **Publishes** the GitHub release (marked `latest`) with all assets attached.
+   The step **fails if a release already exists for the tag** — delete the
+   stale release (and re-push the tag) before re-running.
 
-You then review the draft and publish it. Use the helper script:
+Use the helper script:
 
 ```bash
 # first release — files are already at 1.0.0, so this just tags + pushes:
@@ -176,10 +178,9 @@ bundled code (e.g. the `obsidian-id-lib` submodule).
 1. Confirm `manifest.json` is at `1.0.0`, id `visit-history`, name
    `Visit History`.
 2. `npm run build && npm run lint && npm test` — all green.
-3. `scripts/release.sh 1.0.0` — tags `1.0.0` and pushes; `release.yml` builds a
-   draft release with attestation + `SHA256SUMS`.
-4. Review the draft release (assets present, correct version), then publish it.
-5. `scripts/verify-release.sh 1.0.0` — confirm attestation + checksums.
+3. `scripts/release.sh 1.0.0` — tags `1.0.0` and pushes; `release.yml` builds and
+   publishes the release (`latest`) with attestation + `SHA256SUMS`.
+4. `scripts/verify-release.sh 1.0.0` — confirm assets, attestation + checksums.
 6. Open the one-time `obsidian-releases` PR (see above); fix anything the bot
    flags in the same PR.
 7. Future releases: just `scripts/release.sh patch|minor|major` — no PR.

@@ -64,5 +64,5 @@ jobs:
 
                   gh release create "$tag" \
                     --title="$tag" \
-                    --draft \
+                    --latest \
                     main.js manifest.json SHA256SUMS ${{ steps.styles.outputs.exists == 'true' && 'styles.css' || '' }}
