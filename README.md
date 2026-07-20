@@ -41,7 +41,7 @@ Folders named `_archive` are **hidden from the heatmap** — archived content do
 - `npm install && npm run build`
 
 ### Enable the plugin
-- In Obsidian: Settings → Community plugins → enable **Visit History Plugin**.
+- In Obsidian: Settings → Community plugins → enable **Visit History**.
 
 ## Settings
 Under **Settings → Visit History**:
