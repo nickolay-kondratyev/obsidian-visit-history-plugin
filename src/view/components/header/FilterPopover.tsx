@@ -55,6 +55,10 @@ export function FilterPopover({ open, onAddTerm }: FilterPopoverProps) {
         }}
       />
       <div className="filter-pop-hint">{KIND_HINTS[kind]}</div>
+      <div className="filter-pop-hint filter-pop-hint--or">
+        Filters combine with <strong>OR</strong> — a file is shown if it matches{' '}
+        <strong>any</strong> filter.
+      </div>
     </div>
   );
 }

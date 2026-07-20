@@ -62,8 +62,8 @@ export const DEFAULT_HEATMAP_CONFIG: HeatmapConfig = {
   colorMode: 'heatmap',
   gradKey: 'nature',
   field: 'lastModifiedAt',
-  hotDays: { value: 7, min: 1, max: 365 },
-  coldDays: { value: 180, min: 2, max: 730 },
+  hotDays: { value: 3, min: 1, max: 15 },
+  coldDays: { value: 21, min: 7, max: 60 },
   // Canvas/excalidraw are down-weighted so prose dominates the treemap.
   scales: {
     md: { value: 1, min: 0.05, max: 2 },

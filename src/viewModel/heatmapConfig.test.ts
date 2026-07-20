@@ -54,9 +54,10 @@ describe('HeatmapConfigSanitizer', () => {
     });
 
     it('should fall back to default bounds when max <= min', () => {
-      // GIVEN inverted slider bounds
+      // GIVEN inverted slider bounds (value equals the default so the assertion
+      // isolates the BOUNDS fallback, not a value change)
       const config = HeatmapConfigSanitizer.sanitize({
-        hotDays: { value: 7, min: 100, max: 10 },
+        hotDays: { value: DEFAULT_HEATMAP_CONFIG.hotDays.value, min: 100, max: 10 },
       });
       // THEN the default bounds apply
       expect(config.hotDays).toEqual(DEFAULT_HEATMAP_CONFIG.hotDays);
@@ -72,12 +73,13 @@ describe('HeatmapConfigSanitizer', () => {
     });
 
     it('should clamp a value that is outside its own bounds', () => {
-      // GIVEN a value above max
+      // GIVEN a value above max (max kept below the cold default so the
+      // hot < cold cross-invariant does not reset both thresholds)
       const config = HeatmapConfigSanitizer.sanitize({
-        hotDays: { value: 500, min: 1, max: 100 },
+        hotDays: { value: 500, min: 1, max: 15 },
       });
       // THEN it is clamped to max instead of discarded
-      expect(config.hotDays.value).toBe(100);
+      expect(config.hotDays.value).toBe(15);
     });
 
     it('should fall back to the default value for a non-numeric slider value', () => {

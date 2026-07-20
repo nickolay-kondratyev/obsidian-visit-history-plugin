@@ -400,6 +400,14 @@ body.theme-light .vault-heatmap-view {
   color: var(--vt-text-dim);
 }
 
+/* OR-semantics note: separated from the per-kind hint by a hairline rule. */
+.vault-heatmap-view .filter-pop-hint--or {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--vt-border);
+  line-height: 1.4;
+}
+
 /* Info popover: stats stack vertically; legend wraps in the narrow panel. */
 .vault-heatmap-view .hdr-pop .stats {
   flex-direction: column;
