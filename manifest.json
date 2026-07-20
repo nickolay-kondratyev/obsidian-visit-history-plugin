@@ -1,11 +1,11 @@
 {
-	"id": "vintrin-visit-history-plugin",
-	"name": "Visit History Plugin",
-	"version": "0.0.10",
+	"id": "visit-history",
+	"name": "Visit History",
+	"version": "1.0.0",
 	"minAppVersion": "1.5.7",
-	"description": "Records the visit history of notes and canvases.",
+	"description": "Records the visit history of notes and canvases, and visualizes vault activity as a treemap heatmap.",
 	"author": "Nickolay Kondratyev",
-	"authorUrl": "http://glassthought.com",
-	"fundingUrl": "http://glassthought.com",
+	"authorUrl": "https://glassthought.com",
+	"fundingUrl": "https://glassthought.com",
 	"isDesktopOnly": false
 }

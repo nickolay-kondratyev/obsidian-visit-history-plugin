@@ -22,6 +22,7 @@ drawings, and visualizes vault activity as a treemap heatmap.
 | [architecture.md](architecture.md) | Module map, dependency injection, layer boundaries, caching |
 | [visit-history-format.md](visit-history-format.md) | On-disk VH V3 format, user + device dirs, doc-id keying, legacy-layout move |
 | [heatmap-view.md](heatmap-view.md) | React treemap view: components, state, config |
+| [how-to-publish.md](how-to-publish.md) | Cutting a release + submitting to the community plugin list |
 
 ## Dev quickstart
 
