@@ -23,6 +23,13 @@ describe('VhV3SessionLineParser', () => {
       expect(VhV3SessionLineParser.parseSession('March-2026 D:5600')).toBeNull();
     });
 
+    it('should reject a well-formed but impossible date (month 13) instead of yielding a NaN start', () => {
+      // A single corrupted digit must skip the line, not emit
+      // focusStartEpochMs=NaN — NaN would poison the last-visit max-aggregation
+      // over ALL of the doc's valid sessions (VhV3DurationStore).
+      expect(VhV3SessionLineParser.parseSession('2026-13-01T00:00:00.000Z D:5600')).toBeNull();
+    });
+
     it('should reject a bare stamp missing the ` D:` part', () => {
       expect(VhV3SessionLineParser.parseSession('2026-07-09T22:02:15.745Z')).toBeNull();
     });
