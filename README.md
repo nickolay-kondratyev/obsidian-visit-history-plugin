@@ -1,61 +1,108 @@
-# Visit History Plugin
+# Visit History
 
-Obsidian plugin that records **when and for how long you visit your notes** — and visualizes vault activity as a zoomable **heatmap treemap**.
+Ever wonder which notes you *actually* spend your time in? Visit History quietly
+records how long you focus on each note, canvas, and Excalidraw drawing — then
+shows your whole vault as a colourful **activity heatmap** so you can see, at a
+glance, what's hot, what's gone cold, and what you've never touched.
 
-Fully offline and local: no network calls, no telemetry. Everything stays inside your vault.
+Everything runs **fully offline and local**: no network calls, no accounts, no
+telemetry. Your history never leaves your machine.
 
-## Features
+![Sample heatmap — vault activity coloured by recency](images/sample-heatmap.png)
 
-### Visit history recording
-Every focus session on a note, canvas, or Excalidraw drawing is logged to a per-user, per-document, per-device file under the `__visit_history/` folder (not dot-hidden, so [Obsidian Sync picks it up](https://forum.obsidian.md/t/obsidian-sync-sync-hidden-files-and-folders-as-well-start-with-a-dot/32123/26); the plugin's own tracking and heatmap exclude it):
+*Sample heatmap — vault activity coloured by how recently each file was visited
+(illustrative). Brighter green = visited recently, deep blue = long ago, dim =
+no data yet.*
 
-- **Focus durations (V3)** — one completed session per line (`<ISO 8601 UTC start stamp> D:<milliseconds>`) at `__visit_history/user/<user-name>/v3/focus_duration_per_device/<device>/<doc-id>.vh_v3`. A session closes when you navigate away, the window loses focus, or you go idle (configurable idle timeout — see Settings). Popout windows are fully supported.
-- **Per-user folders** keep the histories of different people syncing one vault apart (the user name is your OS account name on desktop; a stable generated id on mobile). The heatmap still shows whole-vault activity across all users.
-- Logs are keyed by a **persistent doc id** (stored in the note's frontmatter / canvas metadata, assigned on first focus), so history survives file renames and moves.
-- Legacy v2 and `_visit_history/` (V1) data from older versions of this plugin is no longer read or written — its content is left untouched (on load, a legacy dot-hidden `.visit_history/` folder is renamed to `__visit_history/` once, and a pre-user-scoped `v2|v3` layout is moved under your user folder once).
+## What it does
 
-The `__visit_history/user/<user-name>/v3/` folder contains a generated README describing the format.
+### Visit recording
+Open a note, canvas, or Excalidraw drawing and Visit History times how long it
+stays in focus. When you move on — navigate away, switch windows, or go idle —
+it saves that session (when it started and how long it lasted). Over time you
+build up an honest picture of where your attention actually goes.
 
 ### Vault heatmap
-A treemap of your whole vault where cell size = file size (weighted per file type) and color = file activity.
+A zoomable **treemap** of your entire vault: every file is a rectangle, nested
+inside its folders.
 
-- Open via the **`Open vault heatmap` command**, the **ribbon icon**, or a folder's **file-tree context menu → "Open heatmap for folder"** (opens pre-drilled into that folder).
-- **Coloring modes**: by file type, or heatmap by a timestamp field — last **visited** (from your visit history), last **modified**, or **created**.
-- **Gradients**: three color gradients (Nature, Ember, Mono); "hot" and "cold" day thresholds control how age maps to color.
-- **Navigation**: click a folder to drill in, "back" walks up the ancestor chain; click a file to open it. Pan/zoom with the mouse.
-- **Config panel** ("⚙ config" in the header): coloring mode, gradient, timestamp field, hot/cold thresholds, and per-type scale factors. Threshold and scale sliders have **editable min/max bounds**. All of it is **persisted** — your configuration survives Obsidian restarts.
+- **Size = file size** — bigger files, bigger tiles.
+- **Colour = activity** — either **by type** (notes, canvases, Excalidraw drawings
+  each get their own colour) or **by recency**: how recently each file was
+  **created**, **modified**, or **visited** (your own recorded usage). Recent
+  files glow; stale ones fade.
+- **Drill down** — click a folder to zoom in, step back up the trail, click a
+  file to open it. Pan and zoom with the mouse.
+- **Filter** — narrow the view to files matching a path or their text content.
+- **`_archive` folders are hidden** by default, so archived clutter doesn't drown
+  out your active work (open one explicitly from its folder menu to look inside).
 
-#### Hidden feature: `_archive` folders
-Folders named `_archive` are **hidden from the heatmap** — archived content doesn't drown out your active notes.
+<!-- TODO: replace with a real screenshot -->
+![Heatmap coloured by recency](images/heatmap-by-recency.png)
+*The heatmap coloured by how recently each file was visited.*
 
-- To view an archive, use its file-tree context menu → **"Open heatmap for folder"**: scoped into an archive, ALL archived content is shown (nested archives included).
-- Backing out of the archive hides it again.
+<!-- TODO: replace with a real screenshot -->
+![Heatmap config panel](images/heatmap-config-panel.png)
+*The config panel — switch colouring mode, gradient, timestamp field, and the
+hot/cold thresholds.*
 
-## Install
+## Your history survives renames
 
-### Build the plugin
-- In your vault, go to `.obsidian/plugins/`
-- `git clone --recurse-submodules https://github.com/nickolay-kondratyev/obsidian-visit-history-plugin.git`
-  (already cloned without submodules? run `git submodule update --init`)
-- `cd obsidian-visit-history-plugin`
-- `npm install && npm run build`
+Notes get renamed. Folders get reorganised. Most tools lose track of a file the
+moment you move it — Visit History doesn't.
 
-### Enable the plugin
-- In Obsidian: Settings → Community plugins → enable **Visit History**.
+The first time you open a note or canvas, the plugin assigns it a small,
+permanent **id** (kept in the note's frontmatter, or in the canvas's metadata).
+Your visit history is filed under that id, **not** the file's path — so you can
+rename, move, or refactor a file freely and it keeps every minute of its history.
+
+## Where your data is saved
+
+All of it lives **inside your vault**, in a folder named `__visit_history/` —
+one small text file per document, organised per user and per device. Nothing is
+uploaded anywhere.
+
+- **Per user** keeps different people who sync the same vault from mixing up
+  their histories.
+- **Per device** avoids sync conflicts between your machines.
+
+Because it's stored as plain files in your vault, it syncs wherever your vault
+syncs, and you can back it up or delete it like any other note.
+
+## Installing & enabling
+
+Once Visit History is in the Obsidian community plugin store you'll be able to
+install it from **Settings → Community plugins → Browse**. In the meantime you
+can install it manually (copy `main.js`, `manifest.json`, and `styles.css` into
+`YourVault/.obsidian/plugins/visit-history/`) or via
+[BRAT](https://github.com/TfTHacker/obsidian42-brat).
+
+Then enable it: **Settings → Community plugins → enable *Visit History***.
+
+The first time you open a note after enabling, the plugin asks you to confirm a
+short user name (used only to keep histories separate in shared vaults) — pick
+an existing one or type a new one, and you're set.
 
 ## Settings
+
 Under **Settings → Visit History**:
 
-- **Idle timeout (seconds)** — how long without interaction before a focus-duration session is closed (default 180 s). Applies live, no reload needed.
-- **Add ids to all eligible files** — assigns a persistent doc id to every tracked file in the vault at once (behind a confirmation; modifies files).
+- **Idle timeout (seconds)** — how long without any interaction before the
+  current session is considered finished (default 180). Applies immediately, no
+  reload needed.
+- **Add ids to all eligible files** — assigns the persistent id to every note and
+  canvas in your vault in one go, instead of waiting until you next open each
+  file. This modifies files, so it's behind a confirmation.
 
-Heatmap configuration is edited in the heatmap view itself (config panel) and persisted automatically.
+Heatmap options (colouring mode, gradient, timestamp field, thresholds) are
+changed right inside the heatmap's config panel and are **saved automatically** —
+your setup is exactly as you left it next time you open it.
 
-## More docs
-- [docs/](docs/README.md) — architecture, on-disk formats, heatmap view internals
-- [README_DEVELOPMENT.md](./README_DEVELOPMENT.md)
-- [README_ORIGINAL.md](./README_ORIGINAL.md)
+## Development & publishing
 
+Contributing or cutting a release? See [`docs/`](docs/README.md) for the
+architecture, on-disk format, and heatmap internals, and
+[`docs/how-to-publish.md`](docs/how-to-publish.md) for the release checklist.
 
 ### License
 

@@ -22,6 +22,9 @@ npm run version    # bump version + update manifest/versions
 ```
 
 - Node 18+, npm, esbuild bundler
+- `build.sh` — one-shot local dev bootstrap (submodule init → npm install → `npm run dev`;
+  needs the glassthought bash env). For live iteration, install a hot-reload plugin in the
+  Obsidian vault this plugin is enabled in so rebuilt `main.js` reloads without restarting Obsidian.
 - `tsconfig.json`: strict, ES2021, React JSX (`react-jsx`)
 - Dependencies: React 18, d3-hierarchy, d3-color, d3-interpolate, visx/zoom, lru-cache, obsidian-id-lib (git submodule at `submodules/obsidian-id-lib`, bundled via `file:` dep — commit lib changes INSIDE the submodule, then the pointer here)
 
