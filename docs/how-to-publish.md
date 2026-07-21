@@ -34,7 +34,7 @@ The build happens on GitHub's runners via
 [`.github/workflows/release.yml`](../.github/workflows/release.yml), triggered
 by pushing a tag. The workflow:
 
-1. Checks out with submodules (needed for the `obsidian-id-lib` `file:` dep).
+1. Checks out the repo (`obsidian-id-lib` resolves from npm — no submodule).
 2. `npm ci && npm run build`.
 3. Verifies the tag equals `manifest.json` `version`.
 4. Generates `SHA256SUMS` over the assets.
@@ -162,7 +162,7 @@ commercially-restricted license and remains listed in the community directory.
 This plugin uses **KSAL-2.3** ([LICENSE.md](../LICENSE.md)), disclosed in the
 [README](../README.md#license). `package.json` names it via the SPDX-valid
 `LicenseRef-KSAL-2.3`. Comply with and attribute upstream licenses of any
-bundled code (e.g. the `obsidian-id-lib` submodule).
+bundled code (e.g. the `obsidian-id-lib` npm dependency, MIT).
 
 ## Pre-release checklist
 

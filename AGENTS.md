@@ -11,24 +11,22 @@ Records visit history of notes, canvases, and Excalidraw drawings. Each complete
 ## Dev environment
 
 ```bash
-git submodule update --init   # REQUIRED on fresh clones, before npm install
 npm install        # install dependencies
 npm run dev        # watch mode
 npm run build      # production build (tsc + esbuild)
 npm run lint       # ESLint (obsidianmd rules) — kept at ZERO errors
 npm test           # vitest unit tests
-npm run test:lib   # obsidian-id-lib's own vitest suite (run after lib changes)
 npm run test:e2e   # real-Obsidian Playwright e2e (auto-downloads pinned Obsidian,
                    # headless; asserts on-disk .vh_v3 — see docs/e2e-testing.md)
 npm run version    # bump version + update manifest/versions
 ```
 
 - Node 18+, npm, esbuild bundler
-- `build.sh` — one-shot local dev bootstrap (submodule init → npm install → `npm run dev`;
+- `build.sh` — one-shot local dev bootstrap (npm install → `npm run dev`;
   needs the glassthought bash env). For live iteration, install a hot-reload plugin in the
   Obsidian vault this plugin is enabled in so rebuilt `main.js` reloads without restarting Obsidian.
 - `tsconfig.json`: strict, ES2021, React JSX (`react-jsx`)
-- Dependencies: React 18, d3-hierarchy, d3-color, d3-interpolate, visx/zoom, lru-cache, obsidian-id-lib (git submodule at `submodules/obsidian-id-lib`, bundled via `file:` dep — commit lib changes INSIDE the submodule, then the pointer here)
+- Dependencies: React 18, d3-hierarchy, d3-color, d3-interpolate, visx/zoom, lru-cache, obsidian-id-lib (published npm package — its own repo at github.com/nickolay-kondratyev/obsidian-id-lib; bundle changes there, publish, then bump the version here)
 
 High-level docs live in [`docs/`](docs/README.md): architecture, VH on-disk
 format, heatmap view.
@@ -80,8 +78,8 @@ src/
                             # VhV3Paths (layout), VhV3ReadmeWriter
       docId/                # DocIdBackfillService only (vault-wide backfill;
                             # concurrent calls JOIN). Generator/stores/service/
-                            # cross-plugin lock live in submodules/obsidian-id-lib
-                            # (git submodule, bundled via file: dep)
+                            # cross-plugin lock live in the obsidian-id-lib
+                            # npm package (its own repo)
       migration/            # VhTopDirRenameMigrationService (.visit_history →
                             # __visit_history; runs FIRST in onload) +
                             # VhUserScopeMigrationService (pre-user-scoped v2/v3 →
@@ -155,7 +153,7 @@ src/
 - **FocusTracker dispatch is SERIALIZED** (promise chain): listeners await file IO, so rapid leaf-change events would otherwise interleave and deliver focus/unfocus out of order — stateful listeners (V3 durations) require in-order delivery.
 - **Focus-event deduplication**: `DocIdFocusListener` uses `InFlightDropGuard` (`core/util/async/`) — in-flight promise tracking with DROP semantics — to avoid duplicate writes on rapid focus events.
 - **Doc ids**: every focused document gets a persistent id `docid_{24 base36 lowercase}_e` (36^24 > 2^122 — above UUID v4 randomness). md (incl. `.excalidraw.md`) → frontmatter `id`; canvas → `metadata.frontmatter.id`; raw `.excalidraw` skipped (no id location — owner decision). An existing id — any format, incl. legacy uppercase base62 `docid_{21}_E` — is used as-is and the file is NOT modified; an unusable occupied id slot (e.g. nested mapping) is never overwritten. Writes are atomic raw-text edits via `Vault.process` that only add/fill the id line — Obsidian's `FileManager.processFrontMatter` is deliberately NOT used (it re-serializes the whole frontmatter block, mangling formatting of keys we don't own, e.g. stripping quotes). Vault-wide backfill (settings tab) reuses the same `ensureDocId` path per file.
-- **Doc-id machinery is EXTRACTED to `obsidian-id-lib`** (`submodules/obsidian-id-lib` — own git repo, bundled from raw TS via the `file:` dep; wired by `DocIdServices.createDefault(app.vault)` in PluginFactory). `ensureDocId` is guarded by the lib's `CrossPluginPathLock`: a per-path promise-chain registry on the versioned window/globalThis key `__obsidian_id_lib_path_lock_registry_v1__` (public cross-plugin contract — see the lib README), so two plugins bundling the lib serialize same-path id creation; `getDocId` stays lock-free. The in-transform re-check remains the idempotency backstop. Lib tests run standalone (`npm run test:lib`); the plugin's eslint ignores `submodules/`.
+- **Doc-id machinery is EXTRACTED to `obsidian-id-lib`** (a published npm dependency with its own git repo; wired by `DocIdServices.createDefault(app.vault)` in PluginFactory). `ensureDocId` is guarded by the lib's `CrossPluginPathLock`: a per-path promise-chain registry on the versioned window/globalThis key `__obsidian_id_lib_path_lock_registry_v1__` (public cross-plugin contract — see the lib README), so two plugins bundling the lib serialize same-path id creation; `getDocId` stays lock-free. The in-transform re-check remains the idempotency backstop. Lib tests run in the lib's own repo.
 - **LRU caching** (instance fields, never module-level): `LastVisitCache` holds last-visit stamps keyed by doc id (10k entries), shared by `VisitHistoryServiceV3` (read; caches misses incl. null) and `VhV3DurationRecorder` (write-through after each successful append; max-merge so a racing cache-miss read can't clobber it). Heatmap reads resolve ids via the READ-ONLY `DocIdService.getDocId` — bulk read paths must never write into user files.
 - **Malformed files never throw**: session parsing (`VhV3SessionLineParser` / `StampLineParser` / `VhV3DurationStore`) skips bad lines and `CanvasDocIdStore` returns `null` for unparseable content, so one bad file can't break aggregation or focus handling. Empty/whitespace-only canvas content is NOT malformed — it's a brand-new canvas, treated as `{}`, and gets an id on first focus.
 - **Console logging**: only `console.error` for real failures (obsidianmd no-console rule); no debug logs.

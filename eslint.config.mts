@@ -20,10 +20,6 @@ export default tseslint.config(
 		// AI tooling scratch + test screenshots (gitignored, never shipped).
 		'.tmp',
 		'.out',
-		// Git submodules are foreign repos with their own tooling — the
-		// plugin's eslint must not lint them (obsidian-id-lib is consumed
-		// as a file: dependency).
-		'submodules',
 		// Node-side e2e harness/specs run OUTSIDE Obsidian (real-Obsidian
 		// Playwright driver) — Obsidian plugin rules don't apply, and these
 		// files have their own tsconfig (e2e/tsconfig.json) + typecheck step.

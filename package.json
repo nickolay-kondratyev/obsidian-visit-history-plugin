@@ -11,7 +11,6 @@
 		"lint": "eslint .",
 		"test": "vitest run",
 		"test:watch": "vitest",
-		"test:lib": "npm --prefix submodules/obsidian-id-lib run test",
 		"setup:obsidian": "bash scripts/setup-obsidian-bin.sh",
 		"setup:dev-vault": "node e2e/setupDevVault.mjs",
 		"test:e2e": "bash scripts/run-e2e.sh",
@@ -44,7 +43,7 @@
 		"d3-hierarchy": "^3.1.2",
 		"d3-interpolate": "^3.0.1",
 		"lru-cache": "^11.5.1",
-		"obsidian-id-lib": "file:submodules/obsidian-id-lib",
+		"obsidian-id-lib": "^0.1.0",
 		"react": "^18.3.1",
 		"react-dom": "^18.3.1"
 	}
