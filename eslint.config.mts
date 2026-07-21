@@ -46,4 +46,15 @@ export default tseslint.config(
 		},
 	},
 	...obsidianmd.configs.recommended,
+	{
+		// Type-checked safety rules: forbid operating on `any`-typed values,
+		// which defeat TypeScript's guarantees at call/member/assignment sites.
+		rules: {
+			'@typescript-eslint/no-unsafe-call': 'error',
+			'@typescript-eslint/no-unsafe-member-access': 'error',
+			'@typescript-eslint/no-unsafe-assignment': 'error',
+			'@typescript-eslint/no-unsafe-return': 'error',
+			'@typescript-eslint/no-unsafe-argument': 'error',
+		},
+	},
 );
