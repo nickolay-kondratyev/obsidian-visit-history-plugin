@@ -25,7 +25,7 @@ jobs:
 
             - name: Build plugin
               run: |
-                  npm ci
+                  npm ci --ignore-scripts
                   npm run build
 
             - name: Check for optional styles
