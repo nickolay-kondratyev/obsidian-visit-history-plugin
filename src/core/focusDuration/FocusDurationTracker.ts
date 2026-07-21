@@ -36,12 +36,9 @@ export type WindowHandle = object;
  * window (which structurally satisfies this); tests pass the vitest fake clock.
  */
 export interface WindowTimers {
-  setTimeout(callback: () => void, delayMs: number): TimerHandle;
-  clearTimeout(handle: TimerHandle): void;
+  setTimeout(callback: () => void, delayMs: number): unknown;
+  clearTimeout(handle: unknown): void;
 }
-
-/** Opaque timer handle: produced by setTimeout, passed back to clearTimeout. */
-export type TimerHandle = unknown;
 
 interface CurrentDoc {
   docId: string;
@@ -104,15 +101,15 @@ export class FocusDurationTracker {
   private readonly focusedWindows = new Set<WindowHandle>();
   private session: ActiveSession | null = null;
   private lastActivityMs = 0;
-  // `TimerHandle` (unknown) already admits null — no `| null` (it'd be a
-  // redundant union); null still means "no timer armed" (see the checks below).
-  private idleTimer: TimerHandle = null;
+  // `unknown` already admits null — no `| null` (it'd be a redundant union);
+  // null still means "no timer armed" (see the checks below).
+  private idleTimer: unknown = null;
   // Invariants: pendingClose !== null ⇒ session !== null (pending is created
   // only on unfocus of an open session; every close path with a pending goes
   // through finalizePendingClose, which clears both). graceTimer !== null ⇔
   // pendingClose !== null.
   private pendingClose: PendingClose | null = null;
-  private graceTimer: TimerHandle = null;
+  private graceTimer: unknown = null;
 
   constructor(
     private readonly sink: FocusDurationSink,
