@@ -277,10 +277,13 @@ body.theme-light .vault-heatmap-view {
   gap: 6px;
   min-width: 0;
   overflow-x: auto;
-  scrollbar-width: none; /* chips scroll on wheel/drag; a bar would break the 42px row */
+  /* Chips scroll on wheel/drag; a bar would break the 42px row, so it's hidden
+     via ::-webkit-scrollbar below. WHY-NOT the standard scrollbar-width:none:
+     Chromium only added it in v121, so it's partially supported across
+     Obsidian's range — and since Obsidian is always Chromium, the WebKit rule
+     already hides the bar everywhere, making the standard property redundant. */
 }
 
-/* WebKit fallback for scrollbar-width:none (partially supported in older Obsidian). */
 .vault-heatmap-view .filter-chips::-webkit-scrollbar {
   display: none;
 }
