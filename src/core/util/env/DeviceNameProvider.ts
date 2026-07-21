@@ -1,4 +1,4 @@
-import { Platform } from 'obsidian';
+import { DesktopOsInfo } from './DesktopOsInfo';
 
 export interface DeviceNameProvider {
   getDeviceName(): string;
@@ -20,29 +20,12 @@ export class DeviceNameProviderDefault implements DeviceNameProvider {
     const cached = window.localStorage.getItem(DeviceNameProviderDefault.STORAGE_KEY);
     if (cached) return cached;
 
-    const name = DeviceNameProviderDefault.desktopHostname()
+    // Existing users' VH directories are named after the hostname — do not
+    // change this resolution (desktop hostname → device name; mobile → random).
+    const name = DesktopOsInfo.hostname()
       ?? "mobile-" + crypto.randomUUID().slice(0, 8);
 
     window.localStorage.setItem(DeviceNameProviderDefault.STORAGE_KEY, name);
     return name;
-  }
-
-  /** OS hostname, or null on mobile where Node builtins don't exist. */
-  private static desktopHostname(): string | null {
-    // Node builtins ('os') exist only in the desktop Electron app; guard the
-    // mobile-compat scan explicitly (behavior-preserving — mobile already
-    // returned null via the catch below).
-    if (!Platform.isDesktopApp) {
-      return null;
-    }
-    try {
-      // System boundary: Node's 'os' module is only available in the desktop
-      // (Electron) app. Existing users' VH directories are named after the
-      // hostname — do not change this resolution order.
-      // eslint-disable-next-line import/no-nodejs-modules, @typescript-eslint/no-require-imports, no-undef -- 'os' is a desktop-only Electron builtin, guarded by try/catch for mobile
-      return (require("os") as { hostname(): string }).hostname();
-    } catch {
-      return null;
-    }
   }
 }
