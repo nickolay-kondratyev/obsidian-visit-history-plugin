@@ -7,7 +7,7 @@
 import { type Browser, type Page, chromium } from '@playwright/test';
 import { type ChildProcess, spawn } from 'node:child_process';
 import { cpSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, sep } from 'node:path';
 import {
   DEVICE_NAME,
   LS_KEY_DEVICE_NAME,
@@ -35,6 +35,7 @@ export class ObsidianHarness {
     readonly vaultDir: string,
     private readonly browser: Browser,
     private readonly child: ChildProcess,
+    private readonly runDir: string,
   ) {}
 
   static async launch(opts: LaunchOptions): Promise<ObsidianHarness> {
@@ -76,7 +77,10 @@ export class ObsidianHarness {
       '--remote-debugging-port=0', // OS-assigned port; endpoint parsed from stderr.
       ...extraArgs, // carries the headless Ozone flags from run-e2e.sh
     ];
-    const child = spawn(obsidianPath, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+    // detached → new process group leader, so close() can SIGKILL the WHOLE Electron tree
+    // (main + Chromium helpers) at once; killing only the main pid leaves helpers holding
+    // the userdata dir open, defeating run-dir cleanup.
+    const child = spawn(obsidianPath, args, { stdio: ['ignore', 'pipe', 'pipe'], detached: true });
 
     let browser: Browser | undefined;
     try {
@@ -110,14 +114,14 @@ export class ObsidianHarness {
         { timeout: 30_000 },
       );
 
-      return new ObsidianHarness(page, vaultDir, browser, child);
+      return new ObsidianHarness(page, vaultDir, browser, child, runDir);
     } catch (err) {
       try {
         if (browser) await browser.close();
       } catch {
         /* ignore */
       }
-      child.kill('SIGKILL');
+      killProcessTree(child);
       throw err;
     }
   }
@@ -153,7 +157,53 @@ export class ObsidianHarness {
     } catch {
       /* ignore */
     }
-    this.child.kill('SIGKILL');
+    killProcessTree(this.child);
+    await this.waitForChildExit(3000); // let Electron release the userdata dir before rm
+    // Reclaim the per-launch vault+userdata copy. Guarded to internally-derived paths
+    // under E2E_RUN_ROOT (.tmp/e2e/<runId>) so a stray/caller path — and the shared
+    // Obsidian binary cache under .tmp/obsidian/ — is never touched. Strictly best-effort:
+    // Electron's SIGKILLed helper procs can re-touch userdata during teardown (ENOTEMPTY on
+    // the final rmdir), and .tmp/e2e is gitignored/ephemeral — cleanup must never fail a test.
+    if (this.runDir.startsWith(E2E_RUN_ROOT + sep)) {
+      try {
+        rmSync(this.runDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+      } catch {
+        /* ignore — disk hygiene only */
+      }
+    }
+  }
+
+  /** Resolve once the child process has exited, or after `timeoutMs` (whichever first). */
+  private waitForChildExit(timeoutMs: number): Promise<void> {
+    if (this.child.exitCode !== null || this.child.signalCode !== null) return Promise.resolve();
+    return new Promise<void>((resolve) => {
+      const done = (): void => {
+        clearTimeout(timer);
+        this.child.off('exit', done);
+        resolve();
+      };
+      const timer = setTimeout(done, timeoutMs);
+      this.child.once('exit', done);
+    });
+  }
+}
+
+/**
+ * SIGKILL the child's entire process group (main Electron + Chromium helpers). The child
+ * was spawned `detached`, so it leads its own group; a negative pid signals the group.
+ * Falls back to killing the single pid if the group is already gone.
+ */
+function killProcessTree(child: ChildProcess): void {
+  const pid = child.pid;
+  if (pid === undefined) return;
+  try {
+    process.kill(-pid, 'SIGKILL');
+  } catch {
+    try {
+      child.kill('SIGKILL');
+    } catch {
+      /* already dead */
+    }
   }
 }
 

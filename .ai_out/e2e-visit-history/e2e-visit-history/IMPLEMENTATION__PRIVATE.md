@@ -1,6 +1,21 @@
 # IMPLEMENTATION__PRIVATE — rehydration memory
 
-## Status: COMPLETE. All 5 e2e specs green, vitest green, lint 0 errors. Nothing committed.
+## Status: COMPLETE (+ Iteration 1 minor polish applied). 5 e2e green ×2, vitest 386 green,
+## lint 0 errors. Nothing committed.
+
+## Iteration 1 gotchas (run-dir cleanup — the tricky one)
+- SIGKILL on the Electron MAIN pid does NOT reap Chromium helper procs; they keep `userdata/`
+  open → `rmSync` fails ENOTEMPTY, leaves full dirs. `maxRetries` alone still throws (helpers
+  outlive the 1 s retry window) and a bare throw FAILED an e2e test.
+- FIX that works: spawn `detached:true` + `process.kill(-pid,'SIGKILL')` (process GROUP),
+  then `waitForChildExit(3000)`, then best-effort `rmSync` in try/catch. Group kill reaps the
+  whole tree → dir frees immediately → cleanup reliable (only `.tmp/e2e/output` left).
+- Cleanup is GUARDED to paths under `E2E_RUN_ROOT + sep` so a caller/binary-cache path is
+  never removed. Keep it strictly best-effort (try/catch) — disk hygiene must never fail a test.
+- DRY: `e2e/harnessFixture.ts` `useHarness(idleSeconds)` owns beforeEach/afterEach; specs do
+  `const getHarness = useHarness(...)` in describe + `const h = getHarness()` in the test.
+- `e2e/` is eslint-globalignored — new e2e files are NOT linted; verify with
+  `npx tsc -p e2e/tsconfig.json`.
 
 ## Environment quirks
 - Debian-ish x86_64, Node v20.20.2, non-root uid 1000, NO sudo, headless (no DISPLAY).

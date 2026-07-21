@@ -32,4 +32,6 @@ export const FILE_B = 'B.md';
 export const FILE_C = 'C.canvas';
 
 // One completed session per line: `<ISO start stamp> D:<durationMillis>`.
-export const SESSION_LINE_RE = /^\S+ D:\d+$/m;
+// Tested with `.test()` against individually split+trimmed single lines, so no `m`
+// (multiline `^`/`$`) flag is needed.
+export const SESSION_LINE_RE = /^\S+ D:\d+$/;

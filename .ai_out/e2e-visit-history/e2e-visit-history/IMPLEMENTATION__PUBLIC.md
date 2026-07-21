@@ -1,5 +1,50 @@
 # IMPLEMENTATION__PUBLIC — Real-Obsidian Playwright e2e for Visit History
 
+## Iteration 1 (minor polish — review APPROVE-WITH-MINOR follow-up)
+
+Additive/polish only — NO `src/` runtime changes. All 4 review minors evaluated:
+
+**Applied:**
+1. **Run-dir cleanup on close (minor #1).** `ObsidianHarness.close()` now reclaims the
+   per-launch `.tmp/e2e/<runId>` dir. Root cause found empirically: SIGKILL on the Electron
+   MAIN pid leaves Chromium HELPER children alive holding `userdata/` open, so `rmSync`
+   failed (ENOTEMPTY) and left full 360K dirs. Fix = kill the whole PROCESS GROUP: spawn
+   `detached: true` (child leads its own group) + `killProcessTree()` signals `-pid`
+   (fallback to single-pid kill). Then `waitForChildExit(3000)` before a guarded, strictly
+   best-effort `rmSync({recursive,force,maxRetries:10,retryDelay:100})` wrapped in try/catch
+   (disk hygiene must NEVER fail a test). Guard: only removes paths under `E2E_RUN_ROOT + sep`
+   → caller/binary-cache paths (`.tmp/obsidian/`) untouched. Verified: 2 consecutive full
+   runs leave ONLY `.tmp/e2e/output` — zero leftover run dirs.
+2. **DRY the specs (minor #2).** New `e2e/harnessFixture.ts` exports `useHarness(idleSeconds)`
+   (registers beforeEach launch + afterEach close, returns a live-harness getter) and
+   `HIGH_IDLE_SECONDS = 180`. All 5 specs now call `useHarness(...)` inside their describe and
+   `const h = getHarness()` in the test — removed the copy-pasted `let h`/hooks/const from
+   every spec (single source of truth for the launch/close contract).
+3. **Dropped the `m` flag (minor #3).** `SESSION_LINE_RE` is `/^\S+ D:\d+$/` — tested with
+   `.test()` on individually split+trimmed single lines, so multiline `^`/`$` did nothing.
+   Added a WHY comment.
+4. **S1 negative-check sleep (minor #4).** KEPT the 1 s `sleep` — it is a legitimate bounded
+   ABSENCE check, not a race: nothing ever switches focus away from B, so B's session cannot
+   close (no append to wait for). Added a clarifying WHY comment on the bound. NOT masking a
+   race → not replaced.
+
+**Rejected:** none of the 4 outright. (Review items 3 "close is a flush proxy" and the S1
+item were flagged by the reviewer as intentional/acceptable, not action requests — #3 needs
+a test seam already ticketed; the S1 item we addressed with a comment per instructions.)
+
+**Suite results after polish (2 consecutive e2e runs, deterministic):**
+- `npm run test:e2e`: **5 passed (17.3s)** ×2; run dirs cleaned (only `output` remains).
+- `npm test`: **386 passed** (39 files).
+- `npm run lint`: **0 errors** (2 pre-existing `prefer-active-doc` warnings in `src/main.ts`,
+  untouched). `e2e/` is eslint-globalignored, so `harnessFixture.ts` is not linted; it
+  typechecks clean via `tsc -p e2e/tsconfig.json`.
+
+Files touched this iteration: `e2e/obsidianHarness.ts`, `e2e/constants.ts`,
+`e2e/harnessFixture.ts` (new), and the 5 `*.e2e.ts` specs. No `src/` changes.
+
+---
+
+
 ## Result headline
 **M1 GATE: PASS.** Real headless Obsidian 1.12.7 boots in this container, CDP attaches,
 `window.app` + `layoutReady` are reachable, the built plugin enables, and it writes real

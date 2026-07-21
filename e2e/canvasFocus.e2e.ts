@@ -4,23 +4,15 @@
 // C's id comes from metadata.frontmatter.id (CanvasDocIdStore).
 import { expect, test } from '@playwright/test';
 import { DOC_ID_C, FILE_A, FILE_C } from './constants';
-import { ObsidianHarness } from './obsidianHarness';
+import { HIGH_IDLE_SECONDS, useHarness } from './harnessFixture';
 import { existsSync } from 'node:fs';
 import { parseDurationMs, pollForSessionLine, sleep, vhFilePath } from './vhAssert';
 
-const HIGH_IDLE_SECONDS = 180;
-
 test.describe('S4 focus in a canvas', () => {
-  let h: ObsidianHarness;
-
-  test.beforeEach(async () => {
-    h = await ObsidianHarness.launch({ idleTimeoutSeconds: HIGH_IDLE_SECONDS });
-  });
-  test.afterEach(async () => {
-    await h.close();
-  });
+  const getHarness = useHarness(HIGH_IDLE_SECONDS);
 
   test('canvas records one bounded session under its metadata.frontmatter.id', async () => {
+    const h = getHarness();
     await h.openFile(FILE_C);
     await sleep(1000);
     await h.openFile(FILE_A);

@@ -9,22 +9,14 @@
 // does not perform.
 import { expect, test } from '@playwright/test';
 import { DOC_ID_A, FILE_A, FILE_B } from './constants';
-import { ObsidianHarness } from './obsidianHarness';
+import { HIGH_IDLE_SECONDS, useHarness } from './harnessFixture';
 import { parseDurationMs, pollForSessionLine, sessionLines, sleep, vhFilePath } from './vhAssert';
 
-const HIGH_IDLE_SECONDS = 180;
-
 test.describe('S3 switch to Settings (current behavior)', () => {
-  let h: ObsidianHarness;
-
-  test.beforeEach(async () => {
-    h = await ObsidianHarness.launch({ idleTimeoutSeconds: HIGH_IDLE_SECONDS });
-  });
-  test.afterEach(async () => {
-    await h.close();
-  });
+  const getHarness = useHarness(HIGH_IDLE_SECONDS);
 
   test('Settings-open alone does not end the session; the later doc switch does', async () => {
+    const h = getHarness();
     const aFile = vhFilePath(h.vaultDir, DOC_ID_A);
 
     await h.openFile(FILE_A);

@@ -4,22 +4,16 @@
 // with NO 10 s grace. The close therefore lands well before the 10 s grace could apply.
 import { expect, test } from '@playwright/test';
 import { DOC_ID_A, FILE_A } from './constants';
-import { ObsidianHarness } from './obsidianHarness';
+import { useHarness } from './harnessFixture';
 import { parseDurationMs, pollForSessionLine, vhFilePath } from './vhAssert';
 
-const IDLE_SECONDS = 5;
+const IDLE_SECONDS = 5; // the plugin-enforced floor; the idle path must fire fast.
 
 test.describe('S5 unfocus on idle', () => {
-  let h: ObsidianHarness;
-
-  test.beforeEach(async () => {
-    h = await ObsidianHarness.launch({ idleTimeoutSeconds: IDLE_SECONDS });
-  });
-  test.afterEach(async () => {
-    await h.close();
-  });
+  const getHarness = useHarness(IDLE_SECONDS);
 
   test('idle closes the session at last activity, below the idle window', async () => {
+    const h = getHarness();
     const aFile = vhFilePath(h.vaultDir, DOC_ID_A);
     await h.openFile(FILE_A);
 
