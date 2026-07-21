@@ -48,9 +48,12 @@ export class FakeHiddenFileUtil implements HiddenFileUtil {
     }
     const fromPrefix = `${fromPath}/`;
     for (const [path, content] of [...this.contentByPath.entries()]) {
-      const movedPath = path === fromPath
-        ? toPath
-        : path.startsWith(fromPrefix) ? toPath + '/' + path.slice(fromPrefix.length) : null;
+      let movedPath: string | null = null;
+      if (path === fromPath) {
+        movedPath = toPath;
+      } else if (path.startsWith(fromPrefix)) {
+        movedPath = toPath + '/' + path.slice(fromPrefix.length);
+      }
       if (movedPath !== null) {
         this.contentByPath.delete(path);
         this.contentByPath.set(movedPath, content);
