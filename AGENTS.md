@@ -92,7 +92,9 @@ src/
                             # Vault API can't see),
                             # time/ (StampLineParser — strict ISO stamp parsing),
                             # async/ (InFlightDropGuard — per-key dedup, DROP semantics),
-                            # env/ (DeviceNameProvider), userComm/ (UserNotifier)
+                            # env/ (DeviceNameProvider, DesktopOsInfo — typed
+                            # mobile-safe desktop-only Node 'os' accessor),
+                            # userComm/ (UserNotifier)
 
   settingsTab/              # VisitHistorySettingTab (Settings → Visit History):
                             # "Idle timeout (seconds)" (persisted, applies live) +

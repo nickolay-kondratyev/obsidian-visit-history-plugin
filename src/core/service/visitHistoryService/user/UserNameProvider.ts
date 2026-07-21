@@ -1,4 +1,4 @@
-import { Platform } from 'obsidian';
+import { DesktopOsInfo } from '../../../util/env/DesktopOsInfo';
 import { HiddenFileUtil } from '../../../util/file/hidden/HiddenFileUtil';
 import { UserNamePrompt } from './UserNamePrompt';
 import { UserNameSafety } from './UserNameSafety';
@@ -25,21 +25,9 @@ export interface OsUserNameLookup {
 
 export class OsUserNameLookupDefault implements OsUserNameLookup {
   getOsUserName(): string | null {
-    // Node builtins ('os') exist only in the desktop Electron app; guard the
-    // mobile-compat scan explicitly (behavior-preserving — mobile already
-    // returned null via the catch below).
-    if (!Platform.isDesktopApp) {
-      return null;
-    }
-    try {
-      // System boundary: Node's 'os' module is only available in the desktop
-      // (Electron) app. OS user names cannot contain path separators on any
-      // supported OS, so the name is safe as a directory name.
-      // eslint-disable-next-line import/no-nodejs-modules, @typescript-eslint/no-require-imports, no-undef -- 'os' is a desktop-only Electron builtin, guarded by try/catch for mobile
-      return (require('os') as { userInfo(): { username: string } }).userInfo().username;
-    } catch {
-      return null;
-    }
+    // OS user names cannot contain path separators on any supported OS, so the
+    // name is safe as a directory segment. Desktop → OS login name; mobile → null.
+    return DesktopOsInfo.userName();
   }
 }
 

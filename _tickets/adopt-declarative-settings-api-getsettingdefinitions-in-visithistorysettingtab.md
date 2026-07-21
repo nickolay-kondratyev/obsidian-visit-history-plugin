@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-07-21T01:37:44Z
 id: nid_apqgkqd35dmxuk6jqk6l7body_E
 title: "Adopt declarative settings API (getSettingDefinitions) in VisitHistorySettingTab"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-07-21T01:06:01Z
-status_updated_iso: 2026-07-21T01:06:01Z
+status_updated_iso: 2026-07-21T01:37:44Z
 type: feature
 priority: 2
 assignee: CC_WITH-nickolaykondratyev
@@ -24,3 +25,11 @@ VERIFY: `npm run build` + `npm run lint` + `npm test` green; setting appears in 
 
 VisitHistorySettingTab implements getSettingDefinitions(); idle-timeout setting is declared/searchable on 1.13+; existing imperative settings + backfill action unchanged; lint+build+test green.
 
+
+## Notes
+
+**2026-07-21T01:37:44Z**
+
+Resolved on branch adopt-declarative-settings-api (commits 8482814 + 2f8734a).
+
+Implemented getSettingDefinitions() on VisitHistorySettingTab: idle-timeout number control (key idleTimeoutSeconds, min 5, default 180, validate) + File modifying actions group with backfill button via the render escape hatch; setControlValue routes through saveSettings(). Bumped obsidian dev dep to ^1.13.1 for the 1.13 types. Kept display() as the pre-1.13 fallback and left manifest minAppVersion at 1.5.7 (bumping it = out-of-scope product decision). DRY: IdleTimeoutSeconds.isValid is the single source of truth shared by SettingsSanitizer + the tab. Added mock stubs + focused tests. Gates: build PASS, lint 0 errors, 381 tests pass. Searchability on 1.13+ is a manual check.

@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-07-21T02:02:31Z
 id: nid_md230p48n14ygqj6bht2co638_E
 title: "Type-safe desktop-only Node 'os' access + satisfy mobile-import review rule"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-07-21T01:06:01Z
-status_updated_iso: 2026-07-21T01:06:01Z
+status_updated_iso: 2026-07-21T02:02:31Z
 type: task
 priority: 2
 assignee: CC_WITH-nickolaykondratyev

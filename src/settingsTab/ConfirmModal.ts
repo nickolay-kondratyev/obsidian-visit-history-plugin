@@ -25,6 +25,11 @@ export class ConfirmModal extends Modal {
     new Setting(this.contentEl)
       .addButton(btn => btn
         .setButtonText(this.params.ctaLabel)
+        // setDestructive() (the non-deprecated replacement) is @since Obsidian
+        // 1.13.0, but manifest minAppVersion is 1.5.7 — setWarning() is the only
+        // variant available on the whole supported range. Revisit when the floor
+        // is raised to 1.13.0 (same trigger that lets display() be dropped).
+        // eslint-disable-next-line @typescript-eslint/no-deprecated
         .setWarning()
         .onClick(() => {
           this.close();

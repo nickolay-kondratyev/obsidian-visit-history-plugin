@@ -47,3 +47,35 @@ export const Platform = {
   isMobile: false,
   isDesktop: true,
 };
+
+// --- Settings-tab stand-ins ---------------------------------------------
+// Just enough for the settings-tab module (and its ConfirmModal import) to
+// load and for the tab to be constructed + getSettingDefinitions() called in
+// tests. getSettingDefinitions() returns plain data and never touches Setting,
+// so these stubs are intentionally hollow (no DOM behavior).
+
+/** Minimal stand-in for Obsidian's `PluginSettingTab`. Stores app/plugin. */
+export class PluginSettingTab {
+  readonly containerEl = { empty(): void {} };
+
+  constructor(readonly app: unknown, readonly plugin: unknown) {
+  }
+}
+
+/** Chainable no-op stand-in for Obsidian's `Setting` builder. */
+export class Setting {
+  constructor(_containerEl?: unknown) {
+  }
+
+  setName(_name: string): this { return this; }
+  setDesc(_desc: string): this { return this; }
+  setHeading(): this { return this; }
+  addText(_cb: unknown): this { return this; }
+  addButton(_cb: unknown): this { return this; }
+}
+
+/** Minimal stand-in for Obsidian's `Modal`. */
+export class Modal {
+  constructor(readonly app: unknown) {
+  }
+}
