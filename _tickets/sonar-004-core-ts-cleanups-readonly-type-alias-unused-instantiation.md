@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-07-21T00:10:56Z
 id: nid_yvbeg8trv72ueqz66q10rcvsf_E
 title: "sonar-004: Core TS cleanups — readonly, type alias, unused instantiation"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-07-20T23:34:06Z
-status_updated_iso: 2026-07-20T23:34:06Z
+status_updated_iso: 2026-07-21T00:10:56Z
 type: bug
 priority: 1
 assignee: CC_WITH-nickolaykondratyev
