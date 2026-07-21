@@ -29,3 +29,7 @@ build/
 # AI tooling scratch + test screenshots (never source-controlled)
 .tmp/
 .out/
+
+# e2e: installed plugin build in the seed vault (rebuilt by setup:dev-vault; not committed).
+# The rest of .dev-vault (notes, canvas, minimal .obsidian config) IS committed.
+.dev-vault/.obsidian/plugins/

@@ -18,6 +18,8 @@ npm run build      # production build (tsc + esbuild)
 npm run lint       # ESLint (obsidianmd rules) — kept at ZERO errors
 npm test           # vitest unit tests
 npm run test:lib   # obsidian-id-lib's own vitest suite (run after lib changes)
+npm run test:e2e   # real-Obsidian Playwright e2e (auto-downloads pinned Obsidian,
+                   # headless; asserts on-disk .vh_v3 — see docs/e2e-testing.md)
 npm run version    # bump version + update manifest/versions
 ```
 

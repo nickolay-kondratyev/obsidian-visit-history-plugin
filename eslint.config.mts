@@ -24,6 +24,12 @@ export default tseslint.config(
 		// plugin's eslint must not lint them (obsidian-id-lib is consumed
 		// as a file: dependency).
 		'submodules',
+		// Node-side e2e harness/specs run OUTSIDE Obsidian (real-Obsidian
+		// Playwright driver) — Obsidian plugin rules don't apply, and these
+		// files have their own tsconfig (e2e/tsconfig.json) + typecheck step.
+		'e2e',
+		// Generated/seed e2e vault (installed plugin build is gitignored).
+		'.dev-vault',
 	]),
 	{
 		languageOptions: {
