@@ -1,6 +1,6 @@
 import { App, PluginSettingTab, Setting, SettingDefinitionItem } from 'obsidian';
 import type VisitHistoryPlugin from '../main';
-import { DEFAULT_IDLE_TIMEOUT_SECONDS, MIN_IDLE_TIMEOUT_SECONDS } from '../settings';
+import { DEFAULT_IDLE_TIMEOUT_SECONDS, IdleTimeoutSeconds, MIN_IDLE_TIMEOUT_SECONDS } from '../settings';
 import type { DocIdBackfillResult, DocIdBackfillService } from '../core/service/docId/DocIdBackfillService';
 import type { UserNotifier } from '../core/util/userComm/UserNotifier';
 import { ConfirmModal } from './ConfirmModal';
@@ -12,7 +12,8 @@ import { ConfirmModal } from './ConfirmModal';
  * Renders declaratively on Obsidian 1.13+ (via getSettingDefinitions(), so the
  * settings appear in the built-in settings search) and imperatively (display())
  * as the pre-1.13 fallback. Both representations share the copy constants and
- * the isValidIdleTimeoutSeconds predicate below so they can never drift.
+ * the shared IdleTimeoutSeconds.isValid predicate (src/settings.ts) so they
+ * can never drift.
  */
 export class VisitHistorySettingTab extends PluginSettingTab {
   private static readonly IDLE_TIMEOUT_NAME = 'Idle timeout (seconds)';
@@ -43,11 +44,6 @@ export class VisitHistorySettingTab extends PluginSettingTab {
     super(app, visitHistoryPlugin);
   }
 
-  /** Whether a candidate idle-timeout is a whole number at or above the minimum. */
-  static isValidIdleTimeoutSeconds(seconds: number): boolean {
-    return Number.isInteger(seconds) && seconds >= MIN_IDLE_TIMEOUT_SECONDS;
-  }
-
   /**
    * Declarative settings (Obsidian 1.13+): rendered from this AND indexed for
    * settings search. When non-empty, Obsidian does NOT call display().
@@ -66,7 +62,7 @@ export class VisitHistorySettingTab extends PluginSettingTab {
           placeholder: String(DEFAULT_IDLE_TIMEOUT_SECONDS),
           // Mirrors display()'s silent reject, but surfaces an inline error
           // (invalid input is not persisted either way).
-          validate: (value) => VisitHistorySettingTab.isValidIdleTimeoutSeconds(value)
+          validate: (value) => IdleTimeoutSeconds.isValid(value)
             ? undefined
             : VisitHistorySettingTab.IDLE_TIMEOUT_ERROR,
         },
@@ -132,7 +128,7 @@ export class VisitHistorySettingTab extends PluginSettingTab {
           const seconds = Number(value);
           // Invalid/too-small input is simply not persisted — the previous
           // valid value stays in effect (and reappears when the tab reopens).
-          if (!VisitHistorySettingTab.isValidIdleTimeoutSeconds(seconds)) {
+          if (!IdleTimeoutSeconds.isValid(seconds)) {
             return;
           }
           this.visitHistoryPlugin.settings.idleTimeoutSeconds = seconds;

@@ -1,6 +1,12 @@
 # PRIVATE state — adopt declarative settings API
 
-Status: **COMPLETE**. build/lint/test all green. Not committed (TOP_LEVEL_AGENT commits).
+Status: **COMPLETE + ITERATION 1 DONE** (review nits addressed). build/lint/test all green (381 tests). Not committed (TOP_LEVEL_AGENT commits).
+
+## Iteration 1 (review APPROVE-WITH-NITS)
+- F1 duplicate ticket: merged detail into pre-existing `nid_rv9wadneva15fs5ob0u3wp0x3_E` (add-note), `git rm`'d the dup `nid_8lj046abp2q27ahfeqw0fi3nr_E` file. One ticket remains. (Note: earlier PRIVATE text below still references the now-deleted dup id — that follow-up is now the pre-existing ticket.)
+- F2 DRY: canonical predicate `IdleTimeoutSeconds.isValid` now in `src/settings.ts`; sanitizer + tab both use it; tab's `static isValidIdleTimeoutSeconds` removed. Predicate tests moved to `settings.test.ts`.
+- F3: added `setControlValue` persist+save tests (spy plugin) in the tab test.
+- No delete cmd in `ticket` tool — tickets are plain markdown; delete via `git rm`.
 
 ## What was done
 - `package.json`: `obsidian` `latest → ^1.13.1`; reinstalled with `--ignore-scripts` (log `.tmp/npm-install.log`). Installed now 1.13.1 (was 1.12.3); API `getSettingDefinitions` present. `package-lock.json` updated.

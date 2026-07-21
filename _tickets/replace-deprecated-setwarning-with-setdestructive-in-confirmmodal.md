@@ -27,3 +27,13 @@ Keep supporting older Obsidian for now — 1.13.0 is catalyst (insider) only, no
 general release yet. BLOCKED: do not action until 1.13.0 is broadly released and
 minAppVersion is deliberately raised. Current imperative `display()` / `setWarning()`
 are the correct, sanctioned choices meanwhile.
+
+## Notes
+
+**2026-07-21T01:34:11Z**
+
+Merged from duplicate ticket nid_8lj046abp2q27ahfeqw0fi3nr_E (deleted 2026-07-21).
+
+Exact current suppression location: src/settingsTab/ConfirmModal.ts:33 — .setWarning() preceded by `// eslint-disable-next-line @typescript-eslint/no-deprecated` at line 32 (line moved from :28 after the 1.13.1 devDep bump).
+
+Same trigger as dropping the imperative display() fallback in src/settingsTab/VisitHistorySettingTab.ts: when minAppVersion is raised to 1.13.0, switch to setDestructive() (or setDestructive().setCta()) and remove the eslint-disable.

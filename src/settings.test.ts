@@ -1,10 +1,36 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_IDLE_TIMEOUT_SECONDS,
+  IdleTimeoutSeconds,
   MIN_IDLE_TIMEOUT_SECONDS,
   SettingsSanitizer,
 } from './settings';
 import { DEFAULT_HEATMAP_CONFIG } from './viewModel/heatmapConfig';
+
+describe('IdleTimeoutSeconds', () => {
+  describe('isValid', () => {
+    it('should reject a value below the minimum', () => {
+      // GIVEN a value one below the minimum
+      // WHEN validating
+      // THEN it is rejected
+      expect(IdleTimeoutSeconds.isValid(MIN_IDLE_TIMEOUT_SECONDS - 1)).toBe(false);
+    });
+
+    it('should reject a non-integer value', () => {
+      // GIVEN a fractional value above the minimum
+      // WHEN validating
+      // THEN it is rejected (only whole seconds are accepted)
+      expect(IdleTimeoutSeconds.isValid(MIN_IDLE_TIMEOUT_SECONDS + 0.5)).toBe(false);
+    });
+
+    it('should accept the minimum integer', () => {
+      // GIVEN exactly the minimum
+      // WHEN validating
+      // THEN it is accepted
+      expect(IdleTimeoutSeconds.isValid(MIN_IDLE_TIMEOUT_SECONDS)).toBe(true);
+    });
+  });
+});
 
 describe('SettingsSanitizer', () => {
   describe('sanitize', () => {

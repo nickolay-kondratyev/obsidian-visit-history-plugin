@@ -13,6 +13,18 @@ export const DEFAULT_IDLE_TIMEOUT_SECONDS = 180;
  */
 export const MIN_IDLE_TIMEOUT_SECONDS = 5;
 
+/**
+ * Single source of truth for the idle-timeout validity rule. Consumed by BOTH
+ * the load boundary (SettingsSanitizer) and the settings tab (declarative
+ * validate + the pre-1.13 text-field reject) so the rule can never drift.
+ */
+export class IdleTimeoutSeconds {
+  /** Whether a candidate idle-timeout is a whole number at or above the minimum. */
+  static isValid(seconds: number): boolean {
+    return Number.isInteger(seconds) && seconds >= MIN_IDLE_TIMEOUT_SECONDS;
+  }
+}
+
 // Persisted via loadData()/saveData() in main.ts; edited in
 // src/settingsTab/VisitHistorySettingTab.ts (idle timeout) and the heatmap
 // view's config panel (heatmap — persisted through HeatmapConfigStore).
@@ -38,9 +50,8 @@ export class SettingsSanitizer {
   }
 
   private static sanitizeIdleTimeoutSeconds(value: unknown): number {
-    const isValid = typeof value === 'number'
-      && Number.isInteger(value)
-      && value >= MIN_IDLE_TIMEOUT_SECONDS;
-    return isValid ? value : DEFAULT_IDLE_TIMEOUT_SECONDS;
+    return typeof value === 'number' && IdleTimeoutSeconds.isValid(value)
+      ? value
+      : DEFAULT_IDLE_TIMEOUT_SECONDS;
   }
 }

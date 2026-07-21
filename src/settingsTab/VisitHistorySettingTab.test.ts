@@ -25,6 +25,35 @@ function buildTab(): VisitHistorySettingTab {
   );
 }
 
+/** A plugin fake that records how many times saveSettings() ran. */
+interface SpyPlugin {
+  settings: { idleTimeoutSeconds: number };
+  saveCount: number;
+  saveSettings: () => Promise<void>;
+}
+
+/**
+ * setControlValue persists onto the real plugin object, so it needs a plugin
+ * with a live settings bag and a recordable save (unlike the hollow buildTab).
+ */
+function buildTabWithSpyPlugin(): { tab: VisitHistorySettingTab; plugin: SpyPlugin } {
+  const plugin: SpyPlugin = {
+    settings: { idleTimeoutSeconds: DEFAULT_IDLE_TIMEOUT_SECONDS },
+    saveCount: 0,
+    saveSettings(): Promise<void> {
+      this.saveCount += 1;
+      return Promise.resolve();
+    },
+  };
+  const tab = new VisitHistorySettingTab(
+    {} as unknown as App,
+    plugin as unknown as VisitHistoryPlugin,
+    {} as unknown as DocIdBackfillService,
+    {} as unknown as UserNotifier,
+  );
+  return { tab, plugin };
+}
+
 function idleTimeoutControl(): SettingNumberControl {
   const definition = buildTab().getSettingDefinitions()[0] as SettingDefinitionControl;
   return definition.control as SettingNumberControl;
@@ -35,29 +64,6 @@ function backfillGroup(): SettingDefinitionGroup {
 }
 
 describe('VisitHistorySettingTab', () => {
-  describe('isValidIdleTimeoutSeconds', () => {
-    it('should reject a value below the minimum', () => {
-      // GIVEN a value one below the minimum
-      // WHEN validating
-      // THEN it is rejected
-      expect(VisitHistorySettingTab.isValidIdleTimeoutSeconds(MIN_IDLE_TIMEOUT_SECONDS - 1)).toBe(false);
-    });
-
-    it('should reject a non-integer value', () => {
-      // GIVEN a fractional value above the minimum
-      // WHEN validating
-      // THEN it is rejected (only whole seconds are accepted)
-      expect(VisitHistorySettingTab.isValidIdleTimeoutSeconds(MIN_IDLE_TIMEOUT_SECONDS + 0.5)).toBe(false);
-    });
-
-    it('should accept the minimum integer', () => {
-      // GIVEN exactly the minimum
-      // WHEN validating
-      // THEN it is accepted
-      expect(VisitHistorySettingTab.isValidIdleTimeoutSeconds(MIN_IDLE_TIMEOUT_SECONDS)).toBe(true);
-    });
-  });
-
   describe('getSettingDefinitions', () => {
     it('should name the idle-timeout setting for search and rendering', () => {
       // GIVEN the declarative definitions
@@ -129,6 +135,26 @@ describe('VisitHistorySettingTab', () => {
       // THEN it uses render (no declarative button control exists)
       const item = backfillGroup().items?.[0];
       expect(item !== undefined && 'render' in item).toBe(true);
+    });
+  });
+
+  describe('setControlValue', () => {
+    it('should write the value into the plugin settings', async () => {
+      // GIVEN a tab over a plugin with recordable save
+      const { tab, plugin } = buildTabWithSpyPlugin();
+      // WHEN a control value is set
+      await tab.setControlValue('idleTimeoutSeconds', 42);
+      // THEN it is persisted onto settings under the key
+      expect(plugin.settings.idleTimeoutSeconds).toBe(42);
+    });
+
+    it('should trigger a save', async () => {
+      // GIVEN a tab over a plugin with recordable save
+      const { tab, plugin } = buildTabWithSpyPlugin();
+      // WHEN a control value is set
+      await tab.setControlValue('idleTimeoutSeconds', 42);
+      // THEN the plugin's save path runs exactly once
+      expect(plugin.saveCount).toBe(1);
     });
   });
 });
