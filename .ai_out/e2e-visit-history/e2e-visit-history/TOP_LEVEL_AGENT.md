@@ -13,8 +13,8 @@ Add real-Obsidian Playwright e2e setup + core e2e tests for visit-history record
 - [x] DETAILED_PLAN_REVIEW (PLAN_REVIEWER) — APPROVE-WITH-MINOR-INLINE-FIXES (0 Critical, 1 Major fixed inline). Settings-modal Q: planner default sound.
 - [x] PLAN_ITERATION — SKIPPED (reviewer made minor inline fixes; converged).
 - [x] IMPLEMENTATION — M1 gate PASS (real headless Obsidian 1.12.7 boots + CDP + plugin enables + writes .vh_v3). 5 specs PASS (5 passed 17.1s). npm test green (386). lint 0. No plugin runtime changes. 5 follow-up tickets in _tickets/.
-- [ ] IMPLEMENTATION_REVIEW
-- [ ] IMPLEMENTATION_ITERATION
+- [x] IMPLEMENTATION_REVIEW — APPROVE-WITH-MINOR (0 Crit, 0 Major, 5 optional minors). Reviewer re-ran: 386 unit + 5 e2e PASS; not hollow; no src/ changes.
+- [~] IMPLEMENTATION_ITERATION — applying worthwhile minors (DRY specs, run-dir cleanup, drop needless regex flag, S1 bare-sleep).
 - [ ] PARETO_COMPLEXITY_ANALYSIS
 
 ## Key decisions
