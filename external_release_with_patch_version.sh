@@ -2,7 +2,8 @@
 # __enable_bash_strict_mode__
 
 main() {
-  scripts/release.sh patch 
+  scripts/release.sh patch
+  return
 }
 
 main "${@}"

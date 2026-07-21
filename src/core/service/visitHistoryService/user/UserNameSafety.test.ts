@@ -8,6 +8,15 @@ describe('UserNameSafety', () => {
       'a',
       'john.doe-2',
       'a'.repeat(200),
+      // Single-char non-dot names are valid (boundary rule only forbids dots).
+      '_',
+      '-',
+      '0',
+      // Interior dots are fine; only leading/trailing dots are forbidden.
+      'a.b',
+      // Dash is NOT a boundary-forbidden char (only dot is).
+      '-lead',
+      'lead-',
     ])('should accept %j', (name) => {
       expect(UserNameSafety.isValidUserName(name)).toBe(true);
     });
@@ -18,6 +27,8 @@ describe('UserNameSafety', () => {
       ['space', 'jo hn'],
       ['leading dot', '.john'],
       ['trailing dot', 'john.'],
+      ['single dot', '.'],
+      ['double dot', '..'],
       ['path separator', 'jo/hn'],
       ['backslash', 'jo\\hn'],
       ['overlong (201 chars)', 'a'.repeat(201)],

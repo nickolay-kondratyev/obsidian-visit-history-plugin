@@ -49,7 +49,7 @@ export class FocusTracker {
    * to another doc or an untracked view (e.g. a PDF)".
    */
   private lastFocusEvent: FocusEvent | null = null;
-  private listeners: FocusListener[] = [];
+  private readonly listeners: FocusListener[] = [];
 
   // Serializes event handling: listener handlers await file IO, so without
   // chaining, a second rapid leaf-change could interleave at those awaits and

@@ -60,6 +60,14 @@ export class PluginFactory {
   private readonly vhV3DurationStore: VhV3DurationStore;
   /** V3 duration state machine; undefined until a user name is pinned. */
   private focusDurationTracker?: FocusDurationTracker;
+  /**
+   * Held for explicit ownership only. The monitor self-registers ALL its DOM
+   * listeners via plugin.registerDomEvent / workspace events in its ctor (kept
+   * alive by the plugin's Obsidian lifecycle, not by this reference), so it
+   * needs no method calls after construction — but discarding the `new` result
+   * reads as a useless instantiation. Undefined until a user name is pinned.
+   */
+  private windowActivityMonitor?: WindowActivityMonitor;
 
   constructor(plugin: VisitHistoryPlugin) {
     const app: App = plugin.app;
@@ -127,7 +135,7 @@ export class PluginFactory {
       () => this.plugin.settings.idleTimeoutSeconds * 1000,
       mainWindow,
     );
-    new WindowActivityMonitor(this.plugin, this.focusDurationTracker, mainWindow, mainDocument);
+    this.windowActivityMonitor = new WindowActivityMonitor(this.plugin, this.focusDurationTracker, mainWindow, mainDocument);
     const durationListener = new VhV3FocusDurationListener(this.docIdService, this.focusDurationTracker);
     this.focusTracker.registerListener(durationListener);
     // Replay: this listener registers AFTER workspace-layout restore (and

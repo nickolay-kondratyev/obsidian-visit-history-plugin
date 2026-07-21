@@ -172,7 +172,11 @@ export function TreemapViz({
       .tile(treemapSquarify)
       .size([w, h])
       .paddingOuter(8)
-      .paddingTop(d => (d.depth === 0 ? 0 : d.depth === 1 ? 20 : 16))
+      .paddingTop(d => {
+        if (d.depth === 0) return 0;
+        if (d.depth === 1) return 20;
+        return 16;
+      })
       .paddingInner(2)
       .round(true)(root);
 
@@ -329,6 +333,7 @@ export function TreemapViz({
         <div className="viz-empty">
           <div className="viz-empty-msg">No files match the current filters</div>
           <button
+            type="button"
             className="header-btn"
             onClick={onClearFilters}
             title="Remove all filter terms"

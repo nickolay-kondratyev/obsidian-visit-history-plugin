@@ -80,7 +80,10 @@ export function fmtBytes(b: number): string {
 export function fmtDate(ts: number | null | undefined): string | null {
   if (ts == null) return null;
   const d = Math.round((Date.now() - ts) / MS_PER_DAY);
-  const rel = d === 0 ? 'today' : d === 1 ? 'yesterday' : `${d}d ago`;
+  let rel: string;
+  if (d === 0) rel = 'today';
+  else if (d === 1) rel = 'yesterday';
+  else rel = `${d}d ago`;
   return `${new Date(ts).toISOString().slice(0, 10)} (${rel})`;
 }
 

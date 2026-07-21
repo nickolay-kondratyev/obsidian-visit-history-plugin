@@ -27,13 +27,13 @@ DEFAULT_BRANCH="master"
 
 die() { echo "release.sh: $*" >&2; exit 1; }
 
-[ "$#" -eq 1 ] || die "usage: scripts/release.sh <patch|minor|major|x.y.z>"
+[[ "$#" -eq 1 ]] || die "usage: scripts/release.sh <patch|minor|major|x.y.z>"
 BUMP="$1"
 
 command -v jq >/dev/null 2>&1 || die "jq is required"
 
 # Preconditions: clean tree.
-[ -z "$(git status --porcelain)" ] || die "working tree not clean — commit or stash first"
+[[ -z "$(git status --porcelain)" ]] || die "working tree not clean — commit or stash first"
 
 # Gate on a green build + tests BEFORE tagging, so a broken build never reaches
 # the remote as a pushed tag (undoing a pushed tag needs a manual delete).
@@ -43,7 +43,7 @@ npm test || die "tests failed — not tagging"
 
 # Warn (do not block) if not on the default branch.
 CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
-if [ "$CURRENT_BRANCH" != "$DEFAULT_BRANCH" ]; then
+if [[ "$CURRENT_BRANCH" != "$DEFAULT_BRANCH" ]]; then
   echo "release.sh: WARNING — on branch '$CURRENT_BRANCH', not '$DEFAULT_BRANCH'." >&2
 fi
 
@@ -52,7 +52,7 @@ CURRENT_VERSION="$(jq -r .version package.json)"
 # If an explicit x.y.z equal to the current version is requested, the files are
 # already at target (e.g. the very first release): tag the current commit
 # instead of running `npm version` (which would fail with "Version not changed").
-if [[ "$BUMP" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] && [ "$BUMP" = "$CURRENT_VERSION" ]; then
+if [[ "$BUMP" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] && [[ "$BUMP" = "$CURRENT_VERSION" ]]; then
   echo "release.sh: package.json already at $CURRENT_VERSION — tagging current commit."
   NEW_VERSION="$CURRENT_VERSION"
 else
@@ -66,7 +66,7 @@ fi
 # Guard: manifest.json and package.json versions MUST agree (version-bump.mjs
 # syncs them; a mismatch means the bump machinery is broken).
 MANIFEST_VERSION="$(jq -r .version manifest.json)"
-[ "$MANIFEST_VERSION" = "$NEW_VERSION" ] || \
+[[ "$MANIFEST_VERSION" = "$NEW_VERSION" ]] || \
   die "manifest.json version ($MANIFEST_VERSION) != package.json version ($NEW_VERSION)"
 
 # Ensure the tag exists locally (npm version creates it on the bump path; on the

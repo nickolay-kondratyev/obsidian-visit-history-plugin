@@ -16,7 +16,7 @@ REPO="nickolay-kondratyev/obsidian-visit-history-plugin"
 
 die() { echo "verify-release.sh: $*" >&2; exit 1; }
 
-[ "$#" -eq 1 ] || die "usage: scripts/verify-release.sh <version>"
+[[ "$#" -eq 1 ]] || die "usage: scripts/verify-release.sh <version>"
 VERSION="$1"
 
 command -v gh >/dev/null 2>&1 || die "gh (GitHub CLI) is required"
@@ -38,7 +38,7 @@ echo
 echo "verify-release.sh: verifying build-provenance attestation for SHA256SUMS..."
 # Attest SHA256SUMS itself BEFORE trusting it, so the checksums that vouch for
 # manifest.json / styles.css are rooted in provenance, not an unauthenticated file.
-[ -f SHA256SUMS ] || die "SHA256SUMS not found in release assets"
+[[ -f SHA256SUMS ]] || die "SHA256SUMS not found in release assets"
 gh attestation verify SHA256SUMS --repo "$REPO"
 
 echo
