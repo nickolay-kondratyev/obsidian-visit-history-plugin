@@ -34,6 +34,9 @@ rectangle nested inside its folders.
   term.
 - **`_archive` folders are hidden** by default (open one from its folder menu to
   look inside).
+- Heatmap can also be opened from the `Files` view for specific folder:
+
+![sample-open-heatmap-for-folder.png](images/sample-open-heatmap-for-folder.png)
 
 ### No visit history yet? The heatmap still works
 
@@ -59,7 +62,8 @@ file per document, organised per user and per device. Nothing is uploaded.
 - **Per device** avoids sync conflicts between your machines.
 
 Being plain files, it syncs wherever your vault syncs, and you can back it up or
-delete it like any note.
+delete it like any note. Curious about the exact layout and line format? See
+[The files it writes](#the-files-it-writes-and-their-format) below.
 
 ## Installing & enabling
 
@@ -98,6 +102,52 @@ what the history enables:*
 - **Nearby search** — find the notes you visited *around the same time* as a
   given note, surfacing related work you touched together even when it isn't
   linked.
+
+## The files it writes (and their format)
+
+Your history is just **plain text** — nothing proprietary, nothing locked away.
+You can open it, read it, sync it, back it up, or delete it like any other note.
+Here's exactly what gets written and where, so there are no surprises.
+
+Everything lives under `__visit_history/` at the root of your vault, organised by
+**user** and then by **device**:
+
+```
+__visit_history/
+  user/
+    <your-name>/                       # keeps people who share a vault separate
+      v3/
+        README__generated__vh_v3_format.md   # a copy of this format, written by the plugin
+        focus_duration_per_device/
+          <device-name>/               # one folder per machine — no sync conflicts
+            <doc-id>.vh_v3             # one file per document you've visited
+```
+
+- The **file name is the document's permanent id** — the same id stored in the
+  note's frontmatter or the canvas's metadata. That's why your history follows a
+  file through renames and moves.
+- **One file per document, per device.** Each device writes only its own folder,
+  so two synced machines never fight over the same file.
+
+Inside each `.vh_v3` file, **every line is one completed focus session** — the
+moment it started plus how long you stayed, in milliseconds:
+
+```
+<ISO 8601 UTC start time> D:<milliseconds in focus>
+```
+
+For example, a 5.6-second visit that began on 9 July 2026 looks like:
+
+```
+2026-07-09T22:02:15.745Z D:5600
+```
+
+That's the whole format. The plugin also drops a `README__generated__vh_v3_format.md`
+next to your data describing the same thing, so it's documented right where it lives.
+
+> **Note:** `__visit_history/` is intentionally **not** a hidden (dot-prefixed)
+> folder — Obsidian Sync skips dot-folders, and your history should sync with the
+> rest of your vault. The plugin excludes it from its own tracking and heatmap.
 
 ## Appendix: fixing file times after a `git` clone (`git-restore-mtime`)
 
