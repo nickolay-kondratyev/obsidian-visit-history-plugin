@@ -9,6 +9,7 @@ import { type ChildProcess, spawn } from 'node:child_process';
 import { cpSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join, sep } from 'node:path';
 import {
+  DEV_OVERRIDES_FILE_JSON_PATH_ENV_VAR,
   DEVICE_NAME,
   LS_KEY_DEVICE_NAME,
   LS_KEY_USER_NAME,
@@ -24,9 +25,21 @@ const E2E_RUN_ROOT = join(REPO_ROOT, '.tmp/e2e');
 
 const DEVTOOLS_WS_RE = /DevTools listening on (ws:\/\/\S+)/;
 
+/**
+ * DEV config overrides written to a JSON file the spawned Obsidian reads via
+ * the `__VISIT_HISTORY_DEV_OVERRIDES_FILE_JSON_PATH__` env var. Unlike
+ * `idleTimeoutSeconds` in data.json (clamped to the plugin's min-5 floor), an
+ * override here is applied verbatim — so a sub-floor value (e.g. 1) is honored.
+ */
+export interface DevConfigOverrides {
+  readonly idleTimeoutSeconds?: number;
+}
+
 export interface LaunchOptions {
   /** Written to the plugin's data.json before enable. Floor enforced by the plugin is 5. */
   readonly idleTimeoutSeconds: number;
+  /** Optional dev overrides file (bypasses hard-limited config for e2e). */
+  readonly devConfigOverrides?: DevConfigOverrides;
 }
 
 export class ObsidianHarness {
@@ -70,6 +83,16 @@ export class ObsidianHarness {
       }),
     );
 
+    // Dev overrides: write the file into the run dir and hand its path to the
+    // spawned process via env. Absent → childEnv is a plain copy of parent env,
+    // so the launch behaves exactly as before (mechanism inert).
+    const childEnv: NodeJS.ProcessEnv = { ...process.env };
+    if (opts.devConfigOverrides) {
+      const overridesPath = join(runDir, 'dev-config-overrides.json');
+      writeFileSync(overridesPath, JSON.stringify(opts.devConfigOverrides));
+      childEnv[DEV_OVERRIDES_FILE_JSON_PATH_ENV_VAR] = overridesPath;
+    }
+
     const extraArgs = (process.env.OBSIDIAN_E2E_EXTRA_ARGS ?? '').split(/\s+/).filter(Boolean);
     const args = [
       '--no-sandbox', // Electron's SUID sandbox is unavailable in most CI containers.
@@ -80,7 +103,7 @@ export class ObsidianHarness {
     // detached → new process group leader, so close() can SIGKILL the WHOLE Electron tree
     // (main + Chromium helpers) at once; killing only the main pid leaves helpers holding
     // the userdata dir open, defeating run-dir cleanup.
-    const child = spawn(obsidianPath, args, { stdio: ['ignore', 'pipe', 'pipe'], detached: true });
+    const child = spawn(obsidianPath, args, { stdio: ['ignore', 'pipe', 'pipe'], detached: true, env: childEnv });
 
     let browser: Browser | undefined;
     try {

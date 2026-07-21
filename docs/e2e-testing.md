@@ -2,8 +2,8 @@
 
 The `e2e/` suite drives a **real headless Obsidian (Electron)** and asserts on the
 on-disk `.vh_v3` files the plugin actually writes — never on plugin internals. It proves
-Visit-History V3 recording across five scenarios: focus switch, unload flush, opening
-Settings, canvas focus, and idle timeout.
+Visit-History V3 recording across several scenarios: focus switch, unload flush, opening
+Settings, canvas focus, idle timeout, and a sub-floor idle timeout via a dev overrides file.
 
 ## Run it
 
@@ -41,6 +41,25 @@ window at a time).
 `obsidian` is a types-only package, so the node-side e2e code never imports it —
 runtime constants (plugin id, VH dir, localStorage keys, seeded ids, session regex) are
 duplicated in `e2e/constants.ts` with a sync-pointer comment.
+
+## Dev config overrides (bypass hard-limited config)
+
+Some config is hard-limited for safety — e.g. `idleTimeoutSeconds` is clamped to a min-5 s
+floor at the settings boundary, so `data.json` cannot drive a fast idle close. To exercise
+those paths, a test passes `devConfigOverrides` to the harness:
+
+```ts
+const getHarness = useHarness(/* settings idle */ 180, { idleTimeoutSeconds: 1 });
+```
+
+The harness writes those overrides to `<run-dir>/dev-config-overrides.json` and sets the
+env var `__VISIT_HISTORY_DEV_OVERRIDES_FILE_JSON_PATH__` to that path on the spawned
+Obsidian process. The plugin's `ConfigProvider` reads the file once at load and lets an
+override win over the persisted setting **without re-clamping** — so a sub-floor value
+(e.g. 1 s) is honored. The mechanism is inert in production: normal users never set the
+env var, so `ConfigProvider` just returns live settings values. `idleTimeoutOverride.e2e.ts`
+uses this to close a session in ~1 s, well under the 5 s floor. Env-var name lives in
+`src/core/config/DevOverridesFileSource.ts` (duplicated in `e2e/constants.ts`).
 
 ## Overridable env vars
 
