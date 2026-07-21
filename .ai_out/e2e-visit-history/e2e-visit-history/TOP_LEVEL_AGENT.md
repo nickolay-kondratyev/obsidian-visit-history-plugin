@@ -15,8 +15,12 @@ Add real-Obsidian Playwright e2e setup + core e2e tests for visit-history record
 - [x] IMPLEMENTATION — M1 gate PASS (real headless Obsidian 1.12.7 boots + CDP + plugin enables + writes .vh_v3). 5 specs PASS (5 passed 17.1s). npm test green (386). lint 0. No plugin runtime changes. 5 follow-up tickets in _tickets/.
 - [x] IMPLEMENTATION_REVIEW — APPROVE-WITH-MINOR (0 Crit, 0 Major, 5 optional minors). Reviewer re-ran: 386 unit + 5 e2e PASS; not hollow; no src/ changes.
 - [x] IMPLEMENTATION_ITERATION — minors applied (run-dir cleanup via process-group kill, DRY into harnessFixture.ts, drop `m` flag, S1 sleep kept+justified). 5 e2e + 386 unit + lint green (2 consecutive e2e runs). Converged.
-- [ ] PARETO_COMPLEXITY_ANALYSIS
-- [ ] PARETO_COMPLEXITY_ANALYSIS
+- [x] PARETO_COMPLEXITY_ANALYSIS — JUSTIFIED-WITH-NITS, ship as-is. Real-Obsidian e2e is the right 80/20 (proves what mocks can't); ~660 LOC + ~94 shell; no runtime/seam changes.
+
+## FLOW COMPLETE
+All phases done. Branch `e2e-visit-history`. Suites green (5 e2e + 386 unit + lint 0).
+Follow-up tickets in `_tickets/`: e2e-ci-workflow, e2e-dockerfile-compose, e2e-grace-timer-expiry-spec, e2e-optional-flush-test-seam, vh-settings-open-does-not-end-session-product-question.
+No CHANGELOG.md in repo → commit history is the record (not fabricating one).
 
 ## Key decisions
 - Deliverable = portable scripts + e2e harness + tests (blueprint pattern). No hard Dockerfile/CI (ticket).
