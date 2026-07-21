@@ -40,8 +40,8 @@ core/init/PluginFactory ──── DI container: constructs & wires everything
    │                         heatmap (LastVisitCache, LRU keyed by doc id)
    │                         DocIdService (obsidian-id-lib): ensure
    │                         per-document id on focus — generator/stores/
-   │                         service/lock live in submodules/obsidian-id-lib
-   │                         (git submodule, bundled via file: dep)
+   │                         service/lock live in the obsidian-id-lib
+   │                         npm package (its own repo)
    │                         DocIdBackfillService: vault-wide doc id backfill
    │                         migration/: VhTopDirRenameMigrationService
    │                         (.visit_history → __visit_history; runs FIRST)
@@ -137,9 +137,8 @@ VaultTreemapView.refresh
 
 Every focused document gets a persistent id: `docid_{24 base36 chars}_e`
 (lowercase; 36^24 ≈ 2.2e37 keeps the random space above UUID v4's 2^122).
-The id machinery lives in the `obsidian-id-lib` git submodule
-(`submodules/obsidian-id-lib`, bundled from raw TS via the `file:`
-dependency) so a second plugin can share it; the plugin wires it in
+The id machinery lives in the `obsidian-id-lib` npm package (its own git
+repo) so a second plugin can share it; the plugin wires it in
 `PluginFactory` via `DocIdServices.createDefault(app.vault)`.
 
 ```
