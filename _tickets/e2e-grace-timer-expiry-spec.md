@@ -22,3 +22,5 @@ an empty/untracked leaf, or blur the hosting window) then waits out the 10s grac
 prove: (a) the grace-expiry close (stamped at the original unfocus moment), and (b) a
 same-doc refocus WITHIN the grace cancels the close and continues the session. Low
 priority; the 5 required scenarios stand as-is.
+
+I am thinking for this one we will want to have an override of settings, like test-override.json file that contains the override, and we can pass this file through an environment variable. If this environment variable is set the plugin will read the overrides and use those overrides. With that said we will want to well abstract this interaction so its focused and usages of this file are not spread out. The usage of this override should be in one place. Behind something like `SettingReader`. 
