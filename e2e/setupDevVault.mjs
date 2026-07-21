@@ -14,12 +14,6 @@ function log(msg) {
   process.stderr.write(`[setup:dev-vault] ${msg}\n`);
 }
 
-if (!existsSync(join(REPO_ROOT, 'submodules/obsidian-id-lib/src/index.ts'))) {
-  throw new Error(
-    'submodules/obsidian-id-lib is missing — run `git submodule update --init` before building.',
-  );
-}
-
 log('building plugin (npm run build)…');
 execFileSync('npm', ['run', 'build'], { cwd: REPO_ROOT, stdio: 'inherit' });
 
