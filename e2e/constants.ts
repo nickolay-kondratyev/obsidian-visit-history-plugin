@@ -9,8 +9,14 @@
 //                                 .../user/VhUserPaths.ts
 //   - localStorage keys        → UserNameProvider.ts / DeviceNameProvider.ts
 //   - SESSION_LINE_RE          → VhV3SessionLineParser.ts
+//   - DEV_OVERRIDES_* env var  → src/core/config/DevOverridesFileSource.ts
 
 export const PLUGIN_ID = 'visit-history';
+
+// Env var the plugin reads to load a dev config overrides JSON file, which can
+// bypass hard-limited config (e.g. the min-5 s idle-timeout floor) for e2e.
+// Keep in sync with DEV_OVERRIDES_FILE_JSON_PATH_ENV_VAR in the src source above.
+export const DEV_OVERRIDES_FILE_JSON_PATH_ENV_VAR = '__VISIT_HISTORY_DEV_OVERRIDES_FILE_JSON_PATH__';
 
 export const VH_TOP_DIR = '__visit_history';
 

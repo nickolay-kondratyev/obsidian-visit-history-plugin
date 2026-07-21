@@ -48,6 +48,12 @@ src/
   Constants.ts             # Tracked view types, file extensions, top-level dir names
 
   core/
+    config/
+      ConfigProvider.ts    # EFFECTIVE runtime config seam (getIdleTimeoutMs) —
+                           # dev override wins over the live setting, NO floor re-clamp
+      DevConfigOverridesReader.ts  # parses the dev overrides JSON once (empty on any failure)
+      DevOverridesFileSource.ts    # env-gated desktop-only fs read of the overrides file
+                           # (__VISIT_HISTORY_DEV_OVERRIDES_FILE_JSON_PATH__); inert in prod
     init/
       PluginFactory.ts     # DI container — ctor wires name-independent deps;
                            # activateUserScopedRecording(userName) wires recording post-pin
@@ -96,7 +102,10 @@ src/
                             # time/ (StampLineParser — strict ISO stamp parsing),
                             # async/ (InFlightDropGuard — per-key dedup, DROP semantics),
                             # env/ (DeviceNameProvider, DesktopOsInfo — typed
-                            # mobile-safe desktop-only Node 'os' accessor),
+                            # mobile-safe desktop-only Node 'os' accessor;
+                            # DesktopNodeModule — shared Platform-guarded typed
+                            # require of desktop-only Node builtins, used by
+                            # DesktopOsInfo + DevOverridesFileSource),
                             # userComm/ (UserNotifier)
 
   settingsTab/              # VisitHistorySettingTab (Settings → Visit History):
@@ -160,6 +169,7 @@ src/
 - **LRU caching** (instance fields, never module-level): `LastVisitCache` holds last-visit stamps keyed by doc id (10k entries), shared by `VisitHistoryServiceV3` (read; caches misses incl. null) and `VhV3DurationRecorder` (write-through after each successful append; max-merge so a racing cache-miss read can't clobber it). Heatmap reads resolve ids via the READ-ONLY `DocIdService.getDocId` — bulk read paths must never write into user files.
 - **Malformed files never throw**: session parsing (`VhV3SessionLineParser` / `StampLineParser` / `VhV3DurationStore`) skips bad lines and `CanvasDocIdStore` returns `null` for unparseable content, so one bad file can't break aggregation or focus handling. Empty/whitespace-only canvas content is NOT malformed — it's a brand-new canvas, treated as `{}`, and gets an id on first focus.
 - **Console logging**: only `console.error` for real failures (obsidianmd no-console rule); no debug logs.
+- **Config seam (`ConfigProvider`)**: effective runtime config lives behind one interface — the idle closure in `PluginFactory` reads `configProvider.getIdleTimeoutMs()`, never `settings` directly. A DEV overrides JSON file (named by env var `__VISIT_HISTORY_DEV_OVERRIDES_FILE_JSON_PATH__`, set ONLY by the e2e harness, read once via the desktop-guarded `DevOverridesFileSource`) can override values — bypassing hard limits like the min-5 s idle floor for e2e (`idleTimeoutOverride.e2e.ts`) — WITHOUT touching persisted settings/data.json. Inert in prod (no env var → live settings, byte-for-byte unchanged); mobile-safe (no override); only `idleTimeoutSeconds` is consumed today.
 
 ## Code rules
 

@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-07-21T23:35:10Z
 id: nid_xpq8zb8euhzd26bxbp6150dgt_e
 title: "ability to override config for e2e"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-07-21T23:09:09Z
-status_updated_iso: 2026-07-21T23:09:09Z
+status_updated_iso: 2026-07-21T23:35:10Z
 type: task
 priority: 1
 assignee: nickolaykondratyev

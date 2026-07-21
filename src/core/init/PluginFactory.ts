@@ -25,6 +25,9 @@ import { HeatmapConfigStore, PluginHeatmapConfigStore } from '../../viewModel/He
 import { ContentTermMatcher, ContentTermMatcherDefault } from '../../viewModel/ContentTermMatcher';
 import { UserNameProvider, UserNameProviderDefault } from '../service/visitHistoryService/user/UserNameProvider';
 import { ModalUserNamePrompt } from '../service/visitHistoryService/user/impl/ModalUserNamePrompt';
+import { ConfigProvider, ConfigProviderDefault } from '../config/ConfigProvider';
+import { DevConfigOverridesReader } from '../config/DevConfigOverridesReader';
+import { DevOverridesFileSourceDefault } from '../config/DevOverridesFileSource';
 
 // ── PluginFactory ─────────────────────────────────────────────────────────────
 // Constructs and wires all plugin dependencies.
@@ -49,6 +52,8 @@ export class PluginFactory {
   readonly heatmapConfigStore: HeatmapConfigStore;
   /** Resolves the heatmap's CONTENT filter terms to matching file paths. */
   readonly contentTermMatcher: ContentTermMatcher;
+  /** Effective runtime config (settings + inert-in-prod dev overrides). */
+  readonly configProvider: ConfigProvider;
 
   // Held for activateUserScopedRecording (post-pin wiring).
   private readonly plugin: VisitHistoryPlugin;
@@ -75,6 +80,11 @@ export class PluginFactory {
 
     this.userNotifier = new UserNotifierDefault(plugin);
     this.heatmapConfigStore = new PluginHeatmapConfigStore(plugin);
+
+    // Effective config seam. Dev overrides are read ONCE here (env-gated file);
+    // absent in production, so the provider just returns live settings values.
+    const devOverrides = new DevConfigOverridesReader(new DevOverridesFileSourceDefault()).overrides;
+    this.configProvider = new ConfigProviderDefault(plugin, devOverrides);
 
     const noteFileUtil = new NoteFileUtilDefault(app);
     this.hiddenFileUtil = new HiddenFileUtilDefault(app);
@@ -131,8 +141,9 @@ export class PluginFactory {
 
     this.focusDurationTracker = new FocusDurationTracker(
       new VhV3DurationRecorder(this.vhV3DurationStore, this.lastVisitCache, this.deviceNameProvider, userName),
-      // Live read: a settings-tab change applies without plugin reload.
-      () => this.plugin.settings.idleTimeoutSeconds * 1000,
+      // Effective idle timeout via the config seam: a dev override wins (e2e),
+      // else the live sanitized setting (a settings-tab change applies without reload).
+      () => this.configProvider.getIdleTimeoutMs(),
       mainWindow,
     );
     this.windowActivityMonitor = new WindowActivityMonitor(this.plugin, this.focusDurationTracker, mainWindow, mainDocument);
