@@ -48,7 +48,7 @@ export function Header({
     <div id="header">
       {breadcrumb.length > 0 && onBack && (
         <div className="breadcrumb">
-          <button className="breadcrumb-back" onClick={onBack} title="Go back up one level">
+          <button type="button" className="breadcrumb-back" onClick={onBack} title="Go back up one level">
             ← back
           </button>
           <span className="breadcrumb-path" title={`Viewing /${breadcrumb.join('/')}`}>
@@ -64,6 +64,7 @@ export function Header({
       />
       {colorMode === 'heatmap' && (
         <button
+          type="button"
           className={'header-btn' + (openPanel === 'field' ? ' active' : '')}
           onClick={() => onPanelToggle('field')}
           title="Change timestamp field"
@@ -74,6 +75,7 @@ export function Header({
       )}
       <div className="spacer" />
       <button
+        type="button"
         className="hdr-icon-btn"
         onClick={onResetZoom}
         title="Reset zoom and pan"
@@ -82,6 +84,7 @@ export function Header({
         <ZoomResetIcon />
       </button>
       <button
+        type="button"
         className={'hdr-icon-btn' + (openPanel === 'info' ? ' active' : '')}
         onClick={() => onPanelToggle('info')}
         title="View info"
@@ -91,6 +94,7 @@ export function Header({
         <InfoIcon />
       </button>
       <button
+        type="button"
         className={'hdr-icon-btn' + (openPanel === 'config' ? ' active' : '')}
         onClick={() => onPanelToggle('config')}
         title="Configure heatmap"

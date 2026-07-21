@@ -25,6 +25,7 @@ export function FilterGroup({ terms, filterOpen, onToggleFilter, onRemoveTerm }:
   return (
     <div className="filter-group">
       <button
+        type="button"
         className={'hdr-icon-btn' + (filterOpen ? ' active' : '')}
         onClick={onToggleFilter}
         title="Filter files"
@@ -46,6 +47,7 @@ export function FilterGroup({ terms, filterOpen, onToggleFilter, onRemoveTerm }:
               </span>
               <span className="filter-chip-text">{term.text}</span>
               <button
+                type="button"
                 className="filter-chip-x"
                 onClick={() => onRemoveTerm(term)}
                 aria-label={`Remove filter: ${term.text}`}

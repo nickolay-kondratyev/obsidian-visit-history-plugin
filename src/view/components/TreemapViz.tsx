@@ -329,6 +329,7 @@ export function TreemapViz({
         <div className="viz-empty">
           <div className="viz-empty-msg">No files match the current filters</div>
           <button
+            type="button"
             className="header-btn"
             onClick={onClearFilters}
             title="Remove all filter terms"
