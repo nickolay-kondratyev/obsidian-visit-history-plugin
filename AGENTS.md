@@ -14,7 +14,10 @@ Records visit history of notes, canvases, and Excalidraw drawings. Each complete
 npm install        # install dependencies
 npm run dev        # watch mode
 npm run build      # production build (tsc + esbuild)
-npm run lint       # ESLint (obsidianmd rules) — kept at ZERO errors
+npm run lint       # ESLint (eslint-plugin-obsidianmd `recommended`) — kept at ZERO
+                   # errors. This config IS Obsidian's publish-time validation, so
+                   # keep the plugin on the LATEST version to catch publish errors
+                   # locally (new versions add rules; publish uses latest).
 npm test           # vitest unit tests
 npm run test:e2e   # real-Obsidian Playwright e2e (auto-downloads pinned Obsidian,
                    # headless; asserts on-disk .vh_v3 — see docs/e2e-testing.md)

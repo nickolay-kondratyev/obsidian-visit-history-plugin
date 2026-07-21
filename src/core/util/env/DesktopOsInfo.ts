@@ -43,7 +43,7 @@ export class DesktopOsInfo {
     try {
       // System boundary: 'os' is a desktop-only Node/Electron builtin. Assigned
       // to a TYPED const so the member calls are type-checked (no no-unsafe-*).
-      // eslint-disable-next-line import/no-nodejs-modules, @typescript-eslint/no-require-imports, no-undef -- desktop-only Electron builtin; guarded above + try/catch for mobile
+      // eslint-disable-next-line @typescript-eslint/no-require-imports, no-undef -- desktop-only Electron builtin; guarded above + try/catch for mobile
       const os = require("os") as DesktopOsModule;
       return reader(os);
     } catch {
