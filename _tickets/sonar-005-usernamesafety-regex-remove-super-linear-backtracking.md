@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-07-21T00:19:09Z
 id: nid_2y32yckpy1plq9c5i06yq73yw_E
 title: "sonar-005: UserNameSafety regex — remove super-linear backtracking"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-07-20T23:33:47Z
-status_updated_iso: 2026-07-20T23:33:47Z
+status_updated_iso: 2026-07-21T00:19:09Z
 type: chore
 priority: 2
 assignee: CC_WITH-nickolaykondratyev
