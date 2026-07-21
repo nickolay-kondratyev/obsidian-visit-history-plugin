@@ -36,7 +36,19 @@ New dir `src/core/config/`:
 ## Verify
 npm test / npm run build / npm run lint (ZERO) ; e2e typecheck `npx tsc -p e2e/tsconfig.json`. Real e2e run = human/CI.
 
-## Status: DONE
+## Iteration 1 (reviewer APPROVE_WITH_MINOR — DRY finding): DONE
+- Extracted `src/core/util/env/DesktopNodeModule.ts` — static `require<T>(name): T|null`
+  (Platform guard + typed require + try/catch + the SOLE no-require-imports/no-undef disable + WHY).
+- Refactored `DesktopOsInfo` (read via helper, keeps try/catch around reader call) and
+  `DevOverridesFileSource` (fs via helper; dropped duplicated Platform guard + Platform import;
+  process.env stays local with its own no-undef disable). Behavior identical.
+- Added `DesktopNodeModule.test.ts` (mirrors DesktopOsInfo.test.ts Platform-flip style; covers
+  not-desktop→null, not-electron→null, module-available→returns, require-throw→null).
+- AGENTS.md env/ line updated to name DesktopNodeModule.
+- Verify: test 408 pass (43 files), lint 0 err/1 pre-existing warn, build 0, e2e-tsc 0.
+- No commit (TOP_LEVEL owns git).
+
+## Status: DONE (initial) + Iteration 1 DONE
 - All files created/wired as planned. npm test 404 pass (42 files), build exit 0, lint 0 errors
   (1 pre-existing ConfirmModal warning), e2e tsc exit 0.
 - GOTCHA: `obsidianmd/no-nodejs-modules` cannot be eslint-disabled (`no-restricted-disable`),

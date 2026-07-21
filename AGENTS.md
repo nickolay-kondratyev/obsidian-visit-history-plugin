@@ -102,7 +102,10 @@ src/
                             # time/ (StampLineParser — strict ISO stamp parsing),
                             # async/ (InFlightDropGuard — per-key dedup, DROP semantics),
                             # env/ (DeviceNameProvider, DesktopOsInfo — typed
-                            # mobile-safe desktop-only Node 'os' accessor),
+                            # mobile-safe desktop-only Node 'os' accessor;
+                            # DesktopNodeModule — shared Platform-guarded typed
+                            # require of desktop-only Node builtins, used by
+                            # DesktopOsInfo + DevOverridesFileSource),
                             # userComm/ (UserNotifier)
 
   settingsTab/              # VisitHistorySettingTab (Settings → Visit History):

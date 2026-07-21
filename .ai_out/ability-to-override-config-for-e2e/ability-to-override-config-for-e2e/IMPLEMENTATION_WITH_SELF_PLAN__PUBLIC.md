@@ -84,3 +84,47 @@ None — ticket was self-consistent; no hacks required.
 
 ## Not done (owned elsewhere / out of scope)
 - Changelog entry (TOP_LEVEL_AGENT owns it). Ticket left open. No commit made.
+
+---
+
+## Iteration 1 — resolve [minor DRY] reviewer finding
+
+**Finding addressed:** the desktop-guard (`Platform.isDesktop && isDesktopApp`) + typed
+`require(name)` + try/catch + null-fallback + eslint-disable + WHY-comment pattern was
+near-duplicated between `DevOverridesFileSource` and `DesktopOsInfo`. Extracted into ONE
+shared helper so the knowledge (and its eslint-disable justification) lives in a single place.
+
+**What changed**
+- **NEW `src/core/util/env/DesktopNodeModule.ts`** — static `DesktopNodeModule.require<T>(moduleName): T | null`.
+  Owns the sole copy of: the `Platform` guard (both flags), the typed `require(name) as T` at the
+  system boundary, the try/catch → null, and the single
+  `@typescript-eslint/no-require-imports, no-undef` eslint-disable + the WHY comment (why require /
+  why mobile-safe). Returns null on mobile / require-throw; never throws.
+- **NEW `src/core/util/env/DesktopNodeModule.test.ts`** — mirrors `DesktopOsInfo.test.ts`'s Platform
+  boundary handling (mutable-singleton flip + `afterEach` restore; no over-mocking of `require`).
+  Covers: not-desktop → null, desktop-sized-but-not-Electron → null, module available → returns it
+  (real `os` under vitest), require throws on unknown module → null (exercises the try/catch).
+- **`DesktopOsInfo.ts`** — `read<T>` now calls `DesktopNodeModule.require<DesktopOsModule>('os')`;
+  keeps its own try/catch around the READER call only (a member call could still throw). Behavior
+  identical: null on mobile / any failure. Existing `DesktopOsInfo.test.ts` unchanged, still green.
+- **`DevOverridesFileSource.ts`** — `readRawJson()` now reaches `fs` via
+  `DesktopNodeModule.require<DesktopFsModule>('fs')`; dropped its own duplicated Platform guard and
+  `Platform` import. `process.env` access stays local (a distinct Node-global concern, not the
+  require pattern; still guarded by its own try/catch + `no-undef` disable). Observable behavior
+  identical for every existing test (mobile→null, unset→null, unreadable→null+log): on mobile the
+  `process.env` read yields the path but the `fs` require returns null → readRawJson null. Existing
+  `DevOverridesFileSource.test.ts` unchanged, still green.
+- **`AGENTS.md`** — `core/util/env/` line now names `DesktopNodeModule` (shared Platform-guarded
+  typed require, used by `DesktopOsInfo` + `DevOverridesFileSource`). Minimal, one clause.
+
+**Behavior guarantee:** pure boundary refactor. No change to `ConfigProvider` precedence, the e2e
+specs, or any resolution logic. Both consumers still return null/empty on mobile/failure and never throw.
+
+**Verify (all green, redirected to `.tmp/`)**
+- `npm test` → **408 passed (43 files)**, exit 0 (+4 new `DesktopNodeModule` tests; was 404/42).
+- `npm run lint` → **0 errors, 1 warning** (same pre-existing `ConfirmModal setWarning` deprecation).
+- `npm run build` → exit 0.
+- `npx tsc -p e2e/tsconfig.json --noEmit` → exit 0.
+
+**DRY finding: RESOLVED.** The "how to safely require a desktop-only Node builtin" knowledge and its
+lone eslint-disable now live only in `DesktopNodeModule`; both call sites consume it.
