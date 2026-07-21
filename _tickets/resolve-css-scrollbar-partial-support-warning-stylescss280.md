@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-07-21T01:44:36Z
 id: nid_8l9hoabp8elh3qufjxg07atvn_E
 title: "Resolve css-scrollbar partial-support warning (styles.css:280)"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-07-21T01:06:01Z
-status_updated_iso: 2026-07-21T01:06:01Z
+status_updated_iso: 2026-07-21T01:44:36Z
 type: chore
 priority: 3
 assignee: CC_WITH-nickolaykondratyev
@@ -26,3 +27,9 @@ VERIFY: heatmap filter-chips row still scrolls horizontally without a layout-bre
 
 css-scrollbar warning resolved or explicitly documented as accepted with graceful degradation; filter-chips row layout/scroll behavior preserved.
 
+
+## Notes
+
+**2026-07-21T01:44:35Z**
+
+Resolved in commit b567f48. Removed the partially-supported `scrollbar-width: none` from .vault-heatmap-view .filter-chips (styles.css). Obsidian is always Chromium, and the existing `::-webkit-scrollbar { display: none }` rule hides the bar across the full supported range, so the standard property was redundant — its removal clears the css-scrollbar warning with zero behavior change. WHY-NOT documented inline. 42px row + horizontal wheel/drag scroll preserved; lint + build pass.
