@@ -23,6 +23,7 @@ drawings, and visualizes vault activity as a treemap heatmap.
 | [visit-history-format.md](visit-history-format.md) | On-disk VH V3 format, user + device dirs, doc-id keying, legacy-layout move |
 | [heatmap-view.md](heatmap-view.md) | React treemap view: components, state, config |
 | [how-to-publish.md](how-to-publish.md) | Cutting a release + submitting to the community plugin list |
+| [e2e-testing.md](e2e-testing.md) | Real-Obsidian Playwright e2e: recording scenarios, harness, env vars, CI cache |
 
 ## Dev quickstart
 
@@ -32,6 +33,7 @@ npm run dev     # watch mode
 npm test        # vitest unit tests
 npm run lint    # ESLint (obsidianmd rules) — kept at zero errors
 npm run build   # typecheck + production bundle (main.js)
+npm run test:e2e   # real-Obsidian Playwright e2e (see e2e-testing.md)
 ```
 
 Unit tests run against a minimal runtime stand-in for the types-only
