@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-07-21T00:01:29Z
 id: nid_gp11a3df4aeftcoqwjlmf6c2i_E
 title: "sonar-002: React — add explicit button type attribute"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-07-20T23:33:36Z
-status_updated_iso: 2026-07-20T23:33:36Z
+status_updated_iso: 2026-07-21T00:01:29Z
 type: chore
 priority: 2
 assignee: CC_WITH-nickolaykondratyev
