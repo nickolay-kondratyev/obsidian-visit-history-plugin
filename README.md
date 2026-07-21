@@ -67,12 +67,8 @@ delete it like any note. Curious about the exact layout and line format? See
 
 ## Installing & enabling
 
-Once it's in the community plugin store you'll install it from **Settings →
-Community plugins → Browse**. Until then, install manually (copy `main.js`,
-`manifest.json`, `styles.css` into
-`YourVault/.obsidian/plugins/visit-history/`) or via
-[BRAT](https://github.com/TfTHacker/obsidian42-brat), then enable it under
-**Settings → Community plugins**.
+Install it from **Settings → Community plugins → Browse**, search for **Visit
+History**, and enable it.
 
 The first time you open a note, the plugin asks you to confirm a short user name
 (only used to keep histories separate in shared vaults) — pick an existing one or
@@ -169,12 +165,6 @@ git restore-mtime
 Install it from the [git-tools](https://github.com/MestreLion/git-tools) project
 (e.g. `pipx install git-tools`, or your package manager). Visit-based colouring
 is unaffected — it comes from `__visit_history/`, not the filesystem.
-
-## Development & publishing
-
-Contributing or cutting a release? See [`docs/`](docs/README.md) for the
-architecture, on-disk format, and heatmap internals, and
-[`docs/how-to-publish.md`](docs/how-to-publish.md) for the release checklist.
 
 ### License
 
