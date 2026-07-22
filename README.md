@@ -13,20 +13,30 @@ telemetry. Your history never leaves your machine.
 *Vault activity coloured by how recently each file was visited (illustrative).
 Brighter green = recent, deep blue = long ago, dim = no data yet.*
 
-## What it does
+## See your vault's activity, from day one
 
-**Visit recording.** Open a note, canvas, or Excalidraw drawing and Visit
-History times how long it stays in focus. When you move on — navigate away,
-switch windows, or go idle — it saves that session (start time + duration). Over
-time you get an honest picture of where your attention goes.
+The heatmap is a zoomable **treemap** of your entire vault: every file is a
+rectangle nested inside its folders, sized by file size. Colour is where it gets
+interesting — you pick which timestamp drives it:
 
-**Vault heatmap.** A zoomable **treemap** of your entire vault: every file is a
-rectangle nested inside its folders.
+- **Visited** — where your attention actually goes, based on recorded focus time.
+- **Modified** — what you've been editing lately.
+- **Created** — what's new in the vault.
 
-- **Size = file size** — bigger files, bigger tiles.
-- **Colour = activity** — either **by type** (note / canvas / Excalidraw) or
-  **by recency**: how recently each file was **created**, **modified**, or
-  **visited**. Recent files glow; stale ones fade.
+Switch between them and the same vault tells three different stories. Recent
+files glow; stale ones fade. **Created** and **modified** work immediately on
+install — no waiting, no setup. Visit-based colouring layers on top as you use
+the plugin, and that's when it gets genuinely revealing: the notes you *think*
+matter versus the ones you keep returning to are rarely the same set.
+
+Tune the gradient and the hot/cold thresholds to your vault's rhythm. A vault you
+touch daily wants a different scale than a decade-old archive.
+
+Files can also be coloured **by type** (note / canvas / Excalidraw) when you want
+a structural view instead of a temporal one.
+
+### Getting around
+
 - **Drill down** — click a folder to zoom in, step back up the trail, click a
   file to open it. Pan and zoom with the mouse.
 - **Filter** — narrow the view to files matching a **path** or their text
@@ -34,17 +44,20 @@ rectangle nested inside its folders.
   term.
 - **`_archive` folders are hidden** by default (open one from its folder menu to
   look inside).
-- Heatmap can also be opened from the `Files` view for specific folder:
+- Open the heatmap for a specific folder straight from the `Files` view:
 
 ![sample-open-heatmap-for-folder.png](images/sample-open-heatmap-for-folder.png)
 
-### No visit history yet? The heatmap still works
+Heatmap options (colouring mode, gradient, timestamp field, hot/cold thresholds)
+live in the heatmap's own config panel and are **saved automatically** — your
+setup is exactly as you left it.
 
-You don't need any recorded visits to get value on day one. Colour the heatmap by
-**created** or **modified** time and it immediately highlights your recently
-edited and newly created files across the whole vault — visit-based colouring
-then layers on top as you use the plugin. See the appendix if your files'
-modified times look wrong after a `git` clone.
+## How visit recording works
+
+Open a note, canvas, or Excalidraw drawing and Visit History times how long it
+stays in focus. When you move on — navigate away, switch windows, or go idle — it
+saves that session (start time + duration). Over time you get an honest picture
+of where your attention goes.
 
 ## Your history survives renames
 
@@ -68,7 +81,8 @@ delete it like any note. Curious about the exact layout and line format? See
 ## Installing & enabling
 
 Install it from **Settings → Community plugins → Browse**, search for **Visit
-History**, and enable it.
+History**, and enable it. Open the heatmap and colour by **modified** — you'll
+have something useful to look at before you've recorded a single visit.
 
 The first time you open a note, the plugin asks you to confirm a short user name
 (only used to keep histories separate in shared vaults) — pick an existing one or
@@ -83,10 +97,6 @@ Under **Settings → Visit History**:
 - **Add ids to all eligible files** — assigns the persistent id to every note and
   canvas at once, instead of waiting until you next open each. Modifies files, so
   it's behind a confirmation.
-
-Heatmap options (colouring mode, gradient, timestamp field, hot/cold thresholds)
-live in the heatmap's own config panel and are **saved automatically** — your
-setup is exactly as you left it.
 
 ## On the roadmap
 
