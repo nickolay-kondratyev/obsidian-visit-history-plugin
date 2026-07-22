@@ -166,27 +166,14 @@ Install it from the [git-tools](https://github.com/MestreLion/git-tools) project
 (e.g. `pipx install git-tools`, or your package manager). Visit-based colouring
 is unaffected — it comes from `__visit_history/`, not the filesystem.
 
-### License
+## License
 
-This project is source-available under the Kondratyev Source Available
-License 2.3 (KSAL-2.3). In short:
+Released under the Kondratyev Source Available License (KSAL-3.0). See [LICENSE.md](LICENSE.md).
 
-- **You can** use, modify, fork, and redistribute the code for free for
-  personal, educational, research, and other noncommercial purposes.
-- **Individual creators** — including freelancers, sole proprietors, and
-  single-person LLCs — may commercialize anything they *create with* the
-  software (sites, content, client deliverables), but not the software
-  itself.
-- **You cannot** otherwise use it for commercial purposes — including
-  company/business use, selling products built on it, or offering it as
-  a hosted service — without a paid license.
-- A one-time 30-day commercial evaluation is permitted to decide whether
-  to purchase.
-- Paid functionality behind a license key is not covered by this grant
-  and requires a subscription.
-- Do not bypass or tamper with license key / subscription checks.
-- Contributions you submit are licensed to the author for any use.
+In short:
 
-This summary is informational only and is not the license. The full text
-in [LICENSE.md](LICENSE.md) is the sole and final authority on your
-rights and obligations.
+- **Use it anywhere.** Personal vaults, work vaults, client work, companies of any size. No restrictions on what you do with the notes and data you produce.
+- **Free features are free.** Some features may be gated behind a license key in the future and require a payment. You may not remove, disable, or bypass those checks.
+- **Source is available, not strictly open.** You may read, study, and modify the code for noncommercial purposes. You may not sell it, distribute it commercially, ship it inside a product, or run it as a hosted service.
+
+For commercial licensing, reach out.
