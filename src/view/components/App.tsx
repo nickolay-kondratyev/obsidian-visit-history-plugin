@@ -28,6 +28,14 @@ interface AppProps {
    * changes. Ignored when the path is absent from the tree.
    */
   initialFolderPath?: string;
+  /**
+   * Reports whether the view is CURRENTLY rendering the whole-vault root
+   * (fired on mount and whenever it flips). The ItemView host uses it so the
+   * "open vault heatmap" command can reveal an existing vault-root heatmap
+   * instead of opening a duplicate. Derived from the RENDERED trail, not raw
+   * folderSegments — an unresolvable path falls back to rendering the root.
+   */
+  onAtVaultRootChange?: (atRoot: boolean) => void;
 }
 
 /**
@@ -54,6 +62,7 @@ export function App({
   configStore,
   contentTermMatcher,
   initialFolderPath,
+  onAtVaultRootChange,
 }: AppProps) {
   const [config, setConfig] = useState<HeatmapConfig>(() => configStore.load());
   /** The single open header panel — at most one popover/panel at a time. */
@@ -206,6 +215,14 @@ export function App({
   // Breadcrumb derives from the RESOLVED trail (not raw segments) so it
   // always names what is actually rendered.
   const breadcrumb = useMemo(() => trail.map(n => n.name), [trail]);
+
+  // Report vault-root state to the ItemView host (empty trail = rendering the
+  // whole-vault root). Derived from the RENDERED trail so an unresolvable path
+  // — which falls back to the root — is reported truthfully.
+  const atVaultRoot = trail.length === 0;
+  useEffect(() => {
+    onAtVaultRootChange?.(atVaultRoot);
+  }, [atVaultRoot, onAtVaultRootChange]);
 
   // Within an archive ALL archived content is visible (nested archives
   // included) — TreemapViz skips its _archive pruning then.
