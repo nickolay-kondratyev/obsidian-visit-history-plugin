@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-07-22T17:21:06Z
 id: nid_nhoy7fkz6sy9vkfr40pzk3qwa_e
 title: "Minimum focus time before a visit is recorded (setting + e2e)"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-07-22T17:02:10Z
-status_updated_iso: 2026-07-22T17:02:10Z
+status_updated_iso: 2026-07-22T17:21:06Z
 type: feature
 priority: 1
 assignee: CC_WITH-nickolaykondratyev
@@ -60,3 +61,9 @@ Decorator FocusDurationSink (MinDurationFilteringSink) between FocusDurationTrac
 4. npm test, npm run lint (zero errors), npm run build, npm run test:e2e all pass.
 5. CLAUDE.md + docs/ updated.
 
+
+## Notes
+
+**2026-07-22T17:21:06Z**
+
+Implemented: minFocusSecondsToRecord setting (default 2, 0 disables) via MinDurationFilteringSink decorator dropping sub-threshold sessions before the recorder (no .vh_v3 line, no LastVisitCache/heatmap bump). Config seam getMinFocusMsToRecord (live-read seconds*1000, no re-clamp, no dev key), sanitizer boundary, settings tab (declarative+imperative), e2e harness threading (existing specs seed 0), new S7 spec. Reviewer APPROVED (0 blocking/0 non-blocking). npm test 441/441, lint 0 errors, build OK, e2e 7/7. Commit e54a44a.
