@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-07-22T16:17:17Z
 id: nid_9d45b2giag7g46xbxkbb89ol6_e
 title: "Plan: prevent opening a second vault-level heatmap when one is already at vault root"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-07-22T15:37:33Z
-status_updated_iso: 2026-07-22T15:37:33Z
+status_updated_iso: 2026-07-22T16:17:17Z
 type: task
 priority: 2
 assignee: nickolaykondratyev
@@ -58,3 +59,11 @@ DECISIONS (owner):
 - Guard applies to vault-level opens only (command + ribbon), scanning workspace.getLeavesOfType(VIEW_TYPE_TREEMAP).
 - If multiple vault-root heatmaps pre-exist: reveal the FIRST found.
 - Popout windows: getLeavesOfType already spans them — no extra work.
+
+**2026-07-22T16:17:17Z**
+
+RESOLVED on branch prevent-second-vault-heatmap.
+
+Implemented the guard: vault-level opens (command open-vault-heatmap + ribbon) now REVEAL an existing vault-level VaultTreemapView currently at vault root (silent workspace.revealLeaf, first-found on multiples) instead of duplicating; a drilled-in vault view or any folder-targeted open still opens fresh. Bridge = App onAtVaultRootChange callback -> VaultTreemapView.isAtVaultRoot(); selection via pure obsidian-free src/view/VaultRootHeatmapFinder.ts (unit-tested). Files: src/view/VaultRootHeatmapFinder.ts(+test), src/view/components/App.tsx, src/view/VaultTreemapView.tsx, src/main.ts. Build/test(414)/lint all green.
+
+CALLOUT: manifest.json minAppVersion bumped 1.5.7 -> 1.7.2 because the obsidianmd noUnsupportedApi lint flags revealLeaf (its return type became Promise<void> in 1.7.2). revealLeaf was owner-locked. Reversible; versions.json left for the release step. Awaiting owner confirmation of the version bump.
