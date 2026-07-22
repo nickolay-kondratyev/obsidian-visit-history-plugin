@@ -12,14 +12,18 @@ export const HIGH_IDLE_SECONDS = 180;
  * a getter for the live harness. Call inside a `test.describe` block. Pass
  * `devConfigOverrides` to write a dev overrides file the plugin reads via env
  * (bypasses hard-limited config such as the min-5 s idle floor).
+ *
+ * `minFocusSecondsToRecord` defaults to 0 — the min-focus filter is OFF unless a
+ * spec explicitly tests it, so existing specs' ~0 ms session lines are recorded.
  */
 export function useHarness(
   idleTimeoutSeconds: number,
   devConfigOverrides?: DevConfigOverrides,
+  minFocusSecondsToRecord = 0,
 ): () => ObsidianHarness {
   let harness: ObsidianHarness | undefined;
   test.beforeEach(async () => {
-    harness = await ObsidianHarness.launch({ idleTimeoutSeconds, devConfigOverrides });
+    harness = await ObsidianHarness.launch({ idleTimeoutSeconds, minFocusSecondsToRecord, devConfigOverrides });
   });
   test.afterEach(async () => {
     if (harness) await harness.close();

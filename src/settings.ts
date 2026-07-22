@@ -25,11 +25,34 @@ export class IdleTimeoutSeconds {
   }
 }
 
+/**
+ * A focus session shorter than this many seconds records NO trace at all —
+ * no `.vh_v3` line AND no heatmap last-visit bump — so quick in-and-out jumps
+ * into a note are not counted as visits. 2 seconds by default; 0 disables the
+ * filter (record everything, including zero-duration pass-through navigation).
+ */
+export const DEFAULT_MIN_FOCUS_SECONDS_TO_RECORD = 2;
+
+/**
+ * Single source of truth for the min-focus validity rule. Consumed by BOTH the
+ * load boundary (SettingsSanitizer) and the settings tab (declarative validate
+ * + the pre-1.13 text-field reject) so the rule can never drift. 0 is valid and
+ * means "disabled" — unlike the idle timeout there is no state-machine floor.
+ */
+export class MinFocusSecondsToRecord {
+  /** Whether a candidate minimum is a whole number of seconds at or above zero. */
+  static isValid(seconds: number): boolean {
+    return Number.isInteger(seconds) && seconds >= 0;
+  }
+}
+
 // Persisted via loadData()/saveData() in main.ts; edited in
-// src/settingsTab/VisitHistorySettingTab.ts (idle timeout) and the heatmap
-// view's config panel (heatmap — persisted through HeatmapConfigStore).
+// src/settingsTab/VisitHistorySettingTab.ts (idle timeout, min focus time) and
+// the heatmap view's config panel (heatmap — persisted through
+// HeatmapConfigStore).
 export interface VisitHistoryPluginSettings {
   idleTimeoutSeconds: number;
+  minFocusSecondsToRecord: number;
   heatmap: HeatmapConfig;
 }
 
@@ -45,6 +68,7 @@ export class SettingsSanitizer {
     const raw = (loadedData ?? {}) as Partial<Record<keyof VisitHistoryPluginSettings, unknown>>;
     return {
       idleTimeoutSeconds: SettingsSanitizer.sanitizeIdleTimeoutSeconds(raw.idleTimeoutSeconds),
+      minFocusSecondsToRecord: SettingsSanitizer.sanitizeMinFocusSecondsToRecord(raw.minFocusSecondsToRecord),
       heatmap: HeatmapConfigSanitizer.sanitize(raw.heatmap),
     };
   }
@@ -53,5 +77,11 @@ export class SettingsSanitizer {
     return typeof value === 'number' && IdleTimeoutSeconds.isValid(value)
       ? value
       : DEFAULT_IDLE_TIMEOUT_SECONDS;
+  }
+
+  private static sanitizeMinFocusSecondsToRecord(value: unknown): number {
+    return typeof value === 'number' && MinFocusSecondsToRecord.isValid(value)
+      ? value
+      : DEFAULT_MIN_FOCUS_SECONDS_TO_RECORD;
   }
 }

@@ -11,6 +11,13 @@ export interface ConfigProvider {
    * decision so a settings-tab change applies without a plugin reload.
    */
   getIdleTimeoutMs(): number;
+
+  /**
+   * The minimum session length in milliseconds to record RIGHT NOW. Read live at
+   * each record decision so a settings-tab change applies without a plugin
+   * reload. 0 means "record everything" (filter disabled).
+   */
+  getMinFocusMsToRecord(): number;
 }
 
 /**
@@ -18,7 +25,10 @@ export interface ConfigProvider {
  * don't fake the whole Plugin. `VisitHistoryPlugin` satisfies it.
  */
 export interface ConfigSettingsHost {
-  readonly settings: { readonly idleTimeoutSeconds: number };
+  readonly settings: {
+    readonly idleTimeoutSeconds: number;
+    readonly minFocusSecondsToRecord: number;
+  };
 }
 
 /**
@@ -42,5 +52,13 @@ export class ConfigProviderDefault implements ConfigProvider {
       return override * 1000;
     }
     return this.host.settings.idleTimeoutSeconds * 1000;
+  }
+
+  // No dev override: this setting has no hard floor to bypass (0..n is reachable
+  // straight from data.json), so — per the dev-overrides "add a key only when a
+  // consumer needs it" rule — none is wired. The sanitizer is the sole boundary;
+  // this method does not re-clamp.
+  getMinFocusMsToRecord(): number {
+    return this.host.settings.minFocusSecondsToRecord * 1000;
   }
 }

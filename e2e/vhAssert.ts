@@ -78,6 +78,27 @@ export async function pollForSessionLine(file: string, opts: PollOptions): Promi
   }
 }
 
+/**
+ * Assert a file records NO session line for the whole window: poll it repeatedly
+ * and fail the moment a line appears. Unlike a single check after a sleep, this
+ * catches a late append at any point in the window (the write is async), so a
+ * dropped sub-threshold session is proven absent — not merely "not yet written".
+ */
+export async function assertNoSessionLineWithin(file: string, opts: PollOptions): Promise<void> {
+  const interval = opts.intervalMs ?? 250;
+  const deadline = Date.now() + opts.timeoutMs;
+  for (;;) {
+    const lines = sessionLines(file);
+    if (lines.length > 0) {
+      throw new Error(
+        `expected no session line in ${file}, but found ${lines.length}: ${JSON.stringify(lines)}`,
+      );
+    }
+    if (Date.now() >= deadline) return;
+    await sleep(interval);
+  }
+}
+
 /** Parse the integer duration (ms) from a `<stamp> D:<millis>` line. */
 export function parseDurationMs(line: string): number {
   const m = line.trim().match(/ D:(\d+)$/);

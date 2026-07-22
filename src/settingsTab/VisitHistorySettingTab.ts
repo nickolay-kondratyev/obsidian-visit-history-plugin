@@ -1,6 +1,12 @@
 import { App, PluginSettingTab, Setting, SettingDefinitionItem } from 'obsidian';
 import type VisitHistoryPlugin from '../main';
-import { DEFAULT_IDLE_TIMEOUT_SECONDS, IdleTimeoutSeconds, MIN_IDLE_TIMEOUT_SECONDS } from '../settings';
+import {
+  DEFAULT_IDLE_TIMEOUT_SECONDS,
+  DEFAULT_MIN_FOCUS_SECONDS_TO_RECORD,
+  IdleTimeoutSeconds,
+  MIN_IDLE_TIMEOUT_SECONDS,
+  MinFocusSecondsToRecord,
+} from '../settings';
 import type { DocIdBackfillResult, DocIdBackfillService } from '../core/service/docId/DocIdBackfillService';
 import type { UserNotifier } from '../core/util/userComm/UserNotifier';
 import { ConfirmModal } from './ConfirmModal';
@@ -25,6 +31,14 @@ export class VisitHistorySettingTab extends PluginSettingTab {
     + 'Applies immediately.';
   private static readonly IDLE_TIMEOUT_ERROR =
     `Enter a whole number ≥ ${MIN_IDLE_TIMEOUT_SECONDS}.`;
+  private static readonly MIN_FOCUS_NAME = 'Minimum focus time (seconds)';
+  private static readonly MIN_FOCUS_DESC =
+    'A focus session shorter than this is not recorded anywhere — no visit '
+    + 'history and no heatmap last-visit bump — so quick in-and-out jumps into '
+    + `a note are not counted. Set to 0 to record everything. Default `
+    + `${DEFAULT_MIN_FOCUS_SECONDS_TO_RECORD}. Applies immediately.`;
+  private static readonly MIN_FOCUS_ERROR =
+    'Enter a whole number ≥ 0 (0 records everything).';
   private static readonly BACKFILL_HEADING = 'File modifying actions';
   // "ids" not "'id' field": the sentence-case lint rule force-uppercases a
   // bare "id" to "ID", which would misrepresent the lowercase key we write.
@@ -68,6 +82,23 @@ export class VisitHistorySettingTab extends PluginSettingTab {
         },
       },
       {
+        name: VisitHistorySettingTab.MIN_FOCUS_NAME,
+        desc: VisitHistorySettingTab.MIN_FOCUS_DESC,
+        control: {
+          type: 'number',
+          key: 'minFocusSecondsToRecord',
+          defaultValue: DEFAULT_MIN_FOCUS_SECONDS_TO_RECORD,
+          min: 0,
+          step: 1,
+          placeholder: String(DEFAULT_MIN_FOCUS_SECONDS_TO_RECORD),
+          // Mirrors display()'s silent reject, but surfaces an inline error
+          // (invalid input is not persisted either way).
+          validate: (value) => MinFocusSecondsToRecord.isValid(value)
+            ? undefined
+            : VisitHistorySettingTab.MIN_FOCUS_ERROR,
+        },
+      },
+      {
         type: 'group',
         heading: VisitHistorySettingTab.BACKFILL_HEADING,
         items: [
@@ -89,8 +120,9 @@ export class VisitHistorySettingTab extends PluginSettingTab {
 
   /**
    * Persist a declarative control value through the plugin's own save path
-   * (single, explicit save; live-applied because FocusDurationTracker reads
-   * settings.idleTimeoutSeconds live). `idleTimeoutSeconds` is the only key.
+   * (single, explicit save; live-applied because the config seam reads the
+   * settings live). Handles any declared number key (`idleTimeoutSeconds`,
+   * `minFocusSecondsToRecord`) — the body is key-generic.
    */
   async setControlValue(key: string, value: unknown): Promise<void> {
     // Boundary: Obsidian's declarative persistence contract is generic
@@ -104,6 +136,7 @@ export class VisitHistorySettingTab extends PluginSettingTab {
     this.containerEl.empty();
 
     this.displayIdleTimeoutSetting();
+    this.displayMinFocusSetting();
 
     new Setting(this.containerEl)
       .setName(VisitHistorySettingTab.BACKFILL_HEADING)
@@ -132,6 +165,25 @@ export class VisitHistorySettingTab extends PluginSettingTab {
             return;
           }
           this.visitHistoryPlugin.settings.idleTimeoutSeconds = seconds;
+          await this.visitHistoryPlugin.saveSettings();
+        }));
+  }
+
+  private displayMinFocusSetting(): void {
+    new Setting(this.containerEl)
+      .setName(VisitHistorySettingTab.MIN_FOCUS_NAME)
+      .setDesc(VisitHistorySettingTab.MIN_FOCUS_DESC)
+      .addText(text => text
+        .setPlaceholder(String(DEFAULT_MIN_FOCUS_SECONDS_TO_RECORD))
+        .setValue(String(this.visitHistoryPlugin.settings.minFocusSecondsToRecord))
+        .onChange(async (value) => {
+          const seconds = Number(value);
+          // Invalid input is simply not persisted — the previous valid value
+          // stays in effect (and reappears when the tab reopens).
+          if (!MinFocusSecondsToRecord.isValid(seconds)) {
+            return;
+          }
+          this.visitHistoryPlugin.settings.minFocusSecondsToRecord = seconds;
           await this.visitHistoryPlugin.saveSettings();
         }));
   }

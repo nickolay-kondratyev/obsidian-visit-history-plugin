@@ -6,7 +6,11 @@ import type {
   SettingNumberControl,
 } from 'obsidian';
 import { VisitHistorySettingTab } from './VisitHistorySettingTab';
-import { DEFAULT_IDLE_TIMEOUT_SECONDS, MIN_IDLE_TIMEOUT_SECONDS } from '../settings';
+import {
+  DEFAULT_IDLE_TIMEOUT_SECONDS,
+  DEFAULT_MIN_FOCUS_SECONDS_TO_RECORD,
+  MIN_IDLE_TIMEOUT_SECONDS,
+} from '../settings';
 import type VisitHistoryPlugin from '../main';
 import type { DocIdBackfillService } from '../core/service/docId/DocIdBackfillService';
 import type { UserNotifier } from '../core/util/userComm/UserNotifier';
@@ -59,8 +63,13 @@ function idleTimeoutControl(): SettingNumberControl {
   return definition.control as SettingNumberControl;
 }
 
+function minFocusControl(): SettingNumberControl {
+  const definition = buildTab().getSettingDefinitions()[1] as SettingDefinitionControl;
+  return definition.control as SettingNumberControl;
+}
+
 function backfillGroup(): SettingDefinitionGroup {
-  return buildTab().getSettingDefinitions()[1] as SettingDefinitionGroup;
+  return buildTab().getSettingDefinitions()[2] as SettingDefinitionGroup;
 }
 
 describe('VisitHistorySettingTab', () => {
@@ -120,6 +129,49 @@ describe('VisitHistorySettingTab', () => {
       // WHEN validating a whole value at the minimum
       // THEN no error is returned
       expect(idleTimeoutControl().validate?.(MIN_IDLE_TIMEOUT_SECONDS)).toBeUndefined();
+    });
+
+    it('should name the min-focus setting for search and rendering', () => {
+      // GIVEN the declarative definitions
+      // WHEN reading the second definition
+      // THEN it carries the min-focus name
+      const definition = buildTab().getSettingDefinitions()[1] as SettingDefinitionControl;
+      expect(definition.name).toBe('Minimum focus time (seconds)');
+    });
+
+    it('should bind the min-focus control to the persisted settings key', () => {
+      // GIVEN the min-focus control
+      // WHEN reading its key
+      // THEN it targets settings.minFocusSecondsToRecord
+      expect(minFocusControl().key).toBe('minFocusSecondsToRecord');
+    });
+
+    it('should allow zero for the min-focus control (filter disabled)', () => {
+      // GIVEN the min-focus control
+      // WHEN reading its min
+      // THEN zero is permitted
+      expect(minFocusControl().min).toBe(0);
+    });
+
+    it('should default the min-focus control to the shared default', () => {
+      // GIVEN the min-focus control
+      // WHEN reading its defaultValue
+      // THEN it is the shared default
+      expect(minFocusControl().defaultValue).toBe(DEFAULT_MIN_FOCUS_SECONDS_TO_RECORD);
+    });
+
+    it('should accept zero via the min-focus validate (filter disabled)', () => {
+      // GIVEN the min-focus control validate
+      // WHEN validating zero
+      // THEN no error is returned
+      expect(minFocusControl().validate?.(0)).toBeUndefined();
+    });
+
+    it('should reject a negative value via the min-focus validate', () => {
+      // GIVEN the min-focus control validate
+      // WHEN validating a negative value
+      // THEN an inline error string is returned
+      expect(minFocusControl().validate?.(-1)).toBeTypeOf('string');
     });
 
     it('should group the backfill action under its heading', () => {
