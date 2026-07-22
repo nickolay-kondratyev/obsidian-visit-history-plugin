@@ -5,6 +5,12 @@ Zoomable treemap of the vault, colored by file activity. Opened via the
 context menu ("Open heatmap for folder" — opens pre-drilled into that
 folder; "back" still walks up through every ancestor to the vault root).
 
+A vault-level open (command / ribbon) that finds an existing vault-level
+heatmap CURRENTLY at the vault root reveals it silently instead of
+duplicating (`VaultRootHeatmapFinder` + `VaultTreemapView.isAtVaultRoot()`);
+a drilled-in vault view or any folder-targeted view never blocks a fresh
+open.
+
 While a heatmap view is the active view, Obsidian's status bar is hidden:
 an `active-leaf-change` listener in `main.ts` toggles the
 `vault-heatmap-active` body class and `styles.css` does the hiding —

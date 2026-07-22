@@ -40,11 +40,35 @@ export class VaultTreemapView extends ItemView {
    * view survives workspace layout save/restore.
    */
   private folderPath: string | undefined;
+  /**
+   * Whether the React app is CURRENTLY rendering the whole-vault root
+   * (updated via {@link handleAtVaultRootChange} from App's onAtVaultRootChange).
+   * Defaults to true: a freshly opened vault-level view starts at the root.
+   * For a folder-targeted view this may lag until App reports, but that never
+   * mis-triggers the guard because {@link isVaultLevel} is false there.
+   */
+  private atVaultRoot = true;
 
   constructor(leaf: WorkspaceLeaf, pluginFactory: PluginFactory) {
     super(leaf);
     this.pluginFactory = pluginFactory;
   }
+
+  // ── Duplicate-open guard surface (read by main.ts) ────────────────────
+
+  /** Vault-LEVEL heatmap (no target folder) vs. a folder-targeted one. */
+  isVaultLevel(): boolean {
+    return this.folderPath === undefined;
+  }
+
+  /** Whether the view is currently rendering the whole-vault root. */
+  isAtVaultRoot(): boolean {
+    return this.atVaultRoot;
+  }
+
+  private readonly handleAtVaultRootChange = (atRoot: boolean): void => {
+    this.atVaultRoot = atRoot;
+  };
 
   getViewType(): string {
     return VIEW_TYPE_TREEMAP;
@@ -135,6 +159,7 @@ export class VaultTreemapView extends ItemView {
         initialFolderPath={this.folderPath}
         configStore={this.pluginFactory.heatmapConfigStore}
         contentTermMatcher={this.pluginFactory.contentTermMatcher}
+        onAtVaultRootChange={this.handleAtVaultRootChange}
       />,
     );
   }

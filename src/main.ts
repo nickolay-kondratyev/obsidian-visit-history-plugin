@@ -1,4 +1,4 @@
-import { Plugin, TFolder } from 'obsidian';
+import { Plugin, TFolder, WorkspaceLeaf } from 'obsidian';
 import { SettingsSanitizer, VisitHistoryPluginSettings } from './settings';
 import { PluginFactory } from './core/init/PluginFactory';
 import { HiddenFileUtil } from './core/util/file/hidden/HiddenFileUtil';
@@ -8,6 +8,7 @@ import { VhUserScopeMigrationService } from './core/service/migration/VhUserScop
 import { UserNotifier } from './core/util/userComm/UserNotifier';
 import { UserNotifierDefault } from './core/util/userComm/impl/UserNotifierDefault';
 import { CSS_CLASS_HEATMAP_ACTIVE, VaultTreemapView, VIEW_TYPE_TREEMAP } from './view/VaultTreemapView';
+import { VaultRootHeatmapFinder } from './view/VaultRootHeatmapFinder';
 import { VisitHistorySettingTab } from './settingsTab/VisitHistorySettingTab';
 
 // ── VisitHistoryPlugin ────────────────────────────────────────────────────────
@@ -117,13 +118,27 @@ export default class VisitHistoryPlugin extends Plugin {
       });
     };
 
+    // Vault-level open (command + ribbon): if a vault-level heatmap is already
+    // open AND currently at the vault root, reveal it silently instead of
+    // opening a duplicate. A drilled-in vault-level view does NOT block a fresh
+    // open (owner decision). Folder-targeted opens are unaffected.
+    const revealOrOpenVaultHeatmap = () => {
+      const existing = this.findVaultRootHeatmapLeaf();
+      if (existing !== null) {
+        // revealLeaf returns a Promise (Obsidian ≥1.7.2); we don't await it.
+        void this.app.workspace.revealLeaf(existing);
+        return;
+      }
+      openHeatmap();
+    };
+
     this.addCommand({
       id: 'open-vault-heatmap',
       name: 'Open vault heatmap',
-      callback: () => openHeatmap(),
+      callback: () => revealOrOpenVaultHeatmap(),
     });
 
-    this.addRibbonIcon('layout-grid', 'Open vault heatmap', () => openHeatmap());
+    this.addRibbonIcon('layout-grid', 'Open vault heatmap', () => revealOrOpenVaultHeatmap());
 
     // Hide the status bar while the heatmap view is the ACTIVE view.
     // CSS-only (body class → styles.css): removing the class restores the
@@ -149,6 +164,28 @@ export default class VisitHistoryPlugin extends Plugin {
         );
       }),
     );
+  }
+
+  /**
+   * The open vault-level heatmap leaf currently at the vault root (spans
+   * popouts — getLeavesOfType enumerates all windows), or null when none.
+   * Non-treemap views are filtered out via the instanceof narrow at the
+   * Obsidian boundary; the selection itself is delegated to the pure finder.
+   */
+  private findVaultRootHeatmapLeaf(): WorkspaceLeaf | null {
+    const candidates = this.app.workspace
+      .getLeavesOfType(VIEW_TYPE_TREEMAP)
+      .flatMap((leaf) => {
+        const view = leaf.view;
+        return view instanceof VaultTreemapView
+          ? [{
+              leaf,
+              isVaultLevel: view.isVaultLevel(),
+              isAtVaultRoot: view.isAtVaultRoot(),
+            }]
+          : [];
+      });
+    return VaultRootHeatmapFinder.firstVaultRootLeaf(candidates);
   }
 
   onunload() {
