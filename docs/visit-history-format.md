@@ -80,8 +80,14 @@ __visit_history/
   first post-wake interaction — a session spanning a sleep still ends at the
   last pre-sleep interaction.
 - Window refocus or interaction after an idle close starts a NEW session for
-  the same document. Zero-duration sessions (pass-through navigation) are
-  recorded truthfully as `D:0`.
+  the same document.
+- **Minimum focus time**: a session shorter than the "Minimum focus time
+  (seconds)" setting (`minFocusSecondsToRecord`, default 2 s; 0 disables the
+  filter) is dropped BEFORE the recorder (`MinDurationFilteringSink`), leaving
+  NO trace at all — no `.vh_v3` line AND no heatmap last-visit bump — so quick
+  in-and-out jumps into a note are not counted as visits. With the filter
+  disabled (0) a zero-duration pass-through navigation is recorded truthfully
+  as `D:0`; at the default it is dropped.
 - Reading is strict per line (`VhV3SessionLineParser`) and never throws:
   unparseable lines are skipped, so one bad file cannot break aggregation.
 

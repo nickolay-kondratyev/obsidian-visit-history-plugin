@@ -13,6 +13,7 @@ import { VisitHistoryServiceV3 } from '../service/visitHistoryService/v3/VisitHi
 import { LastVisitCache } from '../service/visitHistoryService/v3/LastVisitCache';
 import { FocusDurationTracker } from '../focusDuration/FocusDurationTracker';
 import { VhV3DurationRecorder } from '../focusDuration/VhV3DurationRecorder';
+import { MinDurationFilteringSink } from '../focusDuration/MinDurationFilteringSink';
 import { WindowActivityMonitor } from '../focusDuration/WindowActivityMonitor';
 import { VhV3FocusDurationListener } from '../focusTracker/listener/VhV3FocusDurationListener';
 import { VaultUtil, VaultUtilDefault } from '../util/vault/VaultUtil';
@@ -140,7 +141,13 @@ export class PluginFactory {
     const mainDocument = this.plugin.app.workspace.rootSplit.doc;
 
     this.focusDurationTracker = new FocusDurationTracker(
-      new VhV3DurationRecorder(this.vhV3DurationStore, this.lastVisitCache, this.deviceNameProvider, userName),
+      // Min-focus gate: sessions shorter than the configured minimum are dropped
+      // BEFORE the recorder, so a quick in-and-out visit leaves no trace at all.
+      // Threshold read live per record (settings change applies without reload).
+      new MinDurationFilteringSink(
+        new VhV3DurationRecorder(this.vhV3DurationStore, this.lastVisitCache, this.deviceNameProvider, userName),
+        () => this.configProvider.getMinFocusMsToRecord(),
+      ),
       // Effective idle timeout via the config seam: a dev override wins (e2e),
       // else the live sanitized setting (a settings-tab change applies without reload).
       () => this.configProvider.getIdleTimeoutMs(),

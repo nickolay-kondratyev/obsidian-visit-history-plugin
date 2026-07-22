@@ -38,6 +38,13 @@ export interface DevConfigOverrides {
 export interface LaunchOptions {
   /** Written to the plugin's data.json before enable. Floor enforced by the plugin is 5. */
   readonly idleTimeoutSeconds: number;
+  /**
+   * Written to the plugin's data.json before enable. 0 disables the min-focus
+   * filter (record everything). Every existing spec passes 0 via useHarness's
+   * default so their ~0 ms session-line assertions are not dropped — filtering
+   * is off unless a spec explicitly tests it.
+   */
+  readonly minFocusSecondsToRecord: number;
   /** Optional dev overrides file (bypasses hard-limited config for e2e). */
   readonly devConfigOverrides?: DevConfigOverrides;
 }
@@ -66,11 +73,14 @@ export class ObsidianHarness {
     cpSync(DEV_VAULT, vaultDir, { recursive: true });
     mkdirSync(userDataDir, { recursive: true });
 
-    // Per-test idle setting. Overwrites any stray data.json from the copy.
+    // Per-test settings. Overwrites any stray data.json from the copy.
     const pluginDir = join(vaultDir, '.obsidian', 'plugins', PLUGIN_ID);
     writeFileSync(
       join(pluginDir, 'data.json'),
-      JSON.stringify({ idleTimeoutSeconds: opts.idleTimeoutSeconds }),
+      JSON.stringify({
+        idleTimeoutSeconds: opts.idleTimeoutSeconds,
+        minFocusSecondsToRecord: opts.minFocusSecondsToRecord,
+      }),
     );
 
     // Register the copied vault so Obsidian boots straight in (no picker, no auto-update).

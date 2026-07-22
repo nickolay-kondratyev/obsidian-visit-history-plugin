@@ -2,8 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { ConfigProviderDefault, ConfigSettingsHost } from './ConfigProvider';
 import { DevConfigOverrides } from './DevConfigOverridesReader';
 
-function makeHost(idleTimeoutSeconds: number): ConfigSettingsHost & { settings: { idleTimeoutSeconds: number } } {
-  return { settings: { idleTimeoutSeconds } };
+type MutableHost = ConfigSettingsHost & {
+  settings: { idleTimeoutSeconds: number; minFocusSecondsToRecord: number };
+};
+
+function makeHost(idleTimeoutSeconds: number, minFocusSecondsToRecord = 2): MutableHost {
+  return { settings: { idleTimeoutSeconds, minFocusSecondsToRecord } };
 }
 
 describe(ConfigProviderDefault.name, () => {
@@ -48,6 +52,27 @@ describe(ConfigProviderDefault.name, () => {
       const provider = new ConfigProviderDefault(host, {});
       host.settings.idleTimeoutSeconds = 10;
       expect(provider.getIdleTimeoutMs()).toBe(10_000);
+    });
+  });
+
+  describe('getMinFocusMsToRecord', () => {
+    it('should return the setting converted from seconds to ms', () => {
+      const provider = new ConfigProviderDefault(makeHost(180, 2), {});
+      expect(provider.getMinFocusMsToRecord()).toBe(2_000);
+    });
+
+    it('should return zero when the filter is disabled', () => {
+      const provider = new ConfigProviderDefault(makeHost(180, 0), {});
+      expect(provider.getMinFocusMsToRecord()).toBe(0);
+    });
+
+    // Live-read: the same provider reflects a later settings change (settings-tab
+    // edits apply without a plugin reload).
+    it('should reflect a live settings change', () => {
+      const host = makeHost(180, 2);
+      const provider = new ConfigProviderDefault(host, {});
+      host.settings.minFocusSecondsToRecord = 7;
+      expect(provider.getMinFocusMsToRecord()).toBe(7_000);
     });
   });
 });
