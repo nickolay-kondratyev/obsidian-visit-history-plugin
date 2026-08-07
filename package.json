@@ -43,7 +43,7 @@
 		"d3-hierarchy": "^3.1.2",
 		"d3-interpolate": "^3.0.1",
 		"lru-cache": "^11.5.1",
-		"obsidian-id-lib": "^0.1.0",
+		"obsidian-id-lib": "^0.1.1",
 		"react": "^18.3.1",
 		"react-dom": "^18.3.1"
 	}
