@@ -7,7 +7,7 @@ import {
   DocIdGeneratorDefault,
   DocIdServiceDefault,
   FrontmatterDocIdStore,
-} from 'obsidian-id-lib';
+} from 'stable-ids-for-obsidian';
 import { FakeNoteFileUtil } from '../../../testSupport/FakeNoteFileUtil';
 import { FakeVaultUtil } from '../../../testSupport/fakes';
 
@@ -16,9 +16,9 @@ const DOC_ID_REGEX = /^docid_[0-9a-z]{24}_e$/;
 const FRONTMATTER_WITH_DOC_ID_REGEX = /^---\nid: (docid_[0-9a-z]{24}_e)\n/;
 
 /**
- * Integration: real DocIdBackfillServiceDefault → REAL obsidian-id-lib classes
+ * Integration: real DocIdBackfillServiceDefault → REAL stable-ids-for-obsidian classes
  * (DocIdServiceDefault → Frontmatter/CanvasDocIdStore → DocIdGeneratorDefault)
- * imported through the 'obsidian-id-lib' package boundary. Faked only at the
+ * imported through the 'stable-ids-for-obsidian' package boundary. Faked only at the
  * Obsidian boundary (NoteFileUtil, VaultUtil) — proves the backfill actually
  * mutates file content the same way focus does, and that the plugin consumes
  * the library seam correctly.

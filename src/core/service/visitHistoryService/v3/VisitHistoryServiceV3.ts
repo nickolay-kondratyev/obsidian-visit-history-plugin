@@ -1,6 +1,6 @@
 import { TFile } from 'obsidian';
 import { LastVisitProvider } from '../LastVisitProvider';
-import { DocIdService } from 'obsidian-id-lib';
+import { DocIdService } from 'stable-ids-for-obsidian';
 import { VhV3DurationStore } from './VhV3DurationStore';
 import { LastVisitCache } from './LastVisitCache';
 
