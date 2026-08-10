@@ -1,4 +1,4 @@
-import { LRUCache } from 'lru-cache';
+import { LruCache } from '../../../util/cache/LruCache';
 
 /** Cache entry. `value: null` means a cached "never visited" result. */
 export interface CachedLastVisit {
@@ -13,11 +13,9 @@ export interface CachedLastVisit {
  */
 export class LastVisitCache {
   // Values are wrapped in {value} so a cached "never visited" (null) result
-  // stays distinguishable from a cache miss (LRUCache rejects nullish values).
-  private readonly byDocId = new LRUCache<string, CachedLastVisit>({
-    // Set to high value as it will be of most use in very high note count vaults.
-    max: 10000,
-  });
+  // stays distinguishable from a cache miss (undefined is not storable).
+  // Set to high value as it will be of most use in very high note count vaults.
+  private readonly byDocId = new LruCache<string, CachedLastVisit>(10000);
 
   /** Cached entry, or undefined on cache miss. */
   get(docId: string): CachedLastVisit | undefined {

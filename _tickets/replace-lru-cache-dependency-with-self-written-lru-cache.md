@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-08-10T18:17:15Z
 id: nid_ie968mmm7zsqf5usda41ufxw3_e
 title: Replace lru-cache dependency with self-written LRU cache
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: '2026-08-10T18:13:09Z'
-status_updated_iso: '2026-08-10T18:14:31Z'
+status_updated_iso: 2026-08-10T18:17:15Z
 type: task
 priority: 3
 assignee: nickolaykondratyev
@@ -36,3 +37,20 @@ tested generic LRU and keep `LastVisitCache`'s public API unchanged.
 - `npm test`, `npm run lint` (zero errors), `npm run build` all pass;
   `LastVisitCache` behavior unchanged.
 - CLAUDE.md updated (LRU-caching note + dependency list).
+
+## Resolution (2026-08-10)
+Completed — all acceptance criteria met.
+
+- Added self-written generic `src/core/util/cache/LruCache.ts` (Map-backed,
+  insertion-order LRU; get/set + size; positive-integer max validated;
+  `undefined` not storable — same nullish constraint as lru-cache, documented).
+  Thorough vitest coverage in `LruCache.test.ts` (hit/miss, null values,
+  recency refresh on get, overwrite, eviction, size bound, size-1 cache,
+  ctor validation).
+- `LastVisitCache` now uses `LruCache` (same 10k bound); its public API and
+  `{value}` wrapping unchanged — existing `LastVisitCache.test.ts` passes as-is.
+- `npm uninstall lru-cache` — removed from package.json + lockfile.
+- Verified: `npm test` 453/453 pass, `npm run lint` zero errors,
+  `npm run build` OK, and `grep -c 'fetch(' main.js` = 0 (scorecard token gone).
+- CLAUDE.md (AGENTS.md) updated: dependency list, util/ tree (cache/), and the
+  LRU-caching design note now record the self-written cache + WHY.
