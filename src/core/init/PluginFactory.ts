@@ -18,7 +18,7 @@ import { WindowActivityMonitor } from '../focusDuration/WindowActivityMonitor';
 import { VhV3FocusDurationListener } from '../focusTracker/listener/VhV3FocusDurationListener';
 import { VaultUtil, VaultUtilDefault } from '../util/vault/VaultUtil';
 import { IsTrackedProvider, IsTrackedProviderDefault } from "../util/vault/IsTrackedProvider";
-import { DocIdService, DocIdServices } from 'obsidian-id-lib';
+import { DocIdService, DocIdServices } from 'stable-ids-for-obsidian';
 import { DocIdFocusListener } from '../focusTracker/listener/DocIdFocusListener';
 import { DocIdBackfillService, DocIdBackfillServiceDefault } from '../service/docId/DocIdBackfillService';
 import { VhStartupTasks } from './VhStartupTasks';
@@ -94,7 +94,7 @@ export class PluginFactory {
     this.modalUserNamePrompt = new ModalUserNamePrompt(app);
     this.userNameProvider = new UserNameProviderDefault(this.hiddenFileUtil, this.modalUserNamePrompt);
 
-    // obsidian-id-lib default wiring: generator + stores + the cross-plugin
+    // stable-ids-for-obsidian default wiring: generator + stores + the cross-plugin
     // per-path window lock guarding ensureDocId.
     this.docIdService = DocIdServices.createDefault(app.vault);
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { TFile } from 'obsidian';
 import { DocIdBackfillServiceDefault } from './DocIdBackfillService';
-import { DocIdService } from 'obsidian-id-lib';
+import { DocIdService } from 'stable-ids-for-obsidian';
 import { FakeVaultUtil } from '../../../testSupport/fakes';
 import { makeTFile } from '../../../testSupport/fileFactory';
 

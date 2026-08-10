@@ -38,9 +38,9 @@ core/init/PluginFactory ──── DI container: constructs & wires everything
    │                         LastVisitProvider (read-only interface) ←
    │                         VisitHistoryServiceV3: last-visit stamp for the
    │                         heatmap (LastVisitCache, LRU keyed by doc id)
-   │                         DocIdService (obsidian-id-lib): ensure
+   │                         DocIdService (stable-ids-for-obsidian): ensure
    │                         per-document id on focus — generator/stores/
-   │                         service/lock live in the obsidian-id-lib
+   │                         service/lock live in the stable-ids-for-obsidian
    │                         npm package (its own repo)
    │                         DocIdBackfillService: vault-wide doc id backfill
    │                         migration/: VhTopDirRenameMigrationService
@@ -137,7 +137,7 @@ VaultTreemapView.refresh
 
 Every focused document gets a persistent id: `docid_{24 base36 chars}_e`
 (lowercase; 36^24 ≈ 2.2e37 keeps the random space above UUID v4's 2^122).
-The id machinery lives in the `obsidian-id-lib` npm package (its own git
+The id machinery lives in the `stable-ids-for-obsidian` npm package (its own git
 repo) so a second plugin can share it; the plugin wires it in
 `PluginFactory` via `DocIdServices.createDefault(app.vault)`.
 
@@ -145,7 +145,7 @@ repo) so a second plugin can share it; the plugin wires it in
 active-leaf-change
   → FocusTracker
   → DocIdFocusListener (registered FIRST; in-flight DROP guard per path)
-  → DocIdService (obsidian-id-lib; dispatch by extension)
+  → DocIdService (stable-ids-for-obsidian; dispatch by extension)
   → CrossPluginPathLock — per-path cross-plugin window lock around the whole
        read-decide-write (registry on the versioned globalThis key
        __obsidian_id_lib_path_lock_registry_v1__, so two plugins bundling

@@ -1,5 +1,5 @@
 import { FocusEvent, FocusListener } from '../FocusTracker';
-import { DocIdService } from 'obsidian-id-lib';
+import { DocIdService } from 'stable-ids-for-obsidian';
 import { DocIdFilenameSafety } from '../../service/visitHistoryService/DocIdFilenameSafety';
 import { FocusDurationTracker } from '../../focusDuration/FocusDurationTracker';
 
