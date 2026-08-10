@@ -1,17 +1,17 @@
 ---
 id: nid_ie968mmm7zsqf5usda41ufxw3_e
-title: "Replace lru-cache dependency with self-written LRU cache"
-status: open
+title: Replace lru-cache dependency with self-written LRU cache
+status: in_progress
 deps: []
 links: []
-created_iso: 2026-08-10T18:13:09Z
-status_updated_iso: 2026-08-10T18:13:09Z
+created_iso: '2026-08-10T18:13:09Z'
+status_updated_iso: '2026-08-10T18:14:31Z'
 type: task
 priority: 3
 assignee: nickolaykondratyev
 tags: [scorecard, dependency]
+pwd: /home/nickolaykondratyev/git_repos/nickolay-kondratyev_obsidian-visit-history-plugin
 ---
-
 ## Goal
 Remove the `lru-cache` npm dependency and replace it with a small self-written
 LRU so the Obsidian scorecard stops reporting its (false-positive) network call.
