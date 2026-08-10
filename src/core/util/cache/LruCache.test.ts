@@ -112,5 +112,13 @@ describe('LruCache', () => {
       expect(cache.get('a')).toBeUndefined();
       expect(cache.get('b')).toBe(2);
     });
+
+    it('should throw when storing undefined (indistinguishable from a miss)', () => {
+      // GIVEN a cache whose value type admits undefined
+      const cache = new LruCache<string, number | undefined>(2);
+      // WHEN storing undefined THEN it is rejected — a silent store would
+      // occupy a slot that get() forever reports as a miss
+      expect(() => cache.set('a', undefined)).toThrow();
+    });
   });
 });

@@ -9,8 +9,8 @@
  * writing a key deletes + re-inserts it, so the first key in iteration
  * order is always the least recently used and is evicted when full.
  *
- * `undefined` is not a storable value — it is indistinguishable from a miss
- * (same constraint as `lru-cache`, which rejects nullish values). Wrap
+ * `undefined` is not a storable value (set throws) — it is indistinguishable
+ * from a miss (same constraint as `lru-cache`, which rejects it too). Wrap
  * nullable values in an object if a cached "absent" result must be kept.
  */
 export class LruCache<K, V> {
@@ -35,6 +35,10 @@ export class LruCache<K, V> {
 
   /** Inserts/updates the key as most recently used, evicting the LRU entry when full. */
   set(key: K, value: V): void {
+    if (value === undefined) {
+      // A stored undefined would occupy a slot yet read back as a miss forever.
+      throw new Error('LruCache cannot store undefined; wrap the value or skip the set');
+    }
     if (this.entries.has(key)) {
       this.entries.delete(key);
     } else if (this.entries.size >= this.maxEntries) {
