@@ -1,0 +1,56 @@
+---
+closed_iso: 2026-08-10T18:17:15Z
+id: nid_ie968mmm7zsqf5usda41ufxw3_e
+title: Replace lru-cache dependency with self-written LRU cache
+status: closed
+deps: []
+links: []
+created_iso: '2026-08-10T18:13:09Z'
+status_updated_iso: 2026-08-10T18:17:15Z
+type: task
+priority: 3
+assignee: nickolaykondratyev
+tags: [scorecard, dependency]
+pwd: /home/nickolaykondratyev/git_repos/nickolay-kondratyev_obsidian-visit-history-plugin
+---
+## Goal
+Remove the `lru-cache` npm dependency and replace it with a small self-written
+LRU so the Obsidian scorecard stops reporting its (false-positive) network call.
+
+## Background
+The scorecard flags "1 network call". Investigation (closed ticket
+nid_kmnk1sasm5itvw3twkxj6wja4_e) proved it a FALSE POSITIVE: the static analyzer
+counts the literal `fetch(` token in bundled `main.js`, which comes only from
+`lru-cache`'s `fetch()`/`#fetch()` memoization methods (unrelated to
+`window.fetch`/HTTP). We never call `.fetch()` — only `.get()`/`.set()`.
+Dropping the dependency removes the token and yields a clean scorecard.
+
+## Scope
+`lru-cache` is used in exactly ONE file:
+`src/core/service/visitHistoryService/v3/LastVisitCache.ts` (a bounded
+key->stamp cache; only `get`/`set`). Replace it with a self-contained,
+tested generic LRU and keep `LastVisitCache`'s public API unchanged.
+
+## Acceptance criteria
+- `lru-cache` removed from `package.json`/lockfile; no `fetch(` in `main.js`
+  after a production build.
+- `npm test`, `npm run lint` (zero errors), `npm run build` all pass;
+  `LastVisitCache` behavior unchanged.
+- CLAUDE.md updated (LRU-caching note + dependency list).
+
+## Resolution (2026-08-10)
+Completed — all acceptance criteria met.
+
+- Added self-written generic `src/core/util/cache/LruCache.ts` (Map-backed,
+  insertion-order LRU; get/set + size; positive-integer max validated;
+  `undefined` not storable — same nullish constraint as lru-cache, documented).
+  Thorough vitest coverage in `LruCache.test.ts` (hit/miss, null values,
+  recency refresh on get, overwrite, eviction, size bound, size-1 cache,
+  ctor validation).
+- `LastVisitCache` now uses `LruCache` (same 10k bound); its public API and
+  `{value}` wrapping unchanged — existing `LastVisitCache.test.ts` passes as-is.
+- `npm uninstall lru-cache` — removed from package.json + lockfile.
+- Verified: `npm test` 453/453 pass, `npm run lint` zero errors,
+  `npm run build` OK, and `grep -c 'fetch(' main.js` = 0 (scorecard token gone).
+- CLAUDE.md (AGENTS.md) updated: dependency list, util/ tree (cache/), and the
+  LRU-caching design note now record the self-written cache + WHY.

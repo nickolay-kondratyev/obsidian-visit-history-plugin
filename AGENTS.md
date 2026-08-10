@@ -29,7 +29,7 @@ npm run version    # bump version + update manifest/versions
   needs the glassthought bash env). For live iteration, install a hot-reload plugin in the
   Obsidian vault this plugin is enabled in so rebuilt `main.js` reloads without restarting Obsidian.
 - `tsconfig.json`: strict, ES2021, React JSX (`react-jsx`)
-- Dependencies: React 18, d3-hierarchy, d3-color, d3-interpolate, visx/zoom, lru-cache, stable-ids-for-obsidian (published npm package — its own repo at github.com/nickolay-kondratyev/obsidian-id-lib; bundle changes there, publish, then bump the version here)
+- Dependencies: React 18, d3-hierarchy, d3-color, d3-interpolate, visx/zoom, stable-ids-for-obsidian (published npm package — its own repo at github.com/nickolay-kondratyev/obsidian-id-lib; bundle changes there, publish, then bump the version here)
 
 High-level docs live in [`docs/`](docs/README.md): architecture, VH on-disk
 format, heatmap view.
@@ -98,7 +98,11 @@ src/
                             # VhUserScopeMigrationService (pre-user-scoped v2/v3 →
                             # user/<user-name>/); cleanup both after 2026-October
     data/                   # FileTimeMetadata, VaultNode (heatmap tree node)
-    util/                   # vault/ (VaultUtil, IsTrackedProvider),
+    util/                   # cache/ (LruCache — self-written bounded LRU;
+                            # replaced the lru-cache npm dep, whose fetch()
+                            # methods false-positived the scorecard's
+                            # network-call check),
+                            # vault/ (VaultUtil, IsTrackedProvider),
                             # file/note/ (NoteFileUtil — vault file I/O),
                             # file/hidden/ (HiddenFileUtil — DataAdapter I/O for
                             # all VH data paths, incl. legacy dot-dirs the
@@ -173,7 +177,7 @@ src/
 - **Focus-event deduplication**: `DocIdFocusListener` uses `InFlightDropGuard` (`core/util/async/`) — in-flight promise tracking with DROP semantics — to avoid duplicate writes on rapid focus events.
 - **Doc ids**: every focused document gets a persistent id `docid_{24 base36 lowercase}_e` (36^24 > 2^122 — above UUID v4 randomness). md (incl. `.excalidraw.md`) → frontmatter `id`; canvas → `metadata.frontmatter.id`; raw `.excalidraw` skipped (no id location — owner decision). An existing id — any format, incl. legacy uppercase base62 `docid_{21}_E` — is used as-is and the file is NOT modified; an unusable occupied id slot (e.g. nested mapping) is never overwritten. Writes are atomic raw-text edits via `Vault.process` that only add/fill the id line — Obsidian's `FileManager.processFrontMatter` is deliberately NOT used (it re-serializes the whole frontmatter block, mangling formatting of keys we don't own, e.g. stripping quotes). Vault-wide backfill (settings tab) reuses the same `ensureDocId` path per file.
 - **Doc-id machinery is EXTRACTED to `stable-ids-for-obsidian`** (a published npm dependency with its own git repo; wired by `DocIdServices.createDefault(app.vault)` in PluginFactory). `ensureDocId` is guarded by the lib's `CrossPluginPathLock`: a per-path promise-chain registry on the versioned window/globalThis key `__obsidian_id_lib_path_lock_registry_v1__` (public cross-plugin contract — see the lib README), so two plugins bundling the lib serialize same-path id creation; `getDocId` stays lock-free. The in-transform re-check remains the idempotency backstop. Lib tests run in the lib's own repo.
-- **LRU caching** (instance fields, never module-level): `LastVisitCache` holds last-visit stamps keyed by doc id (10k entries), shared by `VisitHistoryServiceV3` (read; caches misses incl. null) and `VhV3DurationRecorder` (write-through after each successful append; max-merge so a racing cache-miss read can't clobber it). Heatmap reads resolve ids via the READ-ONLY `DocIdService.getDocId` — bulk read paths must never write into user files.
+- **LRU caching** (instance fields, never module-level; self-written `core/util/cache/LruCache` — no lru-cache dep, its `fetch()` methods false-positived the scorecard's network-call check): `LastVisitCache` holds last-visit stamps keyed by doc id (10k entries), shared by `VisitHistoryServiceV3` (read; caches misses incl. null) and `VhV3DurationRecorder` (write-through after each successful append; max-merge so a racing cache-miss read can't clobber it). Heatmap reads resolve ids via the READ-ONLY `DocIdService.getDocId` — bulk read paths must never write into user files.
 - **Malformed files never throw**: session parsing (`VhV3SessionLineParser` / `StampLineParser` / `VhV3DurationStore`) skips bad lines and `CanvasDocIdStore` returns `null` for unparseable content, so one bad file can't break aggregation or focus handling. Empty/whitespace-only canvas content is NOT malformed — it's a brand-new canvas, treated as `{}`, and gets an id on first focus.
 - **Console logging**: only `console.error` for real failures (obsidianmd no-console rule); no debug logs.
 - **Config seam (`ConfigProvider`)**: effective runtime config lives behind one interface — the idle closure in `PluginFactory` reads `configProvider.getIdleTimeoutMs()`, never `settings` directly. A DEV overrides JSON file (named by env var `__VISIT_HISTORY_DEV_OVERRIDES_FILE_JSON_PATH__`, set ONLY by the e2e harness, read once via the desktop-guarded `DevOverridesFileSource`) can override values — bypassing hard limits like the min-5 s idle floor for e2e (`idleTimeoutOverride.e2e.ts`) — WITHOUT touching persisted settings/data.json. Inert in prod (no env var → live settings, byte-for-byte unchanged); mobile-safe (no override); only `idleTimeoutSeconds` is consumed today.

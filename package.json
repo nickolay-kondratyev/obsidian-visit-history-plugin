@@ -42,7 +42,6 @@
 		"d3-color": "^3.1.0",
 		"d3-hierarchy": "^3.1.2",
 		"d3-interpolate": "^3.0.1",
-		"lru-cache": "^11.5.1",
 		"react": "^18.3.1",
 		"react-dom": "^18.3.1",
 		"stable-ids-for-obsidian": "^0.1.3"
