@@ -1,4 +1,5 @@
 ---
+session_ids: [{"a": "claude", "type": "execution", "id": "fcacf5e4-a0d3-41d2-92e2-2c8ce34b4f66"}]
 working_dir: nickolay-kondratyev_obsidian-visit-history-plugin
 id: nid_r4om42zb3uw161wzgkf2h69zo_e
 title: "Sync docs + CLAUDE.md to .plugin_data/visit_history TOP_DIR change"
