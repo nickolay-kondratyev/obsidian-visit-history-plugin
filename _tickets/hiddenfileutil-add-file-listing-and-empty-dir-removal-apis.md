@@ -1,6 +1,6 @@
 ---
 closed_iso: 2026-08-12T23:38:04Z
-session_ids: [{"a": "claude", "type": "execution", "id": "24b7fe47-bc55-4bf1-aa02-c4786b8fc008"}]
+session_ids: [{"a": "claude", "type": "execution", "id": "24b7fe47-bc55-4bf1-aa02-c4786b8fc008"}, {"a": "claude", "type": "review", "id": "d1880cdd-38c3-413c-b1a4-fdcbca3f1ab8"}]
 working_dir: nickolay-kondratyev_obsidian-visit-history-plugin
 id: nid_9ebr4ouaipn4dtylfo0puycoo_e
 title: "HiddenFileUtil: add file listing and empty-dir removal APIs"
