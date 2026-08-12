@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-08-12T23:25:16Z
 id: nid_3dy6j77ekkmv2nmgsnqu959ks_e
 title: "Decide: accept loss of Obsidian Sync for visit history under .plugin_data"
-status: open
+status: closed
 deps: []
 links: [nid_i6zq59oey3pbggvog9kj3dj8x_e, nid_9ebr4ouaipn4dtylfo0puycoo_e, nid_fdlst01268tcjvtfs4aga34ov_e, nid_7hpz3mw6bg68k41eomug4nt0j_e]
 created_iso: 2026-08-12T23:22:25Z
-status_updated_iso: 2026-08-12T23:22:25Z
+status_updated_iso: 2026-08-12T23:25:16Z
 type: task
 priority: 3
 assignee: CC_WITH-nickolaykondratyev
@@ -29,3 +30,9 @@ To accept: `ticket close <this-id>`.
 
 Human explicitly confirmed the sync tradeoff (close = accept) or redirected the approach.
 
+
+## Notes
+
+**2026-08-12T23:25:16Z**
+
+ACCEPTED by owner (2026-08-12): fine with hiding under .plugin_data — questionable whether the __visit_history (non-dot) approach would have worked for Obsidian Sync anyway. Implementation unblocked.
