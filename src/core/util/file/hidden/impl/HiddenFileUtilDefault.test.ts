@@ -43,6 +43,10 @@ class FakeAdapter {
     );
     return { files, folders };
   }
+
+  async rmdir(path: string, _recursive: boolean): Promise<void> {
+    this.folders.delete(path);
+  }
 }
 
 function givenUtil() {
@@ -139,6 +143,86 @@ describe('HiddenFileUtilDefault', () => {
       const { util } = givenUtil();
       // WHEN listing THEN empty, no throw
       expect(await util.listSubfolderNames('.vh/missing')).toEqual([]);
+    });
+  });
+
+  describe('listFileNames', () => {
+    it('should return file basenames (not subfolders)', async () => {
+      // GIVEN a folder with two files and a subfolder
+      const { util, adapter } = givenUtil();
+      adapter.folders.add('.vh/dev');
+      adapter.folders.add('.vh/dev/nested');
+      adapter.contents.set('.vh/dev/a.vh_v3', 'x');
+      adapter.contents.set('.vh/dev/b.vh_v3', 'y');
+      // WHEN listing files
+      const names = await util.listFileNames('.vh/dev');
+      // THEN only the direct file basenames come back
+      expect(names.sort()).toEqual(['a.vh_v3', 'b.vh_v3']);
+    });
+
+    it('should return [] when the folder does not exist', async () => {
+      // GIVEN nothing
+      const { util } = givenUtil();
+      // WHEN listing THEN empty, no throw
+      expect(await util.listFileNames('.vh/missing')).toEqual([]);
+    });
+  });
+
+  describe('removeFolderIfEmpty', () => {
+    it('should remove an empty folder and report true', async () => {
+      // GIVEN an empty folder
+      const { util, adapter } = givenUtil();
+      adapter.folders.add('.vh/empty');
+      // WHEN removing
+      const removed = await util.removeFolderIfEmpty('.vh/empty');
+      // THEN it reports removal
+      expect(removed).toBe(true);
+    });
+
+    it('should leave the empty folder gone after removal', async () => {
+      // GIVEN an empty folder
+      const { util, adapter } = givenUtil();
+      adapter.folders.add('.vh/empty');
+      // WHEN removing
+      await util.removeFolderIfEmpty('.vh/empty');
+      // THEN the folder no longer exists
+      expect(await adapter.exists('.vh/empty')).toBe(false);
+    });
+
+    it('should not remove a folder containing files (returns false)', async () => {
+      // GIVEN a folder with a file
+      const { util, adapter } = givenUtil();
+      adapter.folders.add('.vh/full');
+      adapter.contents.set('.vh/full/a.txt', 'x');
+      // WHEN removing THEN it reports no removal
+      expect(await util.removeFolderIfEmpty('.vh/full')).toBe(false);
+    });
+
+    it('should keep the file-holding folder intact', async () => {
+      // GIVEN a folder with a file
+      const { util, adapter } = givenUtil();
+      adapter.folders.add('.vh/full');
+      adapter.contents.set('.vh/full/a.txt', 'x');
+      // WHEN removing
+      await util.removeFolderIfEmpty('.vh/full');
+      // THEN the folder is still present
+      expect(await adapter.exists('.vh/full')).toBe(true);
+    });
+
+    it('should not remove a folder containing subfolders (returns false)', async () => {
+      // GIVEN a folder with a subfolder
+      const { util, adapter } = givenUtil();
+      adapter.folders.add('.vh/parent');
+      adapter.folders.add('.vh/parent/child');
+      // WHEN removing THEN it reports no removal
+      expect(await util.removeFolderIfEmpty('.vh/parent')).toBe(false);
+    });
+
+    it('should report false for an absent folder', async () => {
+      // GIVEN nothing
+      const { util } = givenUtil();
+      // WHEN removing THEN false, no throw
+      expect(await util.removeFolderIfEmpty('.vh/missing')).toBe(false);
     });
   });
 });
