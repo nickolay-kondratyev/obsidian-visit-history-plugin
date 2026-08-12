@@ -1,4 +1,5 @@
 ---
+session_ids: [{"a": "claude", "type": "execution", "id": "24b7fe47-bc55-4bf1-aa02-c4786b8fc008"}]
 working_dir: nickolay-kondratyev_obsidian-visit-history-plugin
 id: nid_9ebr4ouaipn4dtylfo0puycoo_e
 title: "HiddenFileUtil: add file listing and empty-dir removal APIs"
