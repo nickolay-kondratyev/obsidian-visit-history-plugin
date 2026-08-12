@@ -60,3 +60,9 @@ Done. Both APIs added exactly as specified.
 Verified: `npm test` → 462 passed; `npm run lint` → 0 errors (1 pre-existing unrelated
 deprecation warning in ConfirmModal.ts).
 
+
+## Notes
+
+**2026-08-12T23:39:44Z**
+
+__READY_AS_IS__: Focused, well-tested API addition (listFileNames + removeFolderIfEmpty); test/lint/build all green; no bugs found.
