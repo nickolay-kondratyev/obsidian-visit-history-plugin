@@ -1,11 +1,12 @@
 ---
+working_dir: nickolay-kondratyev_obsidian-visit-history-plugin
 id: nid_9ebr4ouaipn4dtylfo0puycoo_e
 title: "HiddenFileUtil: add file listing and empty-dir removal APIs"
-status: open
+status: in_progress
 deps: [nid_i6zq59oey3pbggvog9kj3dj8x_e]
 links: [nid_i6zq59oey3pbggvog9kj3dj8x_e, nid_3dy6j77ekkmv2nmgsnqu959ks_e, nid_fdlst01268tcjvtfs4aga34ov_e, nid_7hpz3mw6bg68k41eomug4nt0j_e]
 created_iso: 2026-08-12T23:22:37Z
-status_updated_iso: 2026-08-12T23:22:37Z
+status_updated_iso: 2026-08-12T23:36:10Z
 type: task
 priority: 3
 assignee: CC_WITH-nickolaykondratyev
