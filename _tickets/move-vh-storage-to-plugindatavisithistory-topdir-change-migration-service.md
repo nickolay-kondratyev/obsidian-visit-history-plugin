@@ -101,3 +101,9 @@ tracked in **nid_r4om42zb3uw161wzgkf2h69zo_e** (dep on this ticket, tag
 `migration_to_plugin_data_dir`). Not done here to keep this ticket focused on
 the code change; nothing functional depends on it.
 
+
+## Notes
+
+**2026-08-12T23:56:10Z**
+
+__READY_AS_IS__: code/tests/lint/build all pass and logic is correct (two-step migration chain sound); only fixed doc drift where AGENTS.md/docs still described the old visible __visit_history contract the branch reversed.
