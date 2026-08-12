@@ -1,4 +1,4 @@
-// User names become path segments (`__visit_history/user/<user-name>` —
+// User names become path segments (`.plugin_data/visit_history/user/<user-name>` —
 // VhUserPaths.userRootDir), so the charset must be filename-safe. STRICTER
 // than DocIdFilenameSafety (which allows uppercase): user names are
 // human-chosen and lowercase-only (owner decision, 2026-07) avoids

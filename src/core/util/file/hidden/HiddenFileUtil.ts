@@ -4,15 +4,13 @@
  *
  * WHY the DataAdapter (not the Vault API): Obsidian's Vault API (getFiles,
  * getAbstractFileByPath, create, process, metadataCache) does NOT see
- * dot-folders — historically the VH top dir was the dot-hidden
- * `.visit_history/`. Today's `__visit_history/` IS Vault-API visible
- * (renamed so Obsidian Sync syncs it — see VhUserPaths.TOP_DIR), but the
- * DataAdapter works for visible folders too, and legacy dot-dir paths (e.g.
- * the rename migration source) still need it — so all VH I/O stays here.
- * Keeping it as a seam lets everything above stay Obsidian-agnostic and
- * unit-testable (FakeHiddenFileUtil).
+ * dot-folders, and the VH top dir is the dot-hidden `.plugin_data/visit_history/`
+ * (see VhUserPaths.TOP_DIR) — so the DataAdapter is required. It also reaches
+ * legacy dot-dir paths (the rename/move migration sources) and visible folders
+ * alike, so all VH I/O stays here. Keeping it as a seam lets everything above
+ * stay Obsidian-agnostic and unit-testable (FakeHiddenFileUtil).
  *
- * All paths are vault-relative (e.g. "__visit_history/user/<user>/v3/...").
+ * All paths are vault-relative (e.g. ".plugin_data/visit_history/user/<user>/v3/...").
  */
 export interface HiddenFileUtil {
   /** File content, or null when the file does not exist. */

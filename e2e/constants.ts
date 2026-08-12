@@ -18,7 +18,7 @@ export const PLUGIN_ID = 'visit-history';
 // Keep in sync with DEV_OVERRIDES_FILE_JSON_PATH_ENV_VAR in the src source above.
 export const DEV_OVERRIDES_FILE_JSON_PATH_ENV_VAR = '__VISIT_HISTORY_DEV_OVERRIDES_FILE_JSON_PATH__';
 
-export const VH_TOP_DIR = '__visit_history';
+export const VH_TOP_DIR = '.plugin_data/visit_history';
 
 // Deterministic identity pinned via localStorage before the plugin is enabled.
 export const USER_NAME = 'e2e_user';

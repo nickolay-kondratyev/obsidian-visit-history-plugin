@@ -9,6 +9,15 @@ export const TRACKED_EXTENSIONS = new Set(["md", "canvas", "excalidraw"]);
 export const VISIT_HISTORY_TOP_DIR = "_visit_history";
 
 /**
+ * LEGACY interim VISIBLE visit-history dir (double-underscore). Superseded by
+ * the dot-hidden `.plugin_data/visit_history/` (VhUserPaths.TOP_DIR);
+ * VhPluginDataMoveMigrationService relocates its .vh_v3 + README files, but
+ * leftovers (unmigrated v2, skipped conflicts) may remain visible — so it
+ * stays excluded from tracking and the heatmap (see IsTrackedProvider).
+ */
+export const LEGACY_VISIBLE_VISIT_HISTORY_TOP_DIR = "__visit_history";
+
+/**
  * Folders with this exact name are hidden in the heatmap below the current
  * view root — view an archive by right-clicking it in the file explorer and
  * choosing "Open heatmap for folder". See viewModel/pruneArchiveFolders.ts.
