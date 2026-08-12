@@ -1,4 +1,5 @@
 ---
+session_ids: [{"a": "claude", "type": "execution", "id": "54b8c7ad-4893-4aec-8e52-94e1a30a2cc4"}]
 working_dir: nickolay-kondratyev_obsidian-visit-history-plugin
 id: nid_fdlst01268tcjvtfs4aga34ov_e
 title: "Move VH storage to .plugin_data/visit_history: TOP_DIR change + migration service"
