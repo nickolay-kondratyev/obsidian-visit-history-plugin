@@ -32,7 +32,7 @@ core/init/PluginFactory ──── DI container: constructs & wires everything
    │                          session line; VhV3Paths layout; VhV3ReadmeWriter
    │                          generates the in-vault format doc;
    │                          DocIdFilenameSafety validates id-as-filename)
-   │                         user/: VhUserPaths (__visit_history/user/<user-name>/)
+   │                         user/: VhUserPaths (.plugin_data/visit_history/user/<user-name>/)
    │                         + UserNameProvider (prompts + pins the user name via
    │                         the UserNamePrompt modal; UserNameSafety charset)
    │                         LastVisitProvider (read-only interface) ←
@@ -44,10 +44,13 @@ core/init/PluginFactory ──── DI container: constructs & wires everything
    │                         npm package (its own repo)
    │                         DocIdBackfillService: vault-wide doc id backfill
    │                         migration/: VhTopDirRenameMigrationService
-   │                         (.visit_history → __visit_history; runs FIRST)
-   │                         + VhUserScopeMigrationService (pre-user-scoped
-   │                         v2/v3 dirs → user/<user-name>/); drop both
-   │                         after 2026-Oct
+   │                         (.visit_history → __visit_history; runs FIRST) +
+   │                         VhPluginDataMoveMigrationService (__visit_history
+   │                         → .plugin_data/visit_history; runs SECOND) +
+   │                         VhUserScopeMigrationService (pre-user-scoped
+   │                         v2/v3 dirs → user/<user-name>/); drop the first
+   │                         two + user-scope after 2026-Oct, the move after
+   │                         2027-Feb
    │
    ├── settingsTab/ ───────── VisitHistorySettingTab (Settings → Visit History):
    │                         "File modifying actions" → doc id backfill button
@@ -111,7 +114,7 @@ user input events  ──► (idle detection)       │   main at load, popouts 
                                 │  LastVisitCache after a successful append)
                                 ▼
                               VhV3DurationStore.appendFocusDuration
-                                (__visit_history/user/<user>/v3/
+                                (.plugin_data/visit_history/user/<user>/v3/
                                  focus_duration_per_device/<device>/<id>.vh_v3
                                  — `<ISO start> D:<millis>`)
 ```
@@ -223,12 +226,17 @@ stamp cache entry is evicted or the plugin reloads.
 
 ## Legacy data
 
-v2 focus stamps (under `__visit_history/v2/` or, after the legacy-layout
-move, `__visit_history/user/<user-name>/v2/`) and `_visit_history/` (V1) are
-formats from older plugin versions — no longer read or written, content left
-untouched (owner decision). Both `_visit_history/` (legacy) and
-`__visit_history/` (active, Vault-API visible since the rename for Obsidian
-Sync) are excluded from tracking via `IsTrackedProvider`. A pre-2026-07
-dot-hidden `.visit_history/` dir is renamed wholesale to `__visit_history/`
-by `VhTopDirRenameMigrationService` (first thing in `onload`; never merges —
-if both exist the user is notified and the legacy dir is kept).
+v2 focus stamps (under `.plugin_data/visit_history/v2/` or, after the
+legacy-layout move, `.plugin_data/visit_history/user/<user-name>/v2/`, plus
+any stranded in the interim `__visit_history/v2/`) and `_visit_history/` (V1)
+are formats from older plugin versions — no longer read or written, content
+left untouched (owner decision). The active top dir
+`.plugin_data/visit_history/` is dot-hidden, so the Vault API never surfaces
+it and it needs no tracking gate; the still-VISIBLE legacy leftovers
+`__visit_history/` and `_visit_history/` are excluded from tracking via
+`IsTrackedProvider`. Ancient vaults chain through two one-shot top-dir
+migrations at the start of `onload`: `VhTopDirRenameMigrationService`
+(`.visit_history/` → `__visit_history/`) then
+`VhPluginDataMoveMigrationService` (live `.vh_v3` + README →
+`.plugin_data/visit_history/`). Neither merges — if a destination already
+exists the source is kept (the rename also notifies the user).

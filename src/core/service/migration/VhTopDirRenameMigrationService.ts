@@ -1,19 +1,22 @@
+import { LEGACY_VISIBLE_VISIT_HISTORY_TOP_DIR } from '../../../Constants';
 import { HiddenFileUtil } from '../../util/file/hidden/HiddenFileUtil';
 import { UserNotifier } from '../../util/userComm/UserNotifier';
-import { VhUserPaths } from '../visitHistoryService/user/VhUserPaths';
 
 /**
  * One-shot migration of the pre-July-2026 dot-hidden top dir:
  *
  *   .visit_history  →  __visit_history   (whole subtree, single rename)
  *
- * WHY: Obsidian Sync does not sync dot-hidden folders — see the
- * VhUserPaths.TOP_DIR comment for the rationale and issue link.
+ * This targets the INTERIM visible `__visit_history` (a literal, NOT
+ * VhUserPaths.TOP_DIR, which now points at the dot-hidden
+ * `.plugin_data/visit_history`): ancient vaults chain through both
+ * migrations — this one lands data in `__visit_history`, then
+ * VhPluginDataMoveMigrationService (next in onload) relocates the live V3
+ * files into `.plugin_data/visit_history`.
  *
  * Runs FIRST in onload (main.ts) — BEFORE user-name resolution and BEFORE
- * VhUserScopeMigrationService: the user-name modal lists
- * `__visit_history/user` for joinable identities, so renaming later would
- * hide the existing users from the prompt.
+ * the plugin-data move: keeping the whole subtree together here lets the
+ * later move + user-scope migrations do the finer relocation.
  *
  * When BOTH dirs exist (this vault was migrated by another synced device
  * while this one still held the legacy dir), the migration is SKIPPED:
@@ -27,6 +30,8 @@ import { VhUserPaths } from '../visitHistoryService/user/VhUserPaths';
 export class VhTopDirRenameMigrationService {
   /** Pre-rename top dir. Dot-hidden, so Obsidian Sync never synced it. */
   private static readonly LEGACY_TOP_DIR = '.visit_history';
+  /** Rename destination: the interim visible dir, later relocated under `.plugin_data/`. */
+  private static readonly DESTINATION_DIR = LEGACY_VISIBLE_VISIT_HISTORY_TOP_DIR;
 
   constructor(
     private readonly hiddenFileUtil: HiddenFileUtil,
@@ -37,20 +42,21 @@ export class VhTopDirRenameMigrationService {
   /** Renames the legacy top dir to the new one. No-op when it is absent. */
   async migrateIfLegacyPresent(): Promise<void> {
     const legacyDir = VhTopDirRenameMigrationService.LEGACY_TOP_DIR;
+    const destinationDir = VhTopDirRenameMigrationService.DESTINATION_DIR;
     if (!(await this.hiddenFileUtil.exists(legacyDir))) {
       return;
     }
-    if (await this.hiddenFileUtil.exists(VhUserPaths.TOP_DIR)) {
+    if (await this.hiddenFileUtil.exists(destinationDir)) {
       console.error(
-        `[VHP][VhTopDirRenameMigration] destination already exists — legacy dir kept legacyDir=[${legacyDir}] destination=[${VhUserPaths.TOP_DIR}]`,
+        `[VHP][VhTopDirRenameMigration] destination already exists — legacy dir kept legacyDir=[${legacyDir}] destination=[${destinationDir}]`,
       );
       this.userNotifier.showError(
-        `Visit History: both "${legacyDir}" and "${VhUserPaths.TOP_DIR}" folders exist. ` +
+        `Visit History: both "${legacyDir}" and "${destinationDir}" folders exist. ` +
         `Migration skipped — "${legacyDir}" was left untouched. ` +
-        `Please move its content into "${VhUserPaths.TOP_DIR}" (or delete it) manually.`,
+        `Please move its content into "${destinationDir}" (or delete it) manually.`,
       );
       return;
     }
-    await this.hiddenFileUtil.rename(legacyDir, VhUserPaths.TOP_DIR);
+    await this.hiddenFileUtil.rename(legacyDir, destinationDir);
   }
 }

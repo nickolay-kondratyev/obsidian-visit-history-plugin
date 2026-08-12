@@ -35,7 +35,7 @@ window at a time).
 - **`e2e/vhAssert.ts`** — builds the expected `.vh_v3` path and polls it with a bounded
   timeout (never a fixed sleep); throws with the last-seen content on timeout.
 - Assertions target
-  `.tmp/e2e/vault-<run>/__visit_history/user/e2e_user/v3/focus_duration_per_device/e2e_device/<doc-id>.vh_v3`.
+  `.tmp/e2e/vault-<run>/.plugin_data/visit_history/user/e2e_user/v3/focus_duration_per_device/e2e_device/<doc-id>.vh_v3`.
   The human's real vault is never touched.
 
 `obsidian` is a types-only package, so the node-side e2e code never imports it —

@@ -2,13 +2,18 @@ import { HiddenFileUtil } from '../../util/file/hidden/HiddenFileUtil';
 import { VhUserPaths } from '../visitHistoryService/user/VhUserPaths';
 
 /**
- * One-shot migration of the pre-user-scoped layout (before July 2026):
+ * One-shot migration of the pre-user-scoped layout (before July 2026),
+ * relative to the current VH top dir (VhUserPaths.TOP_DIR):
  *
- *   __visit_history/v2  →  __visit_history/user/<user-name>/v2
- *   __visit_history/v3  →  __visit_history/user/<user-name>/v3
+ *   <TOP_DIR>/v2  →  <TOP_DIR>/user/<user-name>/v2
+ *   <TOP_DIR>/v3  →  <TOP_DIR>/user/<user-name>/v3
  *
- * (VhTopDirRenameMigrationService runs first, so by this point any legacy
- * `.visit_history` top dir has already been renamed to `__visit_history`.)
+ * (VhTopDirRenameMigrationService + VhPluginDataMoveMigrationService run first
+ * in onload, so by this point any pre-user-scoped `v3/` has already been
+ * relocated into `.plugin_data/visit_history/` — this service then nests it
+ * under the user. NOTE: a pre-user-scoped `v2/` is NOT relocated by the move
+ * migration (only .vh_v3 + README move), so it stays stranded in the interim
+ * `__visit_history/v2` and is never seen here — acceptable, v2 is never read.)
  *
  * Runs right after the user name is pinned (main.ts), BEFORE recording
  * activates, so new visits can never be written to the legacy location

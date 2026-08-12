@@ -4,6 +4,7 @@ import { PluginFactory } from './core/init/PluginFactory';
 import { HiddenFileUtil } from './core/util/file/hidden/HiddenFileUtil';
 import { HiddenFileUtilDefault } from './core/util/file/hidden/impl/HiddenFileUtilDefault';
 import { VhTopDirRenameMigrationService } from './core/service/migration/VhTopDirRenameMigrationService';
+import { VhPluginDataMoveMigrationService } from './core/service/migration/VhPluginDataMoveMigrationService';
 import { VhUserScopeMigrationService } from './core/service/migration/VhUserScopeMigrationService';
 import { UserNotifier } from './core/util/userComm/UserNotifier';
 import { UserNotifierDefault } from './core/util/userComm/impl/UserNotifierDefault';
@@ -26,10 +27,13 @@ export default class VisitHistoryPlugin extends Plugin {
     await this.loadSettings();
 
     const hiddenFileUtil = new HiddenFileUtilDefault(this.app);
-    // Top-dir rename FIRST — before user-name resolution: the user-name
-    // modal lists `__visit_history/user` for joinable identities, so a
-    // still-dot-named dir would hide them. (onLayoutReady fires after
-    // onload completes, so this await settles before the modal opens.)
+    // Two chained one-shot migrations run FIRST — before user-name resolution:
+    // the user-name modal lists `.plugin_data/visit_history/user` for joinable
+    // identities, so any not-yet-relocated data would hide them. (onLayoutReady
+    // fires after onload completes, so these awaits settle before the modal
+    // opens.) Ancient vaults chain through both: `.visit_history` →
+    // `__visit_history` (rename), then `__visit_history` files →
+    // `.plugin_data/visit_history` (move).
     try {
       // TODO(cleanup): remove after 2026-October (see VhTopDirRenameMigrationService).
       await new VhTopDirRenameMigrationService(hiddenFileUtil, new UserNotifierDefault(this))
@@ -37,6 +41,13 @@ export default class VisitHistoryPlugin extends Plugin {
     } catch (error) {
       // Never blocks load: legacy dir stays untouched, retried on next load.
       console.error('[VHP][main] VH top-dir rename migration failed', error);
+    }
+    try {
+      // TODO(cleanup): remove after 2027-February (see VhPluginDataMoveMigrationService).
+      await new VhPluginDataMoveMigrationService(hiddenFileUtil).migrateIfLegacyPresent();
+    } catch (error) {
+      // Never blocks load: legacy files stay untouched, retried on next load.
+      console.error('[VHP][main] VH plugin-data move migration failed', error);
     }
 
     // The factory wires only NAME-INDEPENDENT parts (heatmap reads, doc-id

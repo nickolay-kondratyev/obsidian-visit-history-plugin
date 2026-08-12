@@ -1,6 +1,6 @@
 /** What the user-name prompt offers the human to choose from. */
 export interface UserNamePromptRequest {
-  /** Existing `__visit_history/user/<name>` dirs — picking one joins that identity. */
+  /** Existing `.plugin_data/visit_history/user/<name>` dirs — picking one joins that identity. */
   existingNames: string[];
   /**
    * Pre-fill for the new-name input (sanitized OS login name); null when

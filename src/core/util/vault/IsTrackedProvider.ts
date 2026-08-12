@@ -1,6 +1,5 @@
 import { TFile, View } from "obsidian";
-import { TRACKED_EXTENSIONS, TRACKED_VIEW_TYPES, VISIT_HISTORY_TOP_DIR } from "../../../Constants";
-import { VhUserPaths } from "../../service/visitHistoryService/user/VhUserPaths";
+import { LEGACY_VISIBLE_VISIT_HISTORY_TOP_DIR, TRACKED_EXTENSIONS, TRACKED_VIEW_TYPES, VISIT_HISTORY_TOP_DIR } from "../../../Constants";
 
 export interface IsTrackedProvider {
   isTrackedFile(file: TFile): boolean;
@@ -36,14 +35,17 @@ export class IsTrackedProviderDefault implements IsTrackedProvider {
 
   /**
    * The plugin's own visit-history files must never be tracked (no
-   * self-tracking loops, never shown in the heatmap). `__visit_history/` is
-   * VISIBLE to the Vault API (not a dot-folder, so Obsidian Sync syncs it) —
-   * this exclusion is the only gate keeping it out. Legacy `_visit_history/`
-   * (V1) stays on disk untouched and stays excluded too.
+   * self-tracking loops, never shown in the heatmap). The ACTIVE top dir
+   * (`.plugin_data/visit_history/`, VhUserPaths.TOP_DIR) is dot-hidden, so the
+   * Vault API never surfaces it and no gate is needed for it. What this gate
+   * DOES exclude are the still-VISIBLE legacy leftovers a migration may not
+   * have fully removed: `__visit_history/` (interim visible layout — e.g.
+   * unmigrated v2 or skipped conflicts) and `_visit_history/` (V1). Both stay
+   * on disk untouched and stay excluded.
    */
   private static isVisitHistoryPath(path: string): boolean {
     return (
-      IsTrackedProviderDefault.isUnderDir(path, VhUserPaths.TOP_DIR) ||
+      IsTrackedProviderDefault.isUnderDir(path, LEGACY_VISIBLE_VISIT_HISTORY_TOP_DIR) ||
       IsTrackedProviderDefault.isUnderDir(path, VISIT_HISTORY_TOP_DIR)
     );
   }

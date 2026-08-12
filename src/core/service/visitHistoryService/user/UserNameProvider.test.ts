@@ -45,9 +45,9 @@ function setup(osUserName: string | null, promptAnswer: string | null): Setup {
   return { provider, prompt, hidden, cache };
 }
 
-/** Seeds one `__visit_history/user/<name>/...` tree (a folder implied by a file). */
+/** Seeds one `.plugin_data/visit_history/user/<name>/...` tree (a folder implied by a file). */
 function seedVhUserTree(hidden: FakeHiddenFileUtil, userName: string): void {
-  hidden.seedFile(`__visit_history/user/${userName}/v3/focus_duration_per_device/host/doc.vh_v3`, 'x\n');
+  hidden.seedFile(`.plugin_data/visit_history/user/${userName}/v3/focus_duration_per_device/host/doc.vh_v3`, 'x\n');
 }
 
 describe('UserNameProviderDefault', () => {
