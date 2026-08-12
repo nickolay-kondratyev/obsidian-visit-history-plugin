@@ -1,17 +1,17 @@
 ---
 id: nid_f7ky5v4q6cz1uc1xs66bylkli_e
-title: "Plan to move to fully hidden place"
-status: open
+title: Plan to move to fully hidden place
+status: in_progress
 deps: []
 links: []
-created_iso: 2026-08-12T23:11:10Z
-status_updated_iso: 2026-08-12T23:11:10Z
+created_iso: '2026-08-12T23:11:10Z'
+status_updated_iso: '2026-08-12T23:18:57Z'
 type: task
 priority: 3
 assignee: nickolaykondratyev
 tags: [migration_to_plugin_data_dir]
+pwd: /home/nickolaykondratyev/git_repos/nickolay-kondratyev_obsidian-visit-history-plugin
 ---
-
 TASK: **PLAN**. Lets clarify any gaps that exist for this ticket
   (if you need to explore code base use cheaper Explore-cheap sub-agent)
   ask human any questions that come up that require human decision.
@@ -37,20 +37,4 @@ Lets tag all the created tickets with migration_to_plugin_data_dir, and in those
 
 The migration should trigger when we see that there is `__visit_history` directory present.
 
-Also lets keep migration SIMPLE and not override the files if there is a file with the same id in the destination directory. The migration is a simple move if there is no destination file at the matching id. 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+Also lets keep migration SIMPLE and not override the files if there is a file with the same id in the destination directory. The migration is a simple move if there is no destination file at the matching id.
