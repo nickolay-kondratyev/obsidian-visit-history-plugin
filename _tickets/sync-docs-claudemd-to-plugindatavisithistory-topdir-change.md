@@ -1,6 +1,6 @@
 ---
 closed_iso: 2026-08-12T23:59:14Z
-session_ids: [{"a": "claude", "type": "execution", "id": "fcacf5e4-a0d3-41d2-92e2-2c8ce34b4f66"}]
+session_ids: [{"a": "claude", "type": "execution", "id": "fcacf5e4-a0d3-41d2-92e2-2c8ce34b4f66"}, {"a": "claude", "type": "review", "id": "04566734-b1d4-4920-b911-df947a3da6ab"}]
 working_dir: nickolay-kondratyev_obsidian-visit-history-plugin
 id: nid_r4om42zb3uw161wzgkf2h69zo_e
 title: "Sync docs + CLAUDE.md to .plugin_data/visit_history TOP_DIR change"
