@@ -1,6 +1,6 @@
 ---
 closed_iso: 2026-08-12T23:49:29Z
-session_ids: [{"a": "claude", "type": "execution", "id": "54b8c7ad-4893-4aec-8e52-94e1a30a2cc4"}]
+session_ids: [{"a": "claude", "type": "execution", "id": "54b8c7ad-4893-4aec-8e52-94e1a30a2cc4"}, {"a": "claude", "type": "review", "id": "402e7c26-584b-46ab-80dc-f12f641026d3"}]
 working_dir: nickolay-kondratyev_obsidian-visit-history-plugin
 id: nid_fdlst01268tcjvtfs4aga34ov_e
 title: "Move VH storage to .plugin_data/visit_history: TOP_DIR change + migration service"
