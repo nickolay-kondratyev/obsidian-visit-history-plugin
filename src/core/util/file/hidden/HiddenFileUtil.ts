@@ -32,6 +32,19 @@ export interface HiddenFileUtil {
    */
   listSubfolderNames(folderPath: string): Promise<string[]>;
 
+  /**
+   * Basenames of the direct FILES in a folder.
+   * Returns [] when the folder does not exist.
+   */
+  listFileNames(folderPath: string): Promise<string[]>;
+
+  /**
+   * Removes the folder ONLY when it holds no files and no subfolders.
+   * Returns whether it was removed; no-op (false) when the folder is absent
+   * or non-empty. Never recursive — never deletes content.
+   */
+  removeFolderIfEmpty(folderPath: string): Promise<boolean>;
+
   /** True when a file OR folder exists at the path. */
   exists(path: string): Promise<boolean>;
 
