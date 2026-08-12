@@ -1,11 +1,12 @@
 ---
+working_dir: nickolay-kondratyev_obsidian-visit-history-plugin
 id: nid_r4om42zb3uw161wzgkf2h69zo_e
 title: "Sync docs + CLAUDE.md to .plugin_data/visit_history TOP_DIR change"
-status: open
+status: in_progress
 deps: [nid_fdlst01268tcjvtfs4aga34ov_e]
 links: [nid_fdlst01268tcjvtfs4aga34ov_e]
 created_iso: 2026-08-12T23:48:55Z
-status_updated_iso: 2026-08-12T23:48:55Z
+status_updated_iso: 2026-08-12T23:57:17Z
 type: chore
 priority: 3
 assignee: CC_WITH-nickolaykondratyev
