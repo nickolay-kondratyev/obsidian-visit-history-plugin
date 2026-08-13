@@ -70,3 +70,9 @@ The remaining, real deliverable was the **migration e2e**, plus a doc note:
 
 Full `npm run test:e2e` green: 9/9 (7 pre-existing + 2 new).
 
+
+## Notes
+
+**2026-08-13T00:10:27Z**
+
+__READY_AS_IS__: docs/e2e-only branch; migration e2e constants+assertions match source, lint/build/473 unit tests green, no bugs found.
