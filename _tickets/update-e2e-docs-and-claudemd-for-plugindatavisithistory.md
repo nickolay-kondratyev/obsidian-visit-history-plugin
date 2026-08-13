@@ -1,6 +1,6 @@
 ---
 closed_iso: 2026-08-13T00:07:57Z
-session_ids: [{"a": "claude", "type": "execution", "id": "b427599e-06ba-407b-9295-fa8045438a6e"}]
+session_ids: [{"a": "claude", "type": "execution", "id": "b427599e-06ba-407b-9295-fa8045438a6e"}, {"a": "claude", "type": "review", "id": "40a5e352-0210-44d4-b9c3-5526fd7e740b"}]
 working_dir: nickolay-kondratyev_obsidian-visit-history-plugin
 id: nid_7hpz3mw6bg68k41eomug4nt0j_e
 title: "Update e2e, docs, and CLAUDE.md for .plugin_data/visit_history"
