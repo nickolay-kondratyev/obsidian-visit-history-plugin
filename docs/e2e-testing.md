@@ -3,7 +3,8 @@
 The `e2e/` suite drives a **real headless Obsidian (Electron)** and asserts on the
 on-disk `.vh_v3` files the plugin actually writes — never on plugin internals. It proves
 Visit-History V3 recording across several scenarios: focus switch, unload flush, opening
-Settings, canvas focus, idle timeout, and a sub-floor idle timeout via a dev overrides file.
+Settings, canvas focus, idle timeout, a sub-floor idle timeout via a dev overrides file,
+and the interim-top-dir → `.plugin_data/visit_history` migration (`pluginDataMoveMigration.e2e.ts`).
 
 ## Run it
 
@@ -41,6 +42,18 @@ window at a time).
 `obsidian` is a types-only package, so the node-side e2e code never imports it —
 runtime constants (plugin id, VH dir, localStorage keys, seeded ids, session regex) are
 duplicated in `e2e/constants.ts` with a sync-pointer comment.
+
+## Seeding legacy layouts (migration specs)
+
+`ObsidianHarness.launch` takes an optional `seedFiles: SeedFile[]` — vault-relative
+`{ path, content }` files written into the fresh copy **before** the plugin is enabled, so
+its onload migrations observe them on disk. `pluginDataMoveMigration.e2e.ts` uses this to
+seed a live `__visit_history/…/<id>.vh_v3` + README plus a non-matching leftover, then
+asserts the third top-dir migration (`VhPluginDataMoveMigrationService`): the `.vh_v3` +
+README move under `.plugin_data/visit_history/…` (content byte-preserved), the leftover
+stays, now-empty legacy subdirs are pruned, and `__visit_history/` itself is removed only
+when nothing remains in it. `vhAssert.pollUntil` waits on these on-disk end-states with a
+bounded timeout (never a fixed sleep).
 
 ## Dev config overrides (bypass hard-limited config)
 
