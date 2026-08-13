@@ -1,12 +1,14 @@
 ---
+closed_iso: 2026-08-12T23:59:14Z
+session_ids: [{"a": "claude", "type": "execution", "id": "fcacf5e4-a0d3-41d2-92e2-2c8ce34b4f66"}, {"a": "claude", "type": "review", "id": "04566734-b1d4-4920-b911-df947a3da6ab"}]
 working_dir: nickolay-kondratyev_obsidian-visit-history-plugin
 id: nid_r4om42zb3uw161wzgkf2h69zo_e
 title: "Sync docs + CLAUDE.md to .plugin_data/visit_history TOP_DIR change"
-status: in_progress
+status: closed
 deps: [nid_fdlst01268tcjvtfs4aga34ov_e]
 links: [nid_fdlst01268tcjvtfs4aga34ov_e]
 created_iso: 2026-08-12T23:48:55Z
-status_updated_iso: 2026-08-12T23:57:17Z
+status_updated_iso: 2026-08-12T23:59:14Z
 type: chore
 priority: 3
 assignee: CC_WITH-nickolaykondratyev
@@ -26,3 +28,38 @@ Update the following (grep each for `__visit_history` and "not dot-hidden"):
 
 Keep the WHY-NOT (Obsidian Sync does not sync dot-folders — the accepted cost) as documented in src/core/service/visitHistoryService/user/VhUserPaths.ts, and mention the two chained migrations (VhTopDirRenameMigrationService: `.visit_history`->`__visit_history`; VhPluginDataMoveMigrationService: `__visit_history` .vh_v3+README -> `.plugin_data/visit_history`). Note `__visit_history` survives as the LEGACY_VISIBLE_VISIT_HISTORY_TOP_DIR constant (Constants.ts), still excluded from tracking by IsTrackedProvider.
 
+---
+
+## Resolution (2026-08-12)
+
+No new changes were required — the prose was already synced by the time this
+ticket was executed:
+
+- **CLAUDE.md** — identical to `master`; the top summary paragraph and the VH
+  V3 / user-scoping / IsTrackedProvider Key-design bullets already describe the
+  dot-hidden `.plugin_data/visit_history/` TOP_DIR, carry the WHY-NOT (Obsidian
+  Sync skips dot-folders → per-device, does NOT sync — accepted owner
+  decision), and name both chained migrations. Was updated upstream (on the
+  `migration` parent branch), so it did not appear in this branch's diff.
+- **docs/visit-history-format.md, docs/architecture.md, docs/README.md,
+  docs/e2e-testing.md** — updated on THIS branch by commit `a562d73`
+  ("Fix stale docs: VH top dir is now dot-hidden .plugin_data/visit_history").
+
+Verification performed (no edits needed):
+- Grepped all five files for `__visit_history`, "not dot-hidden", and the old
+  "visible so Sync syncs it" rationale. Every surviving `__visit_history`
+  reference is correct legacy/interim-migration context (the constant, the
+  rename target, the tracking exclusion). The lone "visible so Sync syncs it"
+  string is the INTENDED historical note in visit-history-format.md line 33
+  ("a deliberate reversal of the earlier ... stance"), not stale rationale.
+- Confirmed `.plugin_data/visit_history/` is used in the e2e path example and
+  the layout tree; both migrations (rename + plugin-data move) are documented;
+  the WHY-NOT cost is preserved.
+- Docs-only ticket: no code/build/lint/test impact. Working tree clean.
+
+
+## Notes
+
+**2026-08-13T00:00:29Z**
+
+__READY_AS_IS__: docs-sync chore; verified CLAUDE.md + docs/*.md match code (.plugin_data/visit_history TOP_DIR, migrations, WHY-NOT). Branch diff is ticket bookkeeping only; nothing to fix.
