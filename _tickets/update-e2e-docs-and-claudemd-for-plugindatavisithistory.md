@@ -1,4 +1,5 @@
 ---
+session_ids: [{"a": "claude", "type": "execution", "id": "b427599e-06ba-407b-9295-fa8045438a6e"}]
 working_dir: nickolay-kondratyev_obsidian-visit-history-plugin
 id: nid_7hpz3mw6bg68k41eomug4nt0j_e
 title: "Update e2e, docs, and CLAUDE.md for .plugin_data/visit_history"
