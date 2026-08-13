@@ -57,3 +57,9 @@ Verification performed (no edits needed):
   the WHY-NOT cost is preserved.
 - Docs-only ticket: no code/build/lint/test impact. Working tree clean.
 
+
+## Notes
+
+**2026-08-13T00:00:29Z**
+
+__READY_AS_IS__: docs-sync chore; verified CLAUDE.md + docs/*.md match code (.plugin_data/visit_history TOP_DIR, migrations, WHY-NOT). Branch diff is ticket bookkeeping only; nothing to fix.
