@@ -1,3 +1,4 @@
+import { LEGACY_VISIBLE_VISIT_HISTORY_TOP_DIR } from '../../../Constants';
 import { HiddenFileUtil } from '../../util/file/hidden/HiddenFileUtil';
 import { VhUserPaths } from '../visitHistoryService/user/VhUserPaths';
 import { VhV3Paths } from '../visitHistoryService/v3/VhV3Paths';
@@ -37,7 +38,7 @@ export class VhPluginDataMoveMigrationService {
    * Interim visible top dir being retired. NOT VhUserPaths.TOP_DIR — that now
    * points at the destination (`.plugin_data/visit_history`).
    */
-  private static readonly LEGACY_TOP_DIR = '__visit_history';
+  private static readonly LEGACY_TOP_DIR = LEGACY_VISIBLE_VISIT_HISTORY_TOP_DIR;
 
   constructor(private readonly hiddenFileUtil: HiddenFileUtil) {
   }
