@@ -7,7 +7,7 @@
 import { type Browser, type Page, chromium } from '@playwright/test';
 import { type ChildProcess, spawn } from 'node:child_process';
 import { cpSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
-import { join, sep } from 'node:path';
+import { dirname, join, sep } from 'node:path';
 import {
   DEV_OVERRIDES_FILE_JSON_PATH_ENV_VAR,
   DEVICE_NAME,
@@ -35,6 +35,17 @@ export interface DevConfigOverrides {
   readonly idleTimeoutSeconds?: number;
 }
 
+/**
+ * A pre-existing file written into the fresh vault copy BEFORE the plugin is
+ * enabled — used to seed legacy on-disk layouts the plugin migrates on load
+ * (e.g. an interim `__visit_history/...` tree). `path` is vault-relative;
+ * parent dirs are created as needed.
+ */
+export interface SeedFile {
+  readonly path: string;
+  readonly content: string;
+}
+
 export interface LaunchOptions {
   /** Written to the plugin's data.json before enable. Floor enforced by the plugin is 5. */
   readonly idleTimeoutSeconds: number;
@@ -47,6 +58,12 @@ export interface LaunchOptions {
   readonly minFocusSecondsToRecord: number;
   /** Optional dev overrides file (bypasses hard-limited config for e2e). */
   readonly devConfigOverrides?: DevConfigOverrides;
+  /**
+   * Optional files seeded into the vault copy before enable (see SeedFile).
+   * Absent → nothing extra is written, so the launch is byte-for-byte the
+   * committed seed vault.
+   */
+  readonly seedFiles?: readonly SeedFile[];
 }
 
 export class ObsidianHarness {
@@ -72,6 +89,14 @@ export class ObsidianHarness {
     // Fresh vault copy — never mutate the committed seed or the human's vault.
     cpSync(DEV_VAULT, vaultDir, { recursive: true });
     mkdirSync(userDataDir, { recursive: true });
+
+    // Seed pre-existing files (legacy layouts, etc.) into the copy before the
+    // plugin loads, so its onload migrations observe them on disk.
+    for (const seed of opts.seedFiles ?? []) {
+      const dest = join(vaultDir, seed.path);
+      mkdirSync(dirname(dest), { recursive: true });
+      writeFileSync(dest, seed.content);
+    }
 
     // Per-test settings. Overwrites any stray data.json from the copy.
     const pluginDir = join(vaultDir, '.obsidian', 'plugins', PLUGIN_ID);
