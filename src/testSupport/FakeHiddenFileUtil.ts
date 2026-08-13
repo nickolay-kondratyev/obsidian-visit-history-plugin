@@ -74,4 +74,25 @@ export class FakeHiddenFileUtil implements HiddenFileUtil {
     }
     return [...names];
   }
+
+  async listFileNames(folderPath: string): Promise<string[]> {
+    const prefix = `${folderPath}/`;
+    const names = new Set<string>();
+    for (const path of this.contentByPath.keys()) {
+      if (!path.startsWith(prefix)) continue;
+      const rest = path.slice(prefix.length);
+      // Direct file = no further slash after the folder prefix.
+      if (!rest.includes('/')) {
+        names.add(rest);
+      }
+    }
+    return [...names];
+  }
+
+  async removeFolderIfEmpty(_folderPath: string): Promise<boolean> {
+    // Folders are implied by files under them, so a folder with no files is
+    // already absent here — nothing to remove and nothing that could be
+    // non-empty. Matches the real impl's false-on-absent/non-empty contract.
+    return false;
+  }
 }

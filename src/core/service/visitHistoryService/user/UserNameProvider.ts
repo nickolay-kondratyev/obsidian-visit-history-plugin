@@ -5,7 +5,7 @@ import { UserNameSafety } from './UserNameSafety';
 import { VhUserPaths } from './VhUserPaths';
 
 /**
- * Resolves the stable user name that keys `__visit_history/user/<user-name>/`.
+ * Resolves the stable user name that keys `.plugin_data/visit_history/user/<user-name>/`.
  * MUST stay stable for a device across restarts — a change would split the
  * device's history across two user trees.
  */
@@ -63,7 +63,7 @@ export class LocalStorageUserNameCache implements UserNameCache {
  *      name can never flip later (e.g. when another user's dir syncs in).
  *      An already-pinned device never sees the prompt.
  *   2. Otherwise ASK via UserNamePrompt: pick an existing
- *      `__visit_history/user/<name>` dir (joining that identity) or type a
+ *      `.plugin_data/visit_history/user/<name>` dir (joining that identity) or type a
  *      new name (desktop pre-filled with the SANITIZED OS login name; on
  *      mobile there is no pre-fill — Obsidian mobile exposes no
  *      user-identity API to plugins). Only an explicit confirmation pins;

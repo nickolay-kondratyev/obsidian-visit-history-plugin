@@ -18,7 +18,17 @@ export const PLUGIN_ID = 'visit-history';
 // Keep in sync with DEV_OVERRIDES_FILE_JSON_PATH_ENV_VAR in the src source above.
 export const DEV_OVERRIDES_FILE_JSON_PATH_ENV_VAR = '__VISIT_HISTORY_DEV_OVERRIDES_FILE_JSON_PATH__';
 
-export const VH_TOP_DIR = '__visit_history';
+export const VH_TOP_DIR = '.plugin_data/visit_history';
+
+// Interim VISIBLE top dir retired by VhPluginDataMoveMigrationService (its live
+// `.vh_v3`+README payload is relocated under VH_TOP_DIR). Kept for the migration
+// e2e that seeds this layout. Keep in sync with
+// VhPluginDataMoveMigrationService.LEGACY_TOP_DIR.
+export const VH_LEGACY_INTERIM_TOP_DIR = '__visit_history';
+
+// The generated V3 README filename — one of the two migratable payloads (the
+// other being any `.vh_v3` file). Keep in sync with VhV3Paths.README_FILENAME.
+export const VH_README_FILENAME = 'README__generated__vh_v3_format.md';
 
 // Deterministic identity pinned via localStorage before the plugin is enabled.
 export const USER_NAME = 'e2e_user';

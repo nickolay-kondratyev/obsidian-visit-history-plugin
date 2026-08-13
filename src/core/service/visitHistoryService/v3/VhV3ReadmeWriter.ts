@@ -20,26 +20,27 @@ Refocusing the window or interacting again starts a new session for the same
 document.
 
 V3 is the ONLY visit history the plugin reads and writes. Any \`v2/\` folder —
-under \`__visit_history/\` or under a \`user/<user-name>/\` dir — and any
-top-level \`_visit_history/\` or \`.visit_history/\` folder is legacy data from
-older plugin versions: no longer read or written, left untouched.
+under a \`user/<user-name>/\` dir — and any legacy top-level
+\`__visit_history/\`, \`_visit_history/\`, or \`.visit_history/\` folder is data
+from older plugin versions: no longer read or written, left untouched.
 
-The top-level folder is named \`__visit_history\` (not dot-hidden) because
-Obsidian Sync does not sync folders starting with a dot, so the history must
-be visible to sync across devices. The plugin's own tracking and heatmap
-exclude it.
+The top-level folder lives under the dot-hidden \`.plugin_data/\` directory so
+Obsidian's file explorer and search never surface it, and plugins that react
+to visible-folder creation are not disturbed. Note: Obsidian Sync does not
+sync dot-hidden folders, so this history is per-device and does NOT sync.
 
 ### File path format
 
 \`\`\`
-__visit_history/
-  user/
-    <user-name>/                          # chosen in the plugin's user-name modal; see below
-      v3/
-        README__generated__vh_v3_format.md    # this file
-        focus_duration_per_device/
-          <device-name>/                      # hostname on desktop; mobile-XXXXXXXX on mobile
-            <doc-id>.vh_v3                    # one duration file per (device, document)
+.plugin_data/
+  visit_history/
+    user/
+      <user-name>/                          # chosen in the plugin's user-name modal; see below
+        v3/
+          README__generated__vh_v3_format.md    # this file
+          focus_duration_per_device/
+            <device-name>/                      # hostname on desktop; mobile-XXXXXXXX on mobile
+              <doc-id>.vh_v3                    # one duration file per (device, document)
 \`\`\`
 
 - The \`.vh_v3\` filename is the document's persistent id. Documents whose id

@@ -99,6 +99,28 @@ export async function assertNoSessionLineWithin(file: string, opts: PollOptions)
   }
 }
 
+/**
+ * Poll until `predicate` returns true, or throw on timeout naming what was
+ * awaited. Used by the migration e2e to wait on on-disk end-states (a file
+ * appearing at its destination, a legacy dir being pruned) that the plugin
+ * produces asynchronously during its onload migration walk.
+ */
+export async function pollUntil(
+  predicate: () => boolean,
+  description: string,
+  opts: PollOptions,
+): Promise<void> {
+  const interval = opts.intervalMs ?? 250;
+  const deadline = Date.now() + opts.timeoutMs;
+  for (;;) {
+    if (predicate()) return;
+    if (Date.now() >= deadline) {
+      throw new Error(`pollUntil timed out after ${opts.timeoutMs}ms waiting for: ${description}`);
+    }
+    await sleep(interval);
+  }
+}
+
 /** Parse the integer duration (ms) from a `<stamp> D:<millis>` line. */
 export function parseDurationMs(line: string): number {
   const m = line.trim().match(/ D:(\d+)$/);

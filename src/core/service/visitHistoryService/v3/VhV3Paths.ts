@@ -4,8 +4,8 @@ import { VhUserPaths } from '../user/VhUserPaths';
  * Path layout of visit history V3 — focus DURATIONS
  * (see docs/visit-history-format.md):
  *
- *   __visit_history/user/<user-name>/v3/README__generated__vh_v3_format.md
- *   __visit_history/user/<user-name>/v3/focus_duration_per_device/<device-name>/<doc-id>.vh_v3
+ *   .plugin_data/visit_history/user/<user-name>/v3/README__generated__vh_v3_format.md
+ *   .plugin_data/visit_history/user/<user-name>/v3/focus_duration_per_device/<device-name>/<doc-id>.vh_v3
  *
  * User level owned by VhUserPaths (top-dir naming rationale there). The doc id
  * IS the filename (survives renames; no backlink indirection). Every method
@@ -15,6 +15,7 @@ import { VhUserPaths } from '../user/VhUserPaths';
  */
 export class VhV3Paths {
   static readonly FOCUS_DURATION_FILE_EXTENSION = '.vh_v3';
+  static readonly README_FILENAME = 'README__generated__vh_v3_format.md';
 
   /** Duration file for one (user, device, doc). The doc id IS the filename. */
   static focusDurationFilePath(userName: string, deviceName: string, docId: string): string {
@@ -30,6 +31,6 @@ export class VhV3Paths {
   }
 
   static readmePath(userName: string): string {
-    return `${VhUserPaths.userRootDir(userName)}/v3/README__generated__vh_v3_format.md`;
+    return `${VhUserPaths.userRootDir(userName)}/v3/${VhV3Paths.README_FILENAME}`;
   }
 }

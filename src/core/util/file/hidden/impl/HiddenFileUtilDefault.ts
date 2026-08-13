@@ -46,6 +46,31 @@ export class HiddenFileUtilDefault implements HiddenFileUtil {
     return listed.folders.map(fullPath => fullPath.slice(fullPath.lastIndexOf('/') + 1));
   }
 
+  async listFileNames(folderPath: string): Promise<string[]> {
+    const path = normalizePath(folderPath);
+    if (!(await this.app.vault.adapter.exists(path))) {
+      return [];
+    }
+    const listed = await this.app.vault.adapter.list(path);
+    // adapter.list returns full vault-relative paths — reduce to basenames.
+    return listed.files.map(fullPath => fullPath.slice(fullPath.lastIndexOf('/') + 1));
+  }
+
+  async removeFolderIfEmpty(folderPath: string): Promise<boolean> {
+    const path = normalizePath(folderPath);
+    if (!(await this.app.vault.adapter.exists(path))) {
+      return false;
+    }
+    const listed = await this.app.vault.adapter.list(path);
+    if (listed.files.length > 0 || listed.folders.length > 0) {
+      return false;
+    }
+    // Non-recursive rmdir — a safety backstop: even on a racing write into
+    // the folder, this never deletes content.
+    await this.app.vault.adapter.rmdir(path, false);
+    return true;
+  }
+
   async exists(path: string): Promise<boolean> {
     return this.app.vault.adapter.exists(normalizePath(path));
   }

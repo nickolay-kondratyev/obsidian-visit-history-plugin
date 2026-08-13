@@ -27,10 +27,23 @@ describe('IsTrackedProviderDefault', () => {
       expect(provider.isTrackedFile(makeTFile({ path: '_visit_history/v1/focus/mac/_vh_01A.md' }))).toBe(false);
     });
 
-    it('should NOT track md files inside __visit_history (e.g. the generated V3 README)', () => {
+    it('should NOT track md files inside the legacy interim __visit_history dir', () => {
+      // Interim VISIBLE layout leftovers (unmigrated v2, skipped conflicts) may
+      // still be surfaced by the Vault API, so the exclusion is retained.
       expect(provider.isTrackedFile(
         makeTFile({ path: '__visit_history/user/alice/v3/README__generated__vh_v3_format.md' }),
       )).toBe(false);
+    });
+
+    it('should still "track" a .plugin_data path (dot-dirs are never surfaced by the Vault API)', () => {
+      // The ACTIVE top dir `.plugin_data/visit_history/` is dot-hidden, so
+      // Obsidian's Vault API never yields a TFile under it — the provider needs
+      // no explicit exclusion for it. This test documents that assumption: were
+      // such a path to reach here, nothing would filter it (it isn't a legacy
+      // visible dir). If this ever flips, the assumption has broken.
+      expect(provider.isTrackedFile(
+        makeTFile({ path: '.plugin_data/visit_history/user/alice/v3/notes.md' }),
+      )).toBe(true);
     });
 
     it('should NOT track unsupported extensions', () => {
