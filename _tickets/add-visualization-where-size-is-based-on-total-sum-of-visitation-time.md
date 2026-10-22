@@ -70,3 +70,9 @@ Built as specified above. Commits `6b6bad9` (plumbing), `c861b4c` (config + sizi
 - **Gaps**:
   - No React component tests (the repo has none). The "write only the active mode" merge in `ConfigPanel` is covered only by type checks.
   - The accepted gaps above still apply: raw `.excalidraw` files are always hidden in visit-time mode, and visit times refresh only on view refresh.
+
+## Notes
+
+**2026-10-22T19:44:00Z**
+
+__READY_AS_IS__: review round 1 found no bugs (sizing/sanitizer upgrade/hiding/banner/empty-state logic verified); 595/595 tests, lint 0 errors, build pass — no changes made
