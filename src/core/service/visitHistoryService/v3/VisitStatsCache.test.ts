@@ -175,6 +175,48 @@ describe('VisitStatsCache', () => {
     });
   });
 
+  describe('beginHistoryMove / endHistoryMove', () => {
+    it('should drop the cached entry once the move ends (next lookup re-reads disk)', () => {
+      // GIVEN a cached entry
+      const cache = cacheWithEntry();
+      // WHEN history files are moved for the doc
+      cache.beginHistoryMove(DOC_ID);
+      cache.endHistoryMove(DOC_ID);
+      // THEN the entry is gone
+      expect(cache.get(DOC_ID)).toBeUndefined();
+    });
+
+    it('should reject a read that overlapped the move', () => {
+      // GIVEN a token taken before a move ran
+      const cache = new VisitStatsCache();
+      const token = cache.readToken();
+      cache.beginHistoryMove(DOC_ID);
+      cache.endHistoryMove(DOC_ID);
+      // WHEN the stale read result is offered
+      // THEN it is rejected
+      expect(cache.setIfNoWriteSince(DOC_ID, DISK_STATS, token)).toBe(false);
+    });
+
+    it('should reject a read finishing while the move is still in flight', () => {
+      // GIVEN a move in progress
+      const cache = new VisitStatsCache();
+      cache.beginHistoryMove(DOC_ID);
+      // WHEN a fresh read result is offered mid-move
+      // THEN it is rejected
+      expect(cache.setIfNoWriteSince(DOC_ID, DISK_STATS, cache.readToken())).toBe(false);
+    });
+
+    it('should cache fresh reads again after the move ended', () => {
+      // GIVEN a finished move
+      const cache = new VisitStatsCache();
+      cache.beginHistoryMove(DOC_ID);
+      cache.endHistoryMove(DOC_ID);
+      // WHEN a read started after the move is offered
+      // THEN it is cached
+      expect(cache.setIfNoWriteSince(DOC_ID, DISK_STATS, cache.readToken())).toBe(true);
+    });
+  });
+
   describe('write-mark eviction ceiling', () => {
     it('should reject a read when the doc mark may have been evicted by >= MAX_ENTRIES newer marks', () => {
       // GIVEN a token, a write on DOC_ID, then enough writes on other docs to evict its mark

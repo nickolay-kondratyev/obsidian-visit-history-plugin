@@ -6,6 +6,12 @@ import { VhUserPaths } from '../user/VhUserPaths';
  *
  *   .plugin_data/visit_history/user/<user-name>/v3/README__generated__vh_v3_format.md
  *   .plugin_data/visit_history/user/<user-name>/v3/focus_duration_per_device/<device-name>/<doc-id>.vh_v3
+ *   .plugin_data/visit_history/user/<user-name>/v3/merged_in_focus_duration_per_device/<device-name>/<receiving-doc-id>/<absorbed-doc-id>[__N].vh_v3
+ *
+ * merged_in_*: history of notes INLINED into <receiving-doc-id> ("inline
+ * note" action). Files are MOVED there unmodified (never merged line-wise)
+ * and every `.vh_v3` under the receiving doc's dir counts towards that doc
+ * on read. Always one level deep (chains are flattened on move).
  *
  * User level owned by VhUserPaths (top-dir naming rationale there). The doc id
  * IS the filename (survives renames; no backlink indirection). Every method
@@ -28,6 +34,16 @@ export class VhV3Paths {
 
   static focusDurationPerDeviceDir(userName: string): string {
     return `${VhUserPaths.userRootDir(userName)}/v3/focus_duration_per_device`;
+  }
+
+  /** Root of one user's merged-in (inlined-note) history, across devices. */
+  static mergedInPerDeviceDir(userName: string): string {
+    return `${VhUserPaths.userRootDir(userName)}/v3/merged_in_focus_duration_per_device`;
+  }
+
+  /** Dir holding every file merged into one receiving doc on one device. */
+  static mergedInDocDir(userName: string, deviceName: string, receivingDocId: string): string {
+    return `${VhV3Paths.mergedInPerDeviceDir(userName)}/${deviceName}/${receivingDocId}`;
   }
 
   static readmePath(userName: string): string {

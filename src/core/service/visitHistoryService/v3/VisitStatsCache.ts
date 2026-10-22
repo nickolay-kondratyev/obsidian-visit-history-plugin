@@ -94,6 +94,25 @@ export class VisitStatsCache {
     this.statsByDocId.delete(docId);
   }
 
+  /**
+   * Opens the doc's write window for a HISTORY MOVE (whole `.vh_v3` files
+   * moved by VhV3HistoryMerger) — call BEFORE the first file move.
+   * WHY separate from session writes: a moved file can't be merged into the
+   * cached total incrementally, so the move always ends in a drop.
+   */
+  beginHistoryMove(docId: string): void {
+    this.beginSessionWrite(docId);
+  }
+
+  /**
+   * Closes the move's write window (success OR failure) and drops the doc's
+   * entry, so the next lookup re-reads the moved layout from disk.
+   */
+  endHistoryMove(docId: string): void {
+    this.closeWriteWindow(docId);
+    this.statsByDocId.delete(docId);
+  }
+
   // ── private ─────────────────────────────────────────────────────────────
 
   private closeWriteWindow(docId: string): void {

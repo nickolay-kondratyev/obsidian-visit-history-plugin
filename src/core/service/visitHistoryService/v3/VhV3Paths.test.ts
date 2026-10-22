@@ -9,6 +9,13 @@ describe('VhV3Paths', () => {
     });
   });
 
+  describe('mergedInDocDir', () => {
+    it('should nest the receiving doc id under the per-user per-device merged-in dir', () => {
+      expect(VhV3Paths.mergedInDocDir('alice', 'my-host', 'docid_note1_e'))
+        .toBe('.plugin_data/visit_history/user/alice/v3/merged_in_focus_duration_per_device/my-host/docid_note1_e');
+    });
+  });
+
   describe('readmePath', () => {
     it('should live under the user root', () => {
       expect(VhV3Paths.readmePath('alice'))

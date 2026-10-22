@@ -226,6 +226,25 @@ export class FocusDurationTracker {
     }
   }
 
+  /**
+   * Closes the doc's session NOW (a pending close at its original unfocus
+   * time) and drops it as the current doc, so no new session opens for it
+   * until it is focused again. Used before the doc's history files are moved
+   * (inline note) — no line may land at the old path afterwards. No-op for
+   * any other doc.
+   */
+  releaseDoc(docId: string): void {
+    if (this.session?.docId === docId) {
+      // finalizePendingClose is a no-op without a pending close; endSession
+      // then closes a still-open one (no-op if the pending close ended it).
+      this.finalizePendingClose();
+      this.endSession(Date.now());
+    }
+    if (this.currentDoc?.docId === docId) {
+      this.currentDoc = null;
+    }
+  }
+
   /** Best-effort flush on plugin unload: closes any open session. */
   dispose(): void {
     // A pending close flushes at its ORIGINAL unfocus time — never lost,

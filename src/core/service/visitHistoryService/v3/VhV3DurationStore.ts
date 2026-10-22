@@ -58,23 +58,15 @@ export class VhV3DurationStore {
     if (!DocIdFilenameSafety.isFilenameSafeId(docId)) {
       return [];
     }
-    const content = await this.hiddenFileUtil.readIfExists(
-      VhV3Paths.focusDurationFilePath(userName, deviceName, docId),
-    );
-    if (content === null) {
-      return [];
-    }
-    return content
-      .split('\n')
-      .map(line => VhV3SessionLineParser.parseSession(line))
-      .filter((session): session is VhV3FocusSession => session !== null);
+    return this.readSessionsAt(VhV3Paths.focusDurationFilePath(userName, deviceName, docId));
   }
 
   /**
    * Visit stats for the doc across ALL users and devices ({@link VisitStats}
    * owns the fold: max session START, sum of durations); EMPTY if never
    * focused. Session start (not end) is the "last visited" stamp — it matches
-   * the old V2 semantics of stamping at focus time.
+   * the old V2 semantics of stamping at focus time. Includes history MERGED IN
+   * from inlined notes (`merged_in_focus_duration_per_device/`, see VhV3Paths).
    */
   async getVisitStatsAcrossUsersAndDevices(docId: string): Promise<VisitStats> {
     // Guard up front: an unsafe id has no file anywhere — skip the
@@ -98,9 +90,48 @@ export class VhV3DurationStore {
     const deviceNames = await this.hiddenFileUtil.listSubfolderNames(
       VhV3Paths.focusDurationPerDeviceDir(userName),
     );
-    const sessionsPerDevice = await Promise.all(
-      deviceNames.map(deviceName => this.readSessions(userName, deviceName, docId)),
+    const [ownSessionsPerDevice, mergedInSessions] = await Promise.all([
+      Promise.all(deviceNames.map(deviceName => this.readSessions(userName, deviceName, docId))),
+      this.readMergedInSessionsForUser(userName, docId),
+    ]);
+    return [...ownSessionsPerDevice.flat(), ...mergedInSessions];
+  }
+
+  /**
+   * Sessions of every note inlined into the doc, on all of the user's devices.
+   * Ceiling: one extra folder listing per user plus one per merged-in device
+   * dir for EVERY looked-up note (heatmap reads hit this for each vault file;
+   * the VisitStatsCache absorbs repeats). Upgrade path if it ever shows up in
+   * profiles: index the merged-in tree once per heatmap refresh.
+   */
+  private async readMergedInSessionsForUser(
+    userName: string,
+    docId: string,
+  ): Promise<VhV3FocusSession[]> {
+    const deviceNames = await this.hiddenFileUtil.listSubfolderNames(
+      VhV3Paths.mergedInPerDeviceDir(userName),
     );
+    const sessionsPerDevice = await Promise.all(deviceNames.map(async (deviceName) => {
+      const docDir = VhV3Paths.mergedInDocDir(userName, deviceName, docId);
+      const fileNames = (await this.hiddenFileUtil.listFileNames(docDir))
+        .filter(fileName => fileName.endsWith(VhV3Paths.FOCUS_DURATION_FILE_EXTENSION));
+      const sessionsPerFile = await Promise.all(
+        fileNames.map(fileName => this.readSessionsAt(`${docDir}/${fileName}`)),
+      );
+      return sessionsPerFile.flat();
+    }));
     return sessionsPerDevice.flat();
+  }
+
+  /** Parsed sessions of one `.vh_v3` file; [] when absent, bad lines skipped. */
+  private async readSessionsAt(filePath: string): Promise<VhV3FocusSession[]> {
+    const content = await this.hiddenFileUtil.readIfExists(filePath);
+    if (content === null) {
+      return [];
+    }
+    return content
+      .split('\n')
+      .map(line => VhV3SessionLineParser.parseSession(line))
+      .filter((session): session is VhV3FocusSession => session !== null);
   }
 }

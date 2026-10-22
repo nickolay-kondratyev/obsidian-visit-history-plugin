@@ -200,4 +200,74 @@ describe('VhV3DurationStore', () => {
       expect((await store.getVisitStatsAcrossUsersAndDevices(DOC_ID)).totalFocusMs).toBe(120);
     });
   });
+
+  describe('getVisitStatsAcrossUsersAndDevices (merged-in history)', () => {
+    const MERGED_DIR = `.plugin_data/visit_history/user/${USER}/v3/merged_in_focus_duration_per_device/${DEVICE}/${DOC_ID}`;
+    const MERGED_FILE_PATH = `${MERGED_DIR}/docid_note2_e.vh_v3`;
+
+    it('should count sessions merged in from an inlined note towards the receiving doc', async () => {
+      // GIVEN only merged-in history for the doc (no own file)
+      const { store, hidden } = setup();
+      hidden.seedFile(MERGED_FILE_PATH, '2026-07-09T10:00:00.000Z D:700\n');
+      // WHEN looked up
+      // THEN the merged-in session counts
+      expect((await store.getVisitStatsAcrossUsersAndDevices(DOC_ID)).totalFocusMs).toBe(700);
+    });
+
+    it('should sum own and merged-in sessions', async () => {
+      // GIVEN own history plus two merged-in files (one with a collision suffix)
+      const { store, hidden } = setup();
+      hidden.seedFile(FILE_PATH, '2026-07-09T10:00:00.000Z D:100\n');
+      hidden.seedFile(MERGED_FILE_PATH, '2026-07-09T11:00:00.000Z D:20\n');
+      hidden.seedFile(`${MERGED_DIR}/docid_note2_e__2.vh_v3`, '2026-07-09T12:00:00.000Z D:3\n');
+      // WHEN looked up
+      // THEN all three count
+      expect((await store.getVisitStatsAcrossUsersAndDevices(DOC_ID)).totalFocusMs).toBe(123);
+    });
+
+    it('should use the latest start across own and merged-in sessions as last visit', async () => {
+      // GIVEN a merged-in session newer than the own one
+      const { store, hidden } = setup();
+      hidden.seedFile(FILE_PATH, '2026-07-09T10:00:00.000Z D:100\n');
+      hidden.seedFile(MERGED_FILE_PATH, '2026-07-12T10:00:00.000Z D:20\n');
+      // WHEN looked up
+      // THEN the merged-in start wins
+      expect((await store.getVisitStatsAcrossUsersAndDevices(DOC_ID)).lastVisitMs)
+        .toBe(Date.parse('2026-07-12T10:00:00.000Z'));
+    });
+
+    it('should count merged-in history of OTHER users', async () => {
+      // GIVEN merged-in history under another user's tree
+      const { store, hidden } = setup();
+      hidden.seedFile(
+        `.plugin_data/visit_history/user/bob/v3/merged_in_focus_duration_per_device/bobs-host/${DOC_ID}/docid_x_e.vh_v3`,
+        '2026-07-09T10:00:00.000Z D:50\n',
+      );
+      // WHEN looked up
+      // THEN it counts
+      expect((await store.getVisitStatsAcrossUsersAndDevices(DOC_ID)).totalFocusMs).toBe(50);
+    });
+
+    it('should not count history merged into a DIFFERENT doc', async () => {
+      // GIVEN merged-in history under another receiving doc
+      const { store, hidden } = setup();
+      hidden.seedFile(
+        `.plugin_data/visit_history/user/${USER}/v3/merged_in_focus_duration_per_device/${DEVICE}/docid_OTHER_E/docid_x_e.vh_v3`,
+        '2026-07-09T10:00:00.000Z D:50\n',
+      );
+      // WHEN looked up
+      // THEN nothing counts
+      expect(await store.getVisitStatsAcrossUsersAndDevices(DOC_ID)).toEqual(VisitStats.EMPTY);
+    });
+
+    it('should ignore non-.vh_v3 files in the merged-in dir', async () => {
+      // GIVEN a stray file next to a merged-in file
+      const { store, hidden } = setup();
+      hidden.seedFile(MERGED_FILE_PATH, '2026-07-09T10:00:00.000Z D:5\n');
+      hidden.seedFile(`${MERGED_DIR}/notes.txt`, '2026-07-09T10:00:00.000Z D:999\n');
+      // WHEN looked up
+      // THEN only the .vh_v3 file counts
+      expect((await store.getVisitStatsAcrossUsersAndDevices(DOC_ID)).totalFocusMs).toBe(5);
+    });
+  });
 });

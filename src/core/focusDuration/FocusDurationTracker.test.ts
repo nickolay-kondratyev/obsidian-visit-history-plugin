@@ -721,6 +721,54 @@ describe('FocusDurationTracker', () => {
     });
   });
 
+  describe('releaseDoc', () => {
+    it('should record the released doc open session right away', () => {
+      // GIVEN doc A focused for 4000ms
+      tracker.onDocFocused('A', MAIN_WIN);
+      advanceMs(4000);
+      // WHEN A is released (about to be inlined)
+      tracker.releaseDoc('A');
+      // THEN its session is recorded without waiting for any grace
+      expect(sink.records).toEqual([{ docId: 'A', focusStartEpochMs: T0, durationMs: 4000 }]);
+    });
+
+    it('should not open a new session for the released doc on later activity', () => {
+      // GIVEN doc A focused, then released
+      tracker.onDocFocused('A', MAIN_WIN);
+      advanceMs(4000);
+      tracker.releaseDoc('A');
+      // WHEN the user keeps interacting and later the tracker flushes
+      advanceMs(1000);
+      tracker.onUserActivity();
+      advanceMs(1000);
+      tracker.dispose();
+      // THEN only the released session exists — no line could land for A after the move
+      expect(sink.records).toHaveLength(1);
+    });
+
+    it('should finalize a pending close of the released doc at its unfocus time', () => {
+      // GIVEN doc A focused 3000ms, then unfocused (grace pending)
+      tracker.onDocFocused('A', MAIN_WIN);
+      advanceMs(3000);
+      tracker.onDocUnfocused();
+      advanceMs(2000);
+      // WHEN A is released mid-grace
+      tracker.releaseDoc('A');
+      // THEN the session ends at the original unfocus moment
+      expect(sink.records).toEqual([{ docId: 'A', focusStartEpochMs: T0, durationMs: 3000 }]);
+    });
+
+    it('should leave another doc open session running', () => {
+      // GIVEN doc B focused
+      tracker.onDocFocused('B', MAIN_WIN);
+      advanceMs(1000);
+      // WHEN an unrelated doc A is released
+      tracker.releaseDoc('A');
+      // THEN nothing is recorded for B yet
+      expect(sink.records).toEqual([]);
+    });
+  });
+
   describe('dispose', () => {
     it('should flush the open session on dispose', () => {
       // GIVEN doc A focused for 42s
