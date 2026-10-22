@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-10-22T18:54:09Z
 id: nid_xxvevkt6niwznjo3d9hpmbf6y_e
 title: "In-memory per-note visit stats (last visit + total focus time)"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-10-22T18:45:12Z
-status_updated_iso: 2026-10-22T18:45:43Z
+status_updated_iso: 2026-10-22T18:54:09Z
 type: feature
 priority: 2
 assignee: CC_WITH-nickolaykondratyev
