@@ -46,6 +46,11 @@ describe('SelfLinkRewriter', () => {
         .toBe('[C# part](#Part%20one)');
     });
 
+    it('should turn a markdown self-link whose text holds brackets into a same-note link', () => {
+      expect(rewrite('[see [x]](note2.md#Part)', [{ original: '[see [x]](note2.md#Part)', subpath: '#Part' }]).content)
+        .toBe('[see [x]](#Part)');
+    });
+
     it('should leave a link that is already same-note as it is', () => {
       expect(rewrite('[[#Part]]', [{ original: '[[#Part]]', subpath: '#Part' }]).content).toBe('[[#Part]]');
     });

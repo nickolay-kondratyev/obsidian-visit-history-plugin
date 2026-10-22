@@ -22,7 +22,8 @@ export interface SelfLinkRewrite {
 // The first `#` is in the target: the target precedes any `|alias`.
 const WIKILINK_PATH_RE = /^(!?\[\[)[^#]*(#.*)$/s;
 // WHAT: `[alias](` + optional `<`, then the path (dropped), then `#subpath…)` (kept).
-const MARKDOWN_LINK_PATH_RE = /^(!?\[[^\]]*\]\(\s*<?)[^#]*(#.*)$/s;
+// The alias ends at the FIRST `](` (it may hold brackets, e.g. `[see [x]](…)`).
+const MARKDOWN_LINK_PATH_RE = /^(!?\[.*?\]\(\s*<?)[^#]*(#.*)$/s;
 
 /**
  * Keeps note2's links to itself working once its text lives inside note1
