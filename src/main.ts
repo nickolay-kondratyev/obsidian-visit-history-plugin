@@ -12,6 +12,8 @@ import { CSS_CLASS_HEATMAP_ACTIVE, VaultTreemapView, VIEW_TYPE_TREEMAP } from '.
 import { VaultRootHeatmapFinder } from './view/VaultRootHeatmapFinder';
 import { VisitHistorySettingTab } from './settingsTab/VisitHistorySettingTab';
 import { INLINE_NOTE_ACTION_NAME } from './core/service/inlineNote/impl/ModalInlineNoteDialogs';
+import { ReadingViewEmbedIconProcessor } from './editorChrome/embedInlineIcon/ReadingViewEmbedIconProcessor';
+import { LivePreviewEmbedIconExtension } from './editorChrome/embedInlineIcon/LivePreviewEmbedIconExtension';
 
 // ── VisitHistoryPlugin ────────────────────────────────────────────────────────
 export default class VisitHistoryPlugin extends Plugin {
@@ -183,7 +185,9 @@ export default class VisitHistoryPlugin extends Plugin {
    * "Inline note (visit history aware)", started FROM the note to inline
    * (note2): file context menu (explorer / tab menu) + a command for the
    * active note. Offered for every `.md` file; the action itself refuses
-   * (with reasons) whatever it can't inline.
+   * (with reasons) whatever it can't inline. Plus an icon on the embed
+   * `![[note2]]` itself when it is note2's only link (reading view + live
+   * preview; both clean up after themselves on unload).
    */
   private initInlineNote(pluginFactory: PluginFactory) {
     const isMarkdownFile = (file: unknown): file is TFile => file instanceof TFile && file.extension === 'md';
@@ -210,6 +214,15 @@ export default class VisitHistoryPlugin extends Plugin {
         );
       }),
     );
+
+    const embedIconRule = pluginFactory.embedInlineIconRule;
+    this.registerEvent(this.app.metadataCache.on('resolved', () => embedIconRule.onLinksResolved()));
+    this.registerEvent(this.app.metadataCache.on('deleted', () => embedIconRule.onLinksResolved()));
+    const readingViewEmbedIcons = new ReadingViewEmbedIconProcessor(pluginFactory.embedInlineIconDecorator);
+    this.registerMarkdownPostProcessor(readingViewEmbedIcons.process);
+    this.register(() => readingViewEmbedIcons.teardown());
+    // Unregistered by Obsidian on unload, which destroy()s each view's plugin.
+    this.registerEditorExtension(LivePreviewEmbedIconExtension.create(pluginFactory.embedInlineIconDecorator));
   }
 
   /**

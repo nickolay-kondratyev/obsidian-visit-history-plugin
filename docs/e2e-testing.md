@@ -5,7 +5,8 @@ on-disk `.vh_v3` files the plugin actually writes — never on plugin internals.
 Visit-History V3 recording across several scenarios: focus switch, unload flush, opening
 Settings, canvas focus, idle timeout, a sub-floor idle timeout via a dev overrides file,
 the interim-top-dir → `.plugin_data/visit_history` migration (`pluginDataMoveMigration.e2e.ts`),
-and the inline-note key journey (`inlineNote.e2e.ts`: content moved, note2 trashed, history merged in).
+the inline-note key journey (`inlineNote.e2e.ts`: content moved, note2 trashed, history merged in),
+and inlining via the embed icon in live preview (`inlineNoteEmbedIcon.e2e.ts`).
 
 ## Run it
 
@@ -43,6 +44,14 @@ window at a time).
 `obsidian` is a types-only package, so the node-side e2e code never imports it —
 runtime constants (plugin id, VH dir, localStorage keys, seeded ids, session regex) are
 duplicated in `e2e/constants.ts` with a sync-pointer comment.
+
+## Clicking inside the workspace
+
+Most specs drive Obsidian via `window.app` only. A spec that CLICKS in the workspace
+(e.g. `inlineNoteEmbedIcon.e2e.ts`) must first enlarge the headless window — it boots at
+300×200 — with `page.setViewportSize`, and call `harness.trustVaultAuthor()`: Obsidian's
+first-open "Do you trust the author of this vault?" modal stays up (the plugin is enabled
+programmatically) and intercepts every pointer event.
 
 ## Seeding legacy layouts (migration specs)
 

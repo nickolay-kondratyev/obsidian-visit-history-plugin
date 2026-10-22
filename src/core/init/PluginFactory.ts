@@ -35,6 +35,8 @@ import { InlineNoteAction } from '../service/inlineNote/InlineNoteAction';
 import { InlineNotePlanner } from '../service/inlineNote/InlineNotePlanner';
 import { NoteReferenceCollectorDefault } from '../service/inlineNote/NoteReferenceCollector';
 import { ModalInlineNoteDialogs } from '../service/inlineNote/impl/ModalInlineNoteDialogs';
+import { EmbedInlineIconDecorator } from '../../editorChrome/embedInlineIcon/EmbedInlineIconDecorator';
+import { EmbedInlineIconRule } from '../../editorChrome/embedInlineIcon/EmbedInlineIconRule';
 
 // ── PluginFactory ─────────────────────────────────────────────────────────────
 // Constructs and wires all plugin dependencies.
@@ -63,6 +65,10 @@ export class PluginFactory {
   readonly configProvider: ConfigProvider;
   /** "Inline note (visit history aware)" — file menu + command entry point. */
   readonly inlineNoteAction: InlineNoteAction;
+  /** Embed "inline note" icon — the same action, one click away on the embed. */
+  readonly embedInlineIconDecorator: EmbedInlineIconDecorator;
+  /** Its show-or-not rule; main.ts feeds it metadataCache link-change events. */
+  readonly embedInlineIconRule: EmbedInlineIconRule;
 
   // Held for activateUserScopedRecording (post-pin wiring).
   private readonly plugin: VisitHistoryPlugin;
@@ -147,6 +153,11 @@ export class PluginFactory {
       focusSessionReleaser,
       new ModalInlineNoteDialogs(app),
       this.userNotifier,
+    );
+    this.embedInlineIconRule = new EmbedInlineIconRule(app.metadataCache);
+    this.embedInlineIconDecorator = new EmbedInlineIconDecorator(
+      this.embedInlineIconRule,
+      (note2) => void this.inlineNoteAction.run(note2),
     );
   }
 
