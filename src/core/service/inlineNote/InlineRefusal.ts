@@ -7,6 +7,7 @@ export type InlineRefusalKind =
   | 'unsupported-inlined-note'
   | 'unsupported-receiving-note'
   | 'too-deep'
+  | 'link-in-heading'
   | 'same-doc-id'
   | 'unusable-receiving-id'
   | 'note-changed';
@@ -97,6 +98,14 @@ export class InlineRefusals {
       'too-deep',
       `Inlining "${noteName}" into "${receivingPath}" would need headings deeper than level 6 (######).`,
       `Move the link higher up the heading chain in "${receivingPath}" (under a less nested heading), then try again.`,
+    );
+  }
+
+  static linkInHeading(noteName: string, receivingPath: string): InlineRefusal {
+    return InlineRefusals.of(
+      'link-in-heading',
+      `The only link to "${noteName}" sits in a heading line of "${receivingPath}", so removing it would break that heading.`,
+      `Move the link out of the heading line (e.g. onto the line below it) in "${receivingPath}", then try again.`,
     );
   }
 

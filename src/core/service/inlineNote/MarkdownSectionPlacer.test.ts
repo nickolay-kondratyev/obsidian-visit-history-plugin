@@ -144,16 +144,6 @@ describe('MarkdownSectionPlacer', () => {
       // THEN no continuation is needed and the sub-heading follows the block
       expect(placedLines(lines, '[[note2]]').slice(4)).toEqual(['#### Existing', 'text']);
     });
-
-    it('should use the rewritten heading text when the link sits in the heading itself', () => {
-      // GIVEN the link inside the section heading
-      const lines = ['### See [[note2]]', 'Section text.'];
-      // WHEN placed
-      // THEN the heading becomes plain text, the section nests under it, the text continues
-      expect(placedLines(lines, '[[note2]]')).toEqual([
-        '### See note2', '#### note2', 'note2 body', '#### See note2-continued', 'Section text.',
-      ]);
-    });
   });
 
   describe('place — link inside a container', () => {
@@ -237,6 +227,14 @@ describe('MarkdownSectionPlacer', () => {
   });
 
   describe('place — refusals', () => {
+    it('should refuse a regular link inside a heading line', () => {
+      expect(place(['### See [[note2]]', 'Section text.'], '[[note2]]').kind).toBe('link-in-heading');
+    });
+
+    it('should refuse an embed inside a heading line', () => {
+      expect(place(['## A', '### ![[note2]]', 'text'], '![[note2]]').kind).toBe('link-in-heading');
+    });
+
     it('should refuse when the title would pass level 6', () => {
       expect(place(['###### Deep', 'See [[note2]].'], '[[note2]]').kind).toBe('too-deep');
     });

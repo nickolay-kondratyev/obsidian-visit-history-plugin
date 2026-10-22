@@ -50,6 +50,11 @@ describe('InlineNotePlanner', () => {
       expect(kindOf(await planner.plan(note2))).toBe('too-deep');
     });
 
+    it('should refuse when the link sits in a heading line', async () => {
+      const { planner, note2 } = setup('note1.md', '## A\n### See [[note2]]\ntext');
+      expect(kindOf(await planner.plan(note2))).toBe('link-in-heading');
+    });
+
     it('should refuse when the cached link offsets no longer match the note', async () => {
       // GIVEN a reference pointing at stale offsets
       const { planner, note1, note2, collector } = setup('note1.md', 'Edited text, see [[note2]].');

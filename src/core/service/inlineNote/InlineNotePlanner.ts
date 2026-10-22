@@ -67,6 +67,8 @@ export class InlineNotePlanner {
     switch (dryRun.kind) {
       case 'too-deep':
         return InlineNotePlanner.refused(InlineRefusals.tooDeep(note2.basename, note1.path));
+      case 'link-in-heading':
+        return InlineNotePlanner.refused(InlineRefusals.linkInHeading(note2.basename, note1.path));
       case 'link-moved':
         // metadataCache offsets lag a just-edited note — retry shortly.
         return InlineNotePlanner.refused(InlineRefusals.noteChanged(note1.path));

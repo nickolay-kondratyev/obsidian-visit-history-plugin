@@ -16,6 +16,11 @@ export type PlacementResult =
   | { readonly kind: 'placed'; readonly content: string }
   /** A heading would pass `######`. */
   | { readonly kind: 'too-deep' }
+  /**
+   * The link sits in a heading line: removing it would leave an empty or
+   * changed heading (plus a stray `-continued` one) — the user moves it.
+   */
+  | { readonly kind: 'link-in-heading' }
   /** The link is no longer at its offsets (note changed since indexing). */
   | { readonly kind: 'link-moved' };
 
@@ -72,14 +77,16 @@ export class MarkdownSectionPlacer {
 
     const headings = MarkdownStructure.headings(lines, bodyStart);
     const enclosing = headings.filter(heading => heading.lineIndex <= linkLine).at(-1);
+    if (enclosing !== undefined && enclosing.lineIndex === linkLine) {
+      return { kind: 'link-in-heading' };
+    }
     const titleLevel = enclosing === undefined ? TOP_LEVEL_TITLE_LEVEL : Math.max(TOP_LEVEL_TITLE_LEVEL, enclosing.level + 1);
     const bodyHeadingDelta = MarkdownSectionPlacer.bodyHeadingDelta(inlined.bodyLines, titleLevel);
     if (bodyHeadingDelta === null) {
       return { kind: 'too-deep' };
     }
 
-    const linkIsHeading = enclosing !== undefined && enclosing.lineIndex === linkLine;
-    const container = linkIsHeading ? null : MarkdownSectionPlacer.containerKindAt(lines, linkLine, bodyStart);
+    const container = MarkdownSectionPlacer.containerKindAt(lines, linkLine, bodyStart);
     const alias = MarkdownLinkSyntax.parse(link.original)?.alias;
     const replacement = container === null
       ? (link.isEmbed ? '' : alias ?? inlined.title)
@@ -92,9 +99,7 @@ export class MarkdownSectionPlacer {
       : rewrittenSpan.split('\n');
 
     const insertAfter = container === null ? linkEndLine : MarkdownSectionPlacer.containerEnd(lines, linkEndLine, container);
-    const continuationText = enclosing === undefined
-      ? receivingTitle
-      : (linkIsHeading ? MarkdownStructure.parseHeading(rewrittenSpan)?.text : undefined) ?? enclosing.text;
+    const continuationText = enclosing === undefined ? receivingTitle : enclosing.text;
     const titlePrefix = '#'.repeat(titleLevel);
     const continuation = MarkdownSectionPlacer.hasLooseTextAfter(lines, insertAfter, headings)
       ? [`${titlePrefix} ${continuationText}${CONTINUED_SUFFIX}`]
