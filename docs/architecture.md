@@ -57,6 +57,11 @@ core/init/PluginFactory ──── DI container: constructs & wires everything
    │                         link census + placement rules (pure) behind
    │                         InlineNoteAction; ModalInlineNoteDialogs (impl/)
    │
+   ├── editorChrome/embedInlineIcon ── inline-note icon on a note embed:
+   │                         EmbedInlineIconRule (pure) → EmbedInlineIconDecorator
+   │                         (DOM) ← reading-view post-processor + live-preview
+   │                         CM6 ViewPlugin
+   │
    ├── settingsTab/ ───────── VisitHistorySettingTab (Settings → Visit History):
    │                         "File modifying actions" → doc id backfill button
    │                         (ConfirmModal gate) + "Idle timeout (seconds)"
@@ -148,6 +153,8 @@ VaultTreemapView.refresh
 
 ```
 file menu (.md) / command 'inline-note' on note2
+  / embed icon on note1's `![[note2]]` (shown only when it is note2's ONLY
+    link per metadataCache.resolvedLinks — a cheap pre-check, not the rule)
   → InlineNoteAction.run
       → InlineNotePlanner.plan (read-only; refuses with InlineRefusals)
           NoteReferenceCollector (metadataCache links/embeds/property links

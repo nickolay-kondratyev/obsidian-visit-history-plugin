@@ -17,7 +17,8 @@ drawings, and visualizes vault activity as a treemap heatmap.
    `.plugin_data/visit_history/`, and pre-user-scoped `v2|v3` dirs auto-moved
    under the user.
 2. **Inline note (visit history aware)** — file menu / command on a note
-   linked from exactly ONE place: moves its content into the linking note,
+   (or the icon on its embed, when that embed is its only link) linked from
+   exactly ONE place: moves its content into the linking note,
    its visit history under that note (`merged_in_focus_duration_per_device/`),
    and the note itself to the trash.
 3. **Visualization** — the "Open vault heatmap" command renders the vault as a
