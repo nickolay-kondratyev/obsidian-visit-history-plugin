@@ -53,6 +53,10 @@ core/init/PluginFactory ──── DI container: constructs & wires everything
    │                         two + user-scope after 2026-Oct, the move after
    │                         2027-Feb
    │
+   ├── core/service/inlineNote ── "Inline note (visit history aware)":
+   │                         link census + placement rules (pure) behind
+   │                         InlineNoteAction; ModalInlineNoteDialogs (impl/)
+   │
    ├── settingsTab/ ───────── VisitHistorySettingTab (Settings → Visit History):
    │                         "File modifying actions" → doc id backfill button
    │                         (ConfirmModal gate) + "Idle timeout (seconds)"
@@ -136,7 +140,28 @@ VaultTreemapView.refresh
   → VhV3DurationStore.getVisitStatsAcrossUsersAndDevices
        (VisitStats fold over ALL users' device dirs: max session START = last
         visit, sum of durations = total focus time — whole-vault activity;
-        writes go to the current user only)
+        writes go to the current user only; merged-in files of inlined notes
+        count towards the receiving doc)
+```
+
+## Inline note flow ("Inline note (visit history aware)")
+
+```
+file menu (.md) / command 'inline-note' on note2
+  → InlineNoteAction.run
+      → InlineNotePlanner.plan (read-only; refuses with InlineRefusals)
+          NoteReferenceCollector (metadataCache links/embeds/property links
+            + our own canvas JSON scan) → InlineEligibility (exactly ONE
+            whole-note body link in the vault, self-links ignored)
+          → PlainNoteCheck (plain .md both sides) → InlinedNoteParser
+          → MarkdownSectionPlacer dry run (too deep → refuse)
+      → InlineNoteDialogs.confirmInline → re-plan → execute:
+          FocusSessionReleaser (close + flush note2's session)
+          → Vault.process(note1): MarkdownSectionPlacer + FrontmatterMerger
+            (raw-text, add-only; link re-verified at its offsets)
+          → ensureDocId(note1) → VhV3HistoryMerger.mergeInto(note2 → note1)
+            (moves files; VisitStatsCache history-move window drops both ids)
+          → FileManager.trashFile(note2)   (last — earlier failure keeps note2)
 ```
 
 ## Doc id flow

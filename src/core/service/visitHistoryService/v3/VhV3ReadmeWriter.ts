@@ -41,6 +41,10 @@ sync dot-hidden folders, so this history is per-device and does NOT sync.
           focus_duration_per_device/
             <device-name>/                      # hostname on desktop; mobile-XXXXXXXX on mobile
               <doc-id>.vh_v3                    # one duration file per (device, document)
+          merged_in_focus_duration_per_device/
+            <device-name>/
+              <receiving-doc-id>/               # a note other notes were inlined into
+                <inlined-doc-id>.vh_v3          # moved here unchanged; may carry __2, __3… suffixes
 \`\`\`
 
 - The \`.vh_v3\` filename is the document's persistent id. Documents whose id
@@ -51,6 +55,14 @@ sync dot-hidden folders, so this history is per-device and does NOT sync.
   device; nothing is recorded until a name is confirmed.
 - Per-device directories keep synced devices from ever writing the same file
   (no sync conflicts).
+- \`merged_in_focus_duration_per_device/\` holds the history of notes merged
+  in with the "Inline note (visit history aware)" action. The inlined note's
+  files are MOVED there unchanged (one per device it was focused on), and
+  every \`.vh_v3\` under \`<receiving-doc-id>/\` counts towards that document.
+  Merges are always one level deep: inlining a note that itself holds merged-in
+  history moves those files up under the new receiving document. A name clash
+  gets a numbered suffix (\`<inlined-doc-id>__2.vh_v3\`) — nothing is overwritten.
+  Only history present on this device is moved (this folder does not sync).
 
 ### File Format
 

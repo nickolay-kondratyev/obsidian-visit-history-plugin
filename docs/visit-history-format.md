@@ -22,6 +22,10 @@ It is the only history the plugin reads and writes.
           focus_duration_per_device/
             <device-name>/                     # one dir per device (hostname or mobile-XXXX)
               <doc-id>.vh_v3                   # one duration file per (device, document)
+          merged_in_focus_duration_per_device/
+            <device-name>/
+              <receiving-doc-id>/              # note other notes were inlined into
+                <inlined-doc-id>[__N].vh_v3    # moved here unchanged (VhV3HistoryMerger)
 ```
 
 - **Dot-hidden on purpose**: the top dir lives under `.plugin_data/`, so
@@ -98,11 +102,33 @@ It is the only history the plugin reads and writes.
 - Reading is strict per line (`VhV3SessionLineParser`) and never throws:
   unparseable lines are skipped, so one bad file cannot break aggregation.
 
+## Merged-in history (inline note)
+
+"Inline note (visit history aware)" (`InlineNoteAction`) merges an inlined
+note's history into the ONE note that linked it (`VhV3HistoryMerger`):
+
+- Every LOCAL `.vh_v3` of the inlined doc — all users, all devices — is
+  MOVED (never rewritten or merged line-wise) to
+  `user/<user>/v3/merged_in_focus_duration_per_device/<device>/<receiving-id>/<inlined-id>.vh_v3`,
+  each staying under its own user and device dir.
+- **Chains flatten**: files already merged into the inlined doc move straight
+  under the new receiving doc — merges are always one level deep.
+- **Collisions** (e.g. a note restored from trash and inlined again) get a
+  numbered suffix `<inlined-id>__2.vh_v3`, `__3`, … — nothing is overwritten.
+- The inlined note's open focus session is closed and flushed BEFORE the
+  move (`FocusDurationTracker.releaseDoc`), so no line lands at the old path.
+- `.plugin_data/` does not sync, so only history present on THIS device is
+  moved; other devices keep the inlined doc's files unattached (invisible
+  dead data — accepted). Restoring the trashed note does NOT bring its
+  history back.
+
 ## Reading (heatmap)
 
 Last-visit for a note = max session START stamp across ALL users' device
 dirs for the note's doc id (the heatmap shows whole-vault activity — owner
-decision; start matches the old "stamp at focus time" semantics), resolved
+decision; start matches the old "stamp at focus time" semantics), plus every
+`.vh_v3` under the doc's `merged_in_focus_duration_per_device/<device>/<doc-id>/`
+dirs (total = sum over own + merged-in sessions), resolved
 via the READ-ONLY `DocIdService.getDocId` (bulk read paths must never write
 ids into user files). Writes always target the CURRENT user's tree. A visit
 becomes visible to the heatmap only once its session closes — accepted owner
