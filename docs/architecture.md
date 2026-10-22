@@ -68,6 +68,7 @@ core/init/PluginFactory ──── DI container: constructs & wires everything
    └── view/ ─────────────── VaultTreemapView (Obsidian ItemView) hosts React app
           │
           └── viewModel/ ─── buildVaultTree: TrackedFile[] → VaultNode tree
+                             tileSize: tile area per sizing mode/curve
                              FileOpener: IFileOpener abstraction
 ```
 

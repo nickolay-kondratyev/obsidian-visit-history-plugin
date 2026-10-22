@@ -83,18 +83,19 @@ per-kind case-insensitive dedupe); `HeatmapConfigSanitizer` enforces the
 same rules at the data.json boundary.
 
 `VaultNode` is a dual-purpose tree node: folders have `children`; leaves have
-`path`, `type` (`md`/`canvas`/`excalidraw`), `size`, and the three timestamps.
+`path`, `type` (`md`/`canvas`/`excalidraw`), `size`, the three timestamps,
+and `totalFocusMs` (summed closed focus sessions, all users/devices).
 
 ## Component tree & state
 
 ```
 App                     state owner: HeatmapConfig (color mode, gradient,
- │                      heat field, hot/cold thresholds, per-type scales,
- │                      filter terms), folder drill-down (folderSegments),
+ │                      heat field, hot/cold thresholds, sizeBy + per-mode
+ │                      sizing (curve + scales), filter terms), folder drill-down (folderSegments),
  │                      openPanel ('filter'|'field'|'info'|'config'|null —
  │                      at most ONE popover/panel open), contentMatchedPaths
  ├─ Header              actions only: breadcrumb + back, FilterGroup,
- │                      zoom reset (action lives in TreemapViz — bridged
+ │                      hidden-notes banner (visit-time sizing), zoom reset (action lives in TreemapViz — bridged
  │                      up through a ref registered via registerResetZoom)
  │   └─ FilterGroup     filter icon trigger + removable term chips
  │                      (kind = glyph + tint + title, never color alone)
@@ -104,9 +105,12 @@ App                     state owner: HeatmapConfig (color mode, gradient,
  ├─ InfoPopover         title + stats + Legend (the collapsed header info)
  ├─ ConfigPanel         SegmentedToggle (color mode), HeatmapOptions
  │                      (field RadioGroup, gradient dropdown,
- │                      hot/cold RangeSliders), per-type scale RangeSliders
+ │                      hot/cold RangeSliders), "Size" section (size-by
+ │                      + curve SegmentedToggles, ACTIVE mode's per-type
+ │                      scale RangeSliders)
  └─ TreemapViz          d3 treemap layout (useMemo), @visx/zoom pan/zoom,
-     │                  hover + edge-flipping tooltip, filter empty-state
+     │                  hover + edge-flipping tooltip, filter empty-state,
+ │                  all-unvisited empty-state ("size by content" CTA)
      ├─ FolderNode      click → drill into subtree (root-relative segments)
      ├─ CollapsedFolderNode  dense folder as ONE tile: name + "N files",
      │                  most-recent-file color, dashed border; click → drill in
@@ -165,8 +169,9 @@ collapses into ONE `CollapsedFolderNode` tile; its subtree is not rendered.
 The tile is colored like its most recent file (max of the active heat field;
 all-null → first file) in both color modes. This bounds rendered file tiles
 to ≈ viewport area / 1024 regardless of vault size (perf). Header stats and
-the filter empty-state still count ALL files (computed from the full
-hierarchy, not the partition).
+the filter empty-state still count ALL laid-out files (computed from the full
+hierarchy, not the partition). A collapsed tile's area is the d3 sum of its
+files' tile values, so it follows the active sizing mode, curve and scales.
 
 Ceiling: decided on the UNZOOMED layout — zooming in does not expand
 collapsed folders (upgrade path: re-partition per zoom scale); the view
@@ -177,8 +182,37 @@ root's own direct files never collapse.
 - `heatColor(ts)`: newer than `hotDays` → hot color; older than `coldDays` →
   cold color; in between → RGB interpolation; `null` timestamp → `nil` color
   at reduced opacity ("no data").
-- Cell area = file size × per-type scale factor (canvas/excalidraw are
-  down-weighted by default so prose dominates).
+
+## Tile sizing
+
+Pure rules in `viewModel/tileSize.ts`; `App` resolves the ACTIVE mode into a
+`TileSizing` (slider bounds stripped) for `TreemapViz`.
+
+- **Size by** (`HeatmapConfig.sizeBy`): `contentSize` (bytes, default) or
+  `visitTime` (`totalFocusMs` in SECONDS — so a few seconds of focus isn't
+  thousands of units).
+- **Curve** per mode: `linear` = raw, `sqrt` = √raw, `log` = log1p(raw).
+  Default `sqrt` for BOTH modes — keeps a few huge files / heavily visited
+  daily notes from swallowing the map. Behavior change: the content view was
+  linear before; upgraded configs (no curve saved) get `sqrt`.
+- Tile value = `curve(raw) × typeScale`, NOT rounded (sqrt/log values are
+  small; rounding would erase their differences). Content raw is floored at
+  1 byte BEFORE the curve so 0-byte notes stay visible.
+- Each mode saves its own curve + per-type scales (`sizing.contentSize` /
+  `sizing.visitTime`); switching modes never touches the other's values.
+  Content defaults down-weight canvas ×0.3 / excalidraw ×0.2 so prose
+  dominates; visit-time defaults are ×1 for all types. The sanitizer still
+  reads the pre-per-mode top-level `scales` key as the content scales
+  (legacy read, cleanup after 2027-April).
+- **Hidden notes** (visit-time only): notes with no focus time are LEFT OUT
+  of the layout (`hideUnvisitedFiles`, after archive pruning and filters);
+  folders left empty disappear. The header banner (`N notes hidden · no
+  visit history`, full sentence on hover) counts them for the CURRENT view.
+  If every note in the view is hidden, an empty state offers "size by
+  content". Raw `.excalidraw` files never get a doc id, so they are always
+  hidden here (accepted gap). Visit times refresh with the view, not live.
+- Tooltip shows "visited for" (total focus) and "tile size" — the active
+  computation, e.g. `sqrt(12.3 KB) ×0.30` or `log(3h 05m) ×1.00`.
 
 ## Styling
 
