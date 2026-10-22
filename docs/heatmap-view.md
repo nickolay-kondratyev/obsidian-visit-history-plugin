@@ -108,6 +108,8 @@ App                     state owner: HeatmapConfig (color mode, gradient,
  └─ TreemapViz          d3 treemap layout (useMemo), @visx/zoom pan/zoom,
      │                  hover + edge-flipping tooltip, filter empty-state
      ├─ FolderNode      click → drill into subtree (root-relative segments)
+     ├─ CollapsedFolderNode  dense folder as ONE tile: name + "N files",
+     │                  most-recent-file color, dashed border; click → drill in
      ├─ LeafNode        click → IFileOpener.openFile(path); title top-left,
      │                  last-visit age ("3d ago") bottom-right when the tile
      │                  fits title + blank line + label (cornerLabelFits)
@@ -151,6 +153,23 @@ so it sticks across restarts:
   out-of-bounds values are clamped, `hot < cold` is enforced.
 - Two heatmap views open at once each hold their own state; last save
   wins, and a view picks up persisted config when (re)opened.
+
+## Dense-folder collapse
+
+`viewModel/partitionTreemapNodes.ts` splits the laid-out treemap (top-down)
+into rendered folders, collapsed folders and leaves. A folder below the view
+root whose rect gives each of its files (all depths) less than
+`MIN_AREA_PER_FILE_PX2` (32×32 px — the leaf-title threshold) on average
+collapses into ONE `CollapsedFolderNode` tile; its subtree is not rendered.
+The tile is colored like its most recent file (max of the active heat field;
+all-null → first file) in both color modes. This bounds rendered file tiles
+to ≈ viewport area / 1024 regardless of vault size (perf). Header stats and
+the filter empty-state still count ALL files (computed from the full
+hierarchy, not the partition).
+
+Ceiling: decided on the UNZOOMED layout — zooming in does not expand
+collapsed folders (upgrade path: re-partition per zoom scale); the view
+root's own direct files never collapse.
 
 ## Heatmap coloring
 

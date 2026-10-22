@@ -1,12 +1,14 @@
 ---
+closed_iso: 2026-10-22T18:03:46Z
+session_ids: [{"a": "claude", "type": "execution", "id": "0ac51d51-ca91-484a-abf5-890fc36a379b"}, {"a": "claude", "type": "review", "id": "f21b093f-40f1-4308-b18c-1686153f9304"}, {"a": "claude", "type": "review", "id": "3043fb1d-3783-4c9b-83cf-3066ed3f2001"}]
 working_dir: nickolay-kondratyev_obsidian-visit-history-plugin
 id: nid_zxh1nwsmchemmzg2fdwu98y22_e
 title: "Optimize performance when there are too many notes and subfolders"
-status: in_progress
+status: closed
 deps: []
-links: []
+links: [nid_j9j1mc5myj1zfjdgs8nmvjywn_e]
 created_iso: 2026-10-22T17:53:55Z
-status_updated_iso: 2026-10-22T17:57:09Z
+status_updated_iso: 2026-10-22T18:03:46Z
 type: task
 priority: 3
 assignee: CC_WITH-nickolaykondratyev
@@ -22,3 +24,49 @@ The folder for now we will use the coloring of the most recent note (depending o
 Then the user can click into the folder like already can.
 
 Come up with logical hueristic of when to allow display of individual notes in the folder and when to collapse. 
+
+## Resolution (2026-10-22)
+
+**Built:** dense-folder collapse in the heatmap treemap.
+
+- **Heuristic** — `src/viewModel/partitionTreemapNodes.ts` (pure, unit-tested):
+  after the single d3 layout pass, walk top-down from the view root; a folder
+  whose rect gives its files less than `MIN_AREA_PER_FILE_PX2` (32×32 px) on
+  average collapses into ONE tile (descendants not rendered). The 32 px side
+  is tied to the leaf-title label threshold (`TILE_TITLE_MIN_WIDTH_PX`).
+  WHY area-per-file rather than a fixed file count: it adapts to screen size
+  and drill-down depth, and it bounds the number of rendered file tiles to
+  ≈ viewport area / 1024 regardless of vault size (the perf guarantee).
+  O(n): file counts + representatives are computed in one `eachAfter` pass.
+- **Rendering** — `src/view/components/CollapsedFolderNode.tsx`: tile with
+  the folder name (uppercase) top-left, `"N files"` bottom-right (when it
+  fits), dashed border (folder, not file), native `<title>` tooltip; click
+  drills in via the same handler as `FolderNode`.
+- **Color** — the "most recent" file = max of the ACTIVE heat field
+  (created / modified / visited) among the folder's files; the tile uses
+  that file's color in both modes (heatmap → its heat color; type mode → its
+  type color). All-null → first file (heatmap shows the "no data" color).
+- **Stats / empty-state** (`TreemapViz.computeTotals`) still count ALL files
+  and folders in the view, incl. those inside collapsed folders.
+- Docs: `docs/heatmap-view.md` ("Dense-folder collapse"), CLAUDE.md/AGENTS.md.
+
+**Assumptions made (non-interactive run; see `_agent_decisions/needs_review/heatmap-dense-folder-collapse.md`):**
+- Label says "files", not "notes" — the count includes canvases/drawings and
+  the header stats already say "files".
+- Known ceilings: the collapse is decided on the UNZOOMED layout — zooming in
+  does not expand a collapsed folder (upgrade: re-partition per zoom scale);
+  the view root's own direct files are never collapsed (only folders do).
+- Collapsed tiles use the native SVG title tooltip, not the rich file tooltip.
+
+Verified: `npm test` 511/511, `npm run lint` 0 errors, `npm run build` OK.
+Not verified in a running Obsidian (no visual/manual check in this run).
+
+## Notes
+
+**2026-10-22T18:05:27Z**
+
+__REVIEW_AGAIN__: no code bugs found and test/lint/build pass, but the flat-folder perf gap (view-root direct files never collapse) is left open as ticket nid_j9j1mc5myj1zfjdgs8nmvjywn_e, and the collapse was never checked visually in Obsidian
+
+**2026-10-22T18:06:55Z**
+
+__READY_AS_IS__: re-reviewed partition/collapse/totals/click wiring — no bugs found; test 511/511, lint 0, build OK; flat-folder gap already tracked in nid_j9j1mc5myj1zfjdgs8nmvjywn_e

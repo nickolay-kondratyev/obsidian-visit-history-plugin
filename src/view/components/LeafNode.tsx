@@ -6,6 +6,8 @@ import {
   LEAF_LABEL_PAD_PX,
   leafFill,
   leafOpacity,
+  TILE_TITLE_MIN_HEIGHT_PX,
+  TILE_TITLE_MIN_WIDTH_PX,
 } from '../utils';
 import type { ColorMode, GradientKey, HeatField } from '../constants';
 import type { VaultNode } from '../../core/data/VaultNode';
@@ -72,7 +74,7 @@ export function LeafNode({
         fillOpacity={opacity}
         className={hovered ? 'leaf-node__bg--hovered' : undefined}
       />
-      {lw > 32 && lh > 14 && (
+      {lw > TILE_TITLE_MIN_WIDTH_PX && lh > TILE_TITLE_MIN_HEIGHT_PX && (
         <text x={LEAF_LABEL_PAD_PX} y={11} className="leaf-node__label">
           {d.data.name}
         </text>

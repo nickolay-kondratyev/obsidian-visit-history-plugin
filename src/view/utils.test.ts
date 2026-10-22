@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cornerLabelFits, fmtAgo, fmtBytes, fmtDate, heatColor } from './utils';
+import { cornerLabelFits, fmtAgo, fmtBytes, fmtDate, fmtFileCount, heatColor } from './utils';
 import { GRADIENTS } from './constants';
 
 const MS_PER_MINUTE = 60000;
@@ -92,6 +92,20 @@ describe('view utils', () => {
 
     it('should keep counting in days beyond a year', () => {
       expect(fmtAgo(NOW_MS - 400 * MS_PER_DAY, NOW_MS)).toBe('400d ago');
+    });
+  });
+
+  describe('fmtFileCount', () => {
+    it('should use the singular for one file', () => {
+      expect(fmtFileCount(1)).toBe('1 file');
+    });
+
+    it('should use the plural for many files', () => {
+      expect(fmtFileCount(12)).toBe('12 files');
+    });
+
+    it('should use the plural for zero files', () => {
+      expect(fmtFileCount(0)).toBe('0 files');
     });
   });
 
