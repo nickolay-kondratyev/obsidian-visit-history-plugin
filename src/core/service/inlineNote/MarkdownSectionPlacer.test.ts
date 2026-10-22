@@ -217,6 +217,23 @@ describe('MarkdownSectionPlacer', () => {
       const inlined = inlinedNote({ title: 'A|B [x]' });
       expect(placedLines(['## A', '- [[note2]]'], '[[note2]]', inlined)[1]).toBe('- [[#A B x|A B x]]');
     });
+
+    it('should strip the characters Obsidian strips from heading link targets (: \\ %%)', () => {
+      // GIVEN a title holding characters Obsidian's stripHeadingForLink replaces
+      const inlined = inlinedNote({ title: 'Q: a\\b %% c' });
+      // WHEN placed inside a list
+      // THEN the target is the Obsidian-safe form (resolveSubpath matches it to the heading)
+      expect(placedLines(['## A', '- [[note2]]'], '[[note2]]', inlined)[1]).toBe('- [[#Q a b c|Q: a\\b c]]');
+    });
+
+    it('should use the nested heading link form when an existing heading matches the title only after Obsidian normalization', () => {
+      // GIVEN an earlier heading "Foo: bar" — Obsidian matches it to a "Foo bar" link
+      const inlined = inlinedNote({ title: 'Foo bar' });
+      const lines = ['## Foo: bar', 'old', '## Third', '- see [[note2]]'];
+      // WHEN placed
+      // THEN the link still targets the new section
+      expect(placedLines(lines, '[[note2]]', inlined)[3]).toBe('- see [[#Third#Foo bar|Foo bar]]');
+    });
   });
 
   describe('place — refusals', () => {

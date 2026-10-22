@@ -29,9 +29,15 @@ const LIST_ITEM_RE = /^\s*(?:[-*+]|\d+[.)])(?:\s|$)/;
 const INDENTED_RE = /^\s+\S/;
 const QUOTE_RE = /^\s*>/;
 const TABLE_ROW_RE = /^\s*\|/;
-// Characters a wikilink heading target cannot hold.
-const HEADING_LINK_UNSAFE_RE = /[[\]|#^]/g;
-const LINK_DISPLAY_UNSAFE_RE = /[[\]|]/g;
+// WHAT: Obsidian's own stripHeadingForLink set (`: # | ^ \ CR LF`, `%%`, `[[`, `]]`)
+// plus lone brackets (our link parser rejects them). Obsidian 1.12.7 source:
+// `/([:#|^\\\r\n]|%%|\[\[|]])/g`. Safe to blank out: resolveSubpath compares
+// both sides through stripHeading (a superset), so the target still resolves.
+const HEADING_LINK_UNSAFE_RE = /[[\]:#|^\\\r\n]|%%/g;
+// WHAT: Obsidian's stripHeading set (1.12.7) — how resolveSubpath compares
+// heading texts (with whitespace collapsed + lowercased).
+const HEADING_MATCH_STRIPPED_RE = /[!"#$%&()*+,.:;<=>?@^`{|}~/[\]\\\r\n]/g;
+const LINK_DISPLAY_UNSAFE_RE = /[[\]|]|%%/g;
 
 /**
  * Places the inlined note's section into the receiving note (pure text):
@@ -133,9 +139,9 @@ export class MarkdownSectionPlacer {
   /**
    * `[[#<title>|<display>]]` — or the nested `[[#<enclosing>#<title>|…]]`
    * when note1 already has a heading with the title's text (a bare link
-   * would resolve to that older heading). Ceiling: characters a heading
-   * link can't hold (`[]|#^`) are replaced by spaces, relying on Obsidian's
-   * lenient heading matching for such titles.
+   * would resolve to that older heading). Characters a heading link can't
+   * hold are blanked like Obsidian's own link autocomplete does (see
+   * HEADING_LINK_UNSAFE_RE); "same text" is judged the way Obsidian matches.
    */
   private static headingLink(
     container: ContainerKind,
@@ -145,13 +151,19 @@ export class MarkdownSectionPlacer {
     headings: readonly MarkdownHeading[],
   ): string {
     const titleTarget = MarkdownSectionPlacer.cleanLinkText(title, HEADING_LINK_UNSAFE_RE);
-    const collides = headings.some(heading => heading.text.toLowerCase() === title.toLowerCase());
+    const titleKey = MarkdownSectionPlacer.headingMatchKey(title);
+    const collides = headings.some(heading => MarkdownSectionPlacer.headingMatchKey(heading.text) === titleKey);
     const target = collides && enclosing !== undefined
       ? `${MarkdownSectionPlacer.cleanLinkText(enclosing.text, HEADING_LINK_UNSAFE_RE)}#${titleTarget}`
       : titleTarget;
     // A bare `|` inside a table row would split the cell.
     const pipe = container === 'table' ? '\\|' : '|';
     return `[[#${target}${pipe}${MarkdownSectionPlacer.cleanLinkText(alias ?? title, LINK_DISPLAY_UNSAFE_RE)}]]`;
+  }
+
+  /** How Obsidian's resolveSubpath compares a heading with a link part. */
+  private static headingMatchKey(text: string): string {
+    return MarkdownSectionPlacer.cleanLinkText(text, HEADING_MATCH_STRIPPED_RE).toLowerCase();
   }
 
   private static cleanLinkText(text: string, unsafe: RegExp): string {
