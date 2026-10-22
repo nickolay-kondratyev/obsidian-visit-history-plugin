@@ -1,4 +1,5 @@
 ---
+session_ids: [{"a": "claude", "type": "execution", "id": "fbc687da-49f0-4295-acbf-8e0742a46f49"}]
 working_dir: nickolay-kondratyev_obsidian-visit-history-plugin
 id: nid_1ld735zqcn0a6kyyqymijaabi_e
 title: "timestamp that is shown at the bottom should be based on the current setting"
