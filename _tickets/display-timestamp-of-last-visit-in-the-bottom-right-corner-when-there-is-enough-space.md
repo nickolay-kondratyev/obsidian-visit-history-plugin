@@ -1,4 +1,5 @@
 ---
+session_ids: [{"a": "claude", "type": "execution", "id": "b1f48473-2ab7-4a7c-b181-ae094375e7df"}]
 working_dir: nickolay-kondratyev_obsidian-visit-history-plugin
 id: nid_38nug4v7v30e1pe2r4bsrque2_e
 title: "Display timestamp of last visit in the bottom right corner when there is enough space"
