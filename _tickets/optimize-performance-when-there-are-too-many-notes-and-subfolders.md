@@ -1,6 +1,6 @@
 ---
 closed_iso: 2026-10-22T18:03:46Z
-session_ids: [{"a": "claude", "type": "execution", "id": "0ac51d51-ca91-484a-abf5-890fc36a379b"}]
+session_ids: [{"a": "claude", "type": "execution", "id": "0ac51d51-ca91-484a-abf5-890fc36a379b"}, {"a": "claude", "type": "review", "id": "f21b093f-40f1-4308-b18c-1686153f9304"}]
 working_dir: nickolay-kondratyev_obsidian-visit-history-plugin
 id: nid_zxh1nwsmchemmzg2fdwu98y22_e
 title: "Optimize performance when there are too many notes and subfolders"
