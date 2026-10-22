@@ -1,6 +1,6 @@
 ---
 closed_iso: 2026-10-22T17:43:00Z
-session_ids: [{"a": "claude", "type": "execution", "id": "b1f48473-2ab7-4a7c-b181-ae094375e7df"}, {"a": "claude", "type": "review", "id": "ecbeddb6-f289-40b3-9231-57177e383674"}]
+session_ids: [{"a": "claude", "type": "execution", "id": "b1f48473-2ab7-4a7c-b181-ae094375e7df"}, {"a": "claude", "type": "review", "id": "ecbeddb6-f289-40b3-9231-57177e383674"}, {"a": "claude", "type": "test-fix", "id": "09561ddf-73e7-4720-a4ca-d8a207742c21"}]
 working_dir: nickolay-kondratyev_obsidian-visit-history-plugin
 id: nid_38nug4v7v30e1pe2r4bsrque2_e
 title: "Display timestamp of last visit in the bottom right corner when there is enough space"
