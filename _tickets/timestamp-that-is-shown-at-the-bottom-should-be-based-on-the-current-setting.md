@@ -28,3 +28,9 @@ The bottom-right in-tile age label on heatmap leaf tiles now shows the age of th
 - Docs: `docs/heatmap-view.md` LeafNode line updated.
 
 Assumption (agent decision): the label follows the active field in **both** color modes (heatmap and type). The field setting is kept while in type mode, so this stays consistent and avoids a mode-dependent special case.
+
+## Notes
+
+**2026-10-22T18:21:03Z**
+
+__READY_AS_IS__: small correct change (label follows active HeatField via tested leafFieldAgo); build, lint (0 errors), 515 tests pass; no fixes needed
