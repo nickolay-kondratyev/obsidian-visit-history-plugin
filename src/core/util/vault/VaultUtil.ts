@@ -50,6 +50,7 @@ export class VaultUtilDefault implements VaultUtil {
           createdMs: f.stat.ctime,
           modifiedMs: f.stat.mtime,
           visitedMs: visitStats.lastVisitMs,
+          totalFocusMs: visitStats.totalFocusMs,
         },
       }))
     );

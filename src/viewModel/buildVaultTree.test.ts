@@ -6,10 +6,15 @@ import { makeTFile } from '../testSupport/fileFactory';
 
 const VAULT_NAME = 'my-vault';
 
-function tracked(path: string, visitedMs: number | null = null, size = 10): TrackedFile {
+function tracked(
+  path: string,
+  visitedMs: number | null = null,
+  size = 10,
+  totalFocusMs = 0,
+): TrackedFile {
   return {
     file: makeTFile({ path, size, ctime: 100, mtime: 200 }),
-    timeMetadata: { createdMs: 100, modifiedMs: 200, visitedMs },
+    timeMetadata: { createdMs: 100, modifiedMs: 200, visitedMs, totalFocusMs },
   };
 }
 
@@ -80,5 +85,13 @@ describe('buildVaultTree', () => {
     const root = buildVaultTree(VAULT_NAME, [tracked('a.md', null)]);
     // THEN lastVisitedAt is null (renders as "no data" in the heatmap)
     expect(childNamed(root, 'a.md').lastVisitedAt).toBeNull();
+  });
+
+  it('should carry total focus time onto the leaf', () => {
+    // GIVEN a file with a known total focus time
+    const totalFocusMs = 4500;
+    const root = buildVaultTree(VAULT_NAME, [tracked('a.md', 1, 10, totalFocusMs)]);
+    // THEN totalFocusMs mirrors FileTimeMetadata.totalFocusMs
+    expect(childNamed(root, 'a.md').totalFocusMs).toBe(totalFocusMs);
   });
 });

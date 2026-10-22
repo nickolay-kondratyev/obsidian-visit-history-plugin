@@ -45,7 +45,7 @@ describe('VaultUtilDefault', () => {
       const files = await vaultUtil.getTrackedFiles();
       // THEN the tracked file carries its metadata
       expect(files).toEqual([
-        { file: tracked, timeMetadata: { createdMs: 11, modifiedMs: 22, visitedMs: null } },
+        { file: tracked, timeMetadata: { createdMs: 11, modifiedMs: 22, visitedMs: null, totalFocusMs: 0 } },
       ]);
     });
 
@@ -56,6 +56,15 @@ describe('VaultUtilDefault', () => {
       const [trackedFile] = await vaultUtil.getTrackedFiles();
       // THEN visitedMs is the last visit
       expect(trackedFile?.timeMetadata.visitedMs).toBe(1234);
+    });
+
+    it('should map the total focus of the visit stats to totalFocusMs', async () => {
+      // GIVEN a tracked file with recorded visit stats
+      const vaultUtil = makeVaultUtil([makeTFile({ path: 'a.md' })], new VisitStats(1234, 999));
+      // WHEN resolving tracked files
+      const [trackedFile] = await vaultUtil.getTrackedFiles();
+      // THEN totalFocusMs is the summed focus time
+      expect(trackedFile?.timeMetadata.totalFocusMs).toBe(999);
     });
   });
 });
