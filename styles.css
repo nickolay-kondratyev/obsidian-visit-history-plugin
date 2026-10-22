@@ -807,6 +807,10 @@ body.theme-light .vault-heatmap-view {
   stroke-linejoin: round;
 }
 
+.vault-heatmap-view .leaf-node__visit-ago {
+  fill: rgba(255, 255, 255, 0.62);
+}
+
 .vault-heatmap-view .leaf-node__bg--hovered {
   stroke: var(--vt-text);
   stroke-opacity: 0.6;

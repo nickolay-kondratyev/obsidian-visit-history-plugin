@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { fmtBytes, fmtDate, heatColor } from './utils';
+import { cornerLabelFits, fmtAgo, fmtBytes, fmtDate, heatColor } from './utils';
 import { GRADIENTS } from './constants';
 
+const MS_PER_MINUTE = 60000;
+const MS_PER_HOUR = 3600000;
 const MS_PER_DAY = 86400000;
+const NOW_MS = Date.UTC(2026, 9, 22, 12, 0, 0);
 
 function daysAgo(days: number): number {
   return Date.now() - days * MS_PER_DAY;
@@ -55,6 +58,59 @@ describe('view utils', () => {
 
     it('should render day-relative age', () => {
       expect(fmtDate(daysAgo(3))).toContain('(3d ago)');
+    });
+  });
+
+  describe('fmtAgo', () => {
+    it('should show <1m ago under a minute', () => {
+      expect(fmtAgo(NOW_MS - 59_000, NOW_MS)).toBe('<1m ago');
+    });
+
+    it('should clamp a future stamp to <1m ago', () => {
+      expect(fmtAgo(NOW_MS + MS_PER_HOUR, NOW_MS)).toBe('<1m ago');
+    });
+
+    it('should show minutes at exactly one minute', () => {
+      expect(fmtAgo(NOW_MS - MS_PER_MINUTE, NOW_MS)).toBe('1m ago');
+    });
+
+    it('should floor minutes under an hour', () => {
+      expect(fmtAgo(NOW_MS - 33 * MS_PER_MINUTE - 59_000, NOW_MS)).toBe('33m ago');
+    });
+
+    it('should show hours at exactly one hour', () => {
+      expect(fmtAgo(NOW_MS - MS_PER_HOUR, NOW_MS)).toBe('1h ago');
+    });
+
+    it('should floor hours under a day', () => {
+      expect(fmtAgo(NOW_MS - 23 * MS_PER_HOUR - 59 * MS_PER_MINUTE, NOW_MS)).toBe('23h ago');
+    });
+
+    it('should show days at exactly one day', () => {
+      expect(fmtAgo(NOW_MS - MS_PER_DAY, NOW_MS)).toBe('1d ago');
+    });
+
+    it('should keep counting in days beyond a year', () => {
+      expect(fmtAgo(NOW_MS - 400 * MS_PER_DAY, NOW_MS)).toBe('400d ago');
+    });
+  });
+
+  describe('cornerLabelFits', () => {
+    // '33m ago' = 7 chars → needs 7 * 5.5 + 2 * 3 = 44.5 wide; 3 lines * 12 = 36 tall.
+    it('should fit when the tile has room for title, blank line and label', () => {
+      expect(cornerLabelFits(45, 36, '33m ago')).toBe(true);
+    });
+
+    it('should not fit when the tile is one px short of three lines', () => {
+      expect(cornerLabelFits(200, 35, '33m ago')).toBe(false);
+    });
+
+    it('should not fit when the tile is narrower than the label', () => {
+      expect(cornerLabelFits(44, 200, '33m ago')).toBe(false);
+    });
+
+    it('should require more width for a longer label', () => {
+      expect(cornerLabelFits(45, 36, '400d ago')).toBe(false);
     });
   });
 });
