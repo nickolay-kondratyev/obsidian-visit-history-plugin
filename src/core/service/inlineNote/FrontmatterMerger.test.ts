@@ -28,6 +28,15 @@ describe('FrontmatterMerger', () => {
         .toBe('---\ntags:\n    - a\n    - b\nother: 1\n---\nbody');
     });
 
+    it('should keep a CRLF note CRLF when adding to a block list', () => {
+      expect(merge('---\r\ntags:\r\n  - a\r\n---\r\nbody', { tags: ['b'] }))
+        .toBe('---\r\ntags:\r\n  - a\r\n  - b\r\n---\r\nbody');
+    });
+
+    it('should add a CRLF frontmatter block to a CRLF note without one', () => {
+      expect(merge('body\r\nmore', { tags: ['b'] })).toBe('---\r\ntags:\r\n  - b\r\n---\r\nbody\r\nmore');
+    });
+
     it('should add new tags into a flow list', () => {
       expect(merge('---\ntags: [a, "b"]\n---\nbody', { tags: ['c'] }))
         .toBe('---\ntags: [a, "b", c]\n---\nbody');

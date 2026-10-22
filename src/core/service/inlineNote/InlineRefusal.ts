@@ -1,4 +1,5 @@
 export type InlineRefusalKind =
+  | 'still-indexing'
   | 'no-links'
   | 'multiple-links'
   | 'partial-link'
@@ -7,6 +8,7 @@ export type InlineRefusalKind =
   | 'unsupported-inlined-note'
   | 'unsupported-receiving-note'
   | 'too-deep'
+  | 'link-in-heading'
   | 'same-doc-id'
   | 'unusable-receiving-id'
   | 'note-changed';
@@ -33,6 +35,14 @@ export interface InlineRefusal {
  * plain language, what went wrong, how to fix.
  */
 export class InlineRefusals {
+  static stillIndexing(noteName: string): InlineRefusal {
+    return InlineRefusals.of(
+      'still-indexing',
+      `Obsidian is still indexing your vault, so not every link to "${noteName}" is known yet.`,
+      'Try again in a moment.',
+    );
+  }
+
   static noLinks(noteName: string): InlineRefusal {
     return InlineRefusals.of(
       'no-links',
@@ -100,6 +110,14 @@ export class InlineRefusals {
     );
   }
 
+  static linkInHeading(noteName: string, receivingPath: string): InlineRefusal {
+    return InlineRefusals.of(
+      'link-in-heading',
+      `The only link to "${noteName}" sits in a heading line of "${receivingPath}", so removing it would break that heading.`,
+      `Move the link out of the heading line (e.g. onto the line below it) in "${receivingPath}", then try again.`,
+    );
+  }
+
   static sameDocId(noteName: string, receivingPath: string): InlineRefusal {
     return InlineRefusals.of(
       'same-doc-id',
@@ -117,10 +135,10 @@ export class InlineRefusals {
     );
   }
 
-  static noteChanged(receivingPath: string): InlineRefusal {
+  static noteChanged(notePath: string): InlineRefusal {
     return InlineRefusals.of(
       'note-changed',
-      `"${receivingPath}" changed while inlining, so its link could not be found where expected. Nothing was changed.`,
+      `"${notePath}" changed while inlining, so its link could not be found where expected. Nothing was changed.`,
       'Wait a moment and try again.',
     );
   }

@@ -1,5 +1,6 @@
 import { FrontmatterBlock, FrontmatterBlocks } from './FrontmatterBlocks';
 import { FrontmatterAdditions } from './InlinedNoteParser';
+import { LineEnding } from './LineEnding';
 
 const TAGS_KEY = 'tags';
 const ALIASES_KEY = 'aliases';
@@ -13,6 +14,7 @@ const SEQUENCE_ITEM_RE = /^(\s*)-\s/;
  * byte-identical except where a value must grow (a flow list gets new items;
  * a scalar `tags: a` becomes a block list so it can hold more — Obsidian
  * accepts both forms). Never processFrontMatter (see FrontmatterBlocks).
+ * Written back with the note's own line ending (LineEnding).
  */
 export class FrontmatterMerger {
   static merge(content: string, additions: FrontmatterAdditions): string {
@@ -38,10 +40,14 @@ export class FrontmatterMerger {
       ...(aliasesBlock === undefined ? FrontmatterMerger.newListKey(ALIASES_KEY, missingAliases) : []),
       ...missingFlagKeys.map(key => `${key}:`),
     ];
+    const eol = LineEnding.detect(content);
     if (split.closingFenceIndex === null) {
-      return [FENCE, ...frontmatterLines, FENCE].join('\n') + '\n' + content;
+      return LineEnding.joinLines([FENCE, ...frontmatterLines, FENCE], eol) + eol + content;
     }
-    return [split.lines[0] ?? FENCE, ...frontmatterLines, ...split.lines.slice(split.closingFenceIndex)].join('\n');
+    return LineEnding.joinLines(
+      [split.lines[0] ?? FENCE, ...frontmatterLines, ...split.lines.slice(split.closingFenceIndex)],
+      eol,
+    );
   }
 
   // ── private ─────────────────────────────────────────────────────────────

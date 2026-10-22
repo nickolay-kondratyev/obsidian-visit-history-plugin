@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { InlineLinkSite, MarkdownSectionPlacer, PlacementResult } from './MarkdownSectionPlacer';
-import { InlinedNote } from './InlinedNoteParser';
+import { InlinedNote, WholeNoteSelfLink } from './InlinedNoteParser';
 
 const NOTE1_TITLE = 'Note one';
 
@@ -10,8 +10,18 @@ function inlinedNote(overrides: Partial<InlinedNote> = {}): InlinedNote {
     propertyLines: [],
     bodyLines: ['note2 body'],
     frontmatterAdditions: { tags: [], aliases: [], flagKeys: [] },
+    wholeNoteSelfLinks: [],
     ...overrides,
   };
+}
+
+/** note2 with one body line holding a whole-note self-link (its first occurrence of `original`). */
+function inlinedWithSelfLink(bodyLine: string, original: string, alias?: string): InlinedNote {
+  const startColumn = bodyLine.indexOf(original);
+  const selfLink: WholeNoteSelfLink = {
+    lineIndex: 0, startColumn, endColumn: startColumn + original.length, isEmbed: original.startsWith('!'), alias,
+  };
+  return inlinedNote({ bodyLines: [bodyLine], wholeNoteSelfLinks: [selfLink] });
 }
 
 /** The link site of the FIRST occurrence of `original` in the content. */
@@ -82,6 +92,57 @@ describe('MarkdownSectionPlacer', () => {
     });
   });
 
+  describe('place — whole-note self-links in the inlined body', () => {
+    it('should turn a self-link into a link to the new section', () => {
+      const inlined = inlinedWithSelfLink('see [[note2]] again', '[[note2]]');
+      expect(placedLines(['## A', 'See [[note2]].'], '[[note2]]', inlined)[3]).toBe('see [[#note2|note2]] again');
+    });
+
+    it('should keep the self-link alias as display text', () => {
+      const inlined = inlinedWithSelfLink('see [[note2|me]]', '[[note2|me]]', 'me');
+      expect(placedLines(['## A', 'See [[note2]].'], '[[note2]]', inlined)[3]).toBe('see [[#note2|me]]');
+    });
+
+    it('should keep a self-embed an embed of the new section', () => {
+      const inlined = inlinedWithSelfLink('![[note2]]', '![[note2]]');
+      expect(placedLines(['## A', 'See [[note2]].'], '[[note2]]', inlined)[3]).toBe('![[#note2|note2]]');
+    });
+
+    it('should use the nested heading link form when note1 already has a heading with the title text', () => {
+      const inlined = inlinedWithSelfLink('see [[note2]]', '[[note2]]');
+      expect(placedLines(['## note2', 'old', '## Third', 'See [[note2]].'], '[[note2]]', inlined)[5])
+        .toBe('see [[#Third#note2|note2]]');
+    });
+
+    it('should escape the pipe of a self-link inside a table row', () => {
+      const inlined = inlinedWithSelfLink('| [[note2]] |', '[[note2]]');
+      expect(placedLines(['## A', 'See [[note2]].'], '[[note2]]', inlined)[3]).toBe('| [[#note2\\|note2]] |');
+    });
+
+    it('should rewrite a self-link inside a body heading that gets shifted', () => {
+      const inlined = inlinedWithSelfLink('# Part [[note2]]', '[[note2]]');
+      expect(placedLines(['## A', 'See [[note2]].'], '[[note2]]', inlined)[3]).toBe('#### Part [[#note2|note2]]');
+    });
+  });
+
+  describe('place — line endings', () => {
+    it('should keep a CRLF note CRLF throughout, inserted lines included', () => {
+      // GIVEN a CRLF note1 whose last line has no line break
+      const content = ['### Third', 'See [[note2]].', 'More.'].join('\r\n');
+      // WHEN placed
+      const result = MarkdownSectionPlacer.place(content, NOTE1_TITLE, siteOf(content, '[[note2]]'), inlinedNote());
+      // THEN every line ends with CRLF
+      expect(result.kind === 'placed' && result.content).toBe(
+        ['### Third', 'See note2.', '#### note2', 'note2 body', '#### Third-continued', 'More.'].join('\r\n'),
+      );
+    });
+
+    it('should not carry CR from the inlined body into an LF note', () => {
+      const inlined = inlinedNote({ bodyLines: ['crlf body\r'] });
+      expect(placedLines(['## A', 'See [[note2]].'], '[[note2]]', inlined)).toEqual(['## A', 'See note2.', '### note2', 'crlf body']);
+    });
+  });
+
   describe('place — inserted block', () => {
     it('should put leftover properties in a yaml block right under the title', () => {
       const inlined = inlinedNote({ propertyLines: ['status: draft'] });
@@ -143,16 +204,6 @@ describe('MarkdownSectionPlacer', () => {
       // WHEN placed
       // THEN no continuation is needed and the sub-heading follows the block
       expect(placedLines(lines, '[[note2]]').slice(4)).toEqual(['#### Existing', 'text']);
-    });
-
-    it('should use the rewritten heading text when the link sits in the heading itself', () => {
-      // GIVEN the link inside the section heading
-      const lines = ['### See [[note2]]', 'Section text.'];
-      // WHEN placed
-      // THEN the heading becomes plain text, the section nests under it, the text continues
-      expect(placedLines(lines, '[[note2]]')).toEqual([
-        '### See note2', '#### note2', 'note2 body', '#### See note2-continued', 'Section text.',
-      ]);
     });
   });
 
@@ -237,6 +288,14 @@ describe('MarkdownSectionPlacer', () => {
   });
 
   describe('place — refusals', () => {
+    it('should refuse a regular link inside a heading line', () => {
+      expect(place(['### See [[note2]]', 'Section text.'], '[[note2]]').kind).toBe('link-in-heading');
+    });
+
+    it('should refuse an embed inside a heading line', () => {
+      expect(place(['## A', '### ![[note2]]', 'text'], '![[note2]]').kind).toBe('link-in-heading');
+    });
+
     it('should refuse when the title would pass level 6', () => {
       expect(place(['###### Deep', 'See [[note2]].'], '[[note2]]').kind).toBe('too-deep');
     });
