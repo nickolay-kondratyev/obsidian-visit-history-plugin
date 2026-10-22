@@ -202,6 +202,16 @@ export class ObsidianHarness {
     }, path);
   }
 
+  /**
+   * Accepts Obsidian's first-open "Do you trust the author of this vault?" modal. The
+   * plugin is already enabled programmatically; the modal only blocks pointer input, so
+   * call this before a spec clicks inside the workspace.
+   */
+  async trustVaultAuthor(): Promise<void> {
+    await this.page.getByRole('button', { name: 'Trust author and enable plugins', exact: true }).click();
+    await this.page.locator('.modal.mod-trust-folder').waitFor({ state: 'detached' });
+  }
+
   /** Runs a command by its full id (`<plugin-id>:<command-id>`); throws when it did not run. */
   async runCommand(commandId: string): Promise<void> {
     const ran = await this.page.evaluate((id) => window.app.commands.executeCommandById(id), commandId);
