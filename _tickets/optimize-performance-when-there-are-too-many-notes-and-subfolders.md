@@ -1,11 +1,12 @@
 ---
+working_dir: nickolay-kondratyev_obsidian-visit-history-plugin
 id: nid_zxh1nwsmchemmzg2fdwu98y22_e
 title: "Optimize performance when there are too many notes and subfolders"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-10-22T17:53:55Z
-status_updated_iso: 2026-10-22T17:53:55Z
+status_updated_iso: 2026-10-22T17:57:09Z
 type: task
 priority: 3
 assignee: CC_WITH-nickolaykondratyev
