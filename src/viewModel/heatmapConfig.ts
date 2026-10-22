@@ -39,6 +39,31 @@ export interface FilterTerm {
   text: string;
 }
 
+// ── Tile sizing ──────────────────────────────────────────────────────────────
+
+/**
+ * What a treemap tile's area is derived from:
+ * - `contentSize`: the file's size in bytes.
+ * - `visitTime`: the file's total focus time (closed sessions, all users/devices).
+ */
+export const SIZE_BY_MODES = ['contentSize', 'visitTime'] as const;
+export type SizeBy = (typeof SIZE_BY_MODES)[number];
+
+/**
+ * How the raw size (bytes / focus seconds) maps to tile area, BEFORE the
+ * per-type scale: linear = proportional, sqrt = softens big outliers,
+ * log = nearly equal.
+ */
+export const SIZE_CURVES = ['linear', 'sqrt', 'log'] as const;
+export type SizeCurve = (typeof SIZE_CURVES)[number];
+
+/** One sizing mode's settings — each mode persists its own, independently. */
+export interface SizeModeConfig {
+  curve: SizeCurve;
+  /** Per-file-type cell area multipliers (applied AFTER the curve), keyed by TYPE_C keys (md/canvas/…). */
+  scales: Record<string, BoundedValue>;
+}
+
 export interface HeatmapConfig {
   colorMode: ColorMode;
   gradKey: GradientKey;
@@ -47,8 +72,10 @@ export interface HeatmapConfig {
   hotDays: BoundedValue;
   /** Files older than this many days get the full "cold" color. */
   coldDays: BoundedValue;
-  /** Per-file-type cell area multipliers, keyed by TYPE_C keys (md/canvas/…). */
-  scales: Record<string, BoundedValue>;
+  /** Active tile sizing mode. */
+  sizeBy: SizeBy;
+  /** Curve + scales per sizing mode; switching modes never touches the other's values. */
+  sizing: Record<SizeBy, SizeModeConfig>;
   /** Include-filter terms (OR across all). Empty = no filtering. */
   filterTerms: FilterTerm[];
 }
@@ -64,16 +91,34 @@ export const DEFAULT_HEATMAP_CONFIG: HeatmapConfig = {
   field: 'lastModifiedAt',
   hotDays: { value: 3, min: 1, max: 15 },
   coldDays: { value: 21, min: 7, max: 60 },
-  // Canvas/excalidraw are down-weighted so prose dominates the treemap.
-  scales: {
-    md: { value: 1, min: 0.05, max: 2 },
-    canvas: { value: 0.3, min: 0.05, max: 2 },
-    excalidraw: { value: 0.2, min: 0.05, max: 2 },
+  sizeBy: 'contentSize',
+  sizing: {
+    contentSize: {
+      curve: 'sqrt',
+      // Canvas/excalidraw are down-weighted so prose dominates the treemap.
+      scales: {
+        md: { value: 1, min: 0.05, max: 2 },
+        canvas: { value: 0.3, min: 0.05, max: 2 },
+        excalidraw: { value: 0.2, min: 0.05, max: 2 },
+      },
+    },
+    visitTime: {
+      curve: 'sqrt',
+      // Time spent is comparable across types — no down-weighting.
+      scales: {
+        md: { value: 1, min: 0.05, max: 2 },
+        canvas: { value: 1, min: 0.05, max: 2 },
+        excalidraw: { value: 1, min: 0.05, max: 2 },
+      },
+    },
   },
   filterTerms: [],
 };
 
 // ── Boundary validation ──────────────────────────────────────────────────────
+
+/** Keys of older persisted shapes that are still READ on upgrade (never written). */
+type LegacyHeatmapConfigKey = 'scales';
 
 /**
  * Boundary validation for the persisted heatmap config: data.json is
@@ -83,7 +128,7 @@ export const DEFAULT_HEATMAP_CONFIG: HeatmapConfig = {
  */
 export class HeatmapConfigSanitizer {
   static sanitize(raw: unknown): HeatmapConfig {
-    const r = (raw ?? {}) as Partial<Record<keyof HeatmapConfig, unknown>>;
+    const r = (raw ?? {}) as Partial<Record<keyof HeatmapConfig | LegacyHeatmapConfigKey, unknown>>;
     const d = DEFAULT_HEATMAP_CONFIG;
     const config: HeatmapConfig = {
       colorMode: HeatmapConfigSanitizer.oneOf(r.colorMode, COLOR_MODES, d.colorMode),
@@ -91,7 +136,8 @@ export class HeatmapConfigSanitizer {
       field: HeatmapConfigSanitizer.oneOf(r.field, HEAT_FIELDS, d.field),
       hotDays: HeatmapConfigSanitizer.sanitizeBounded(r.hotDays, d.hotDays, DAYS_HARD_MIN),
       coldDays: HeatmapConfigSanitizer.sanitizeBounded(r.coldDays, d.coldDays, DAYS_HARD_MIN),
-      scales: HeatmapConfigSanitizer.sanitizeScales(r.scales),
+      sizeBy: HeatmapConfigSanitizer.oneOf(r.sizeBy, SIZE_BY_MODES, d.sizeBy),
+      sizing: HeatmapConfigSanitizer.sanitizeSizing(r.sizing, r.scales),
       filterTerms: HeatmapConfigSanitizer.sanitizeFilterTerms(r.filterTerms),
     };
     // Cross-invariant: hot must stay strictly below cold or the gradient
@@ -123,11 +169,42 @@ export class HeatmapConfigSanitizer {
     return { min, max, value: Math.min(Math.max(value, min), max) };
   }
 
+  private static sanitizeSizing(
+    raw: unknown,
+    legacyScales: unknown,
+  ): Record<SizeBy, SizeModeConfig> {
+    const rawSizing = HeatmapConfigSanitizer.asRecord(raw);
+    const rawContent = rawSizing['contentSize'];
+    // LEGACY read (cleanup after 2027-April): before per-mode sizing, the
+    // content scales lived in a top-level `scales` key. Fall back to it while
+    // the new per-mode entry is absent so upgrading users keep their sliders.
+    const legacyContent = HeatmapConfigSanitizer.isObject(rawContent)
+      ? rawContent
+      : { scales: legacyScales };
+    return {
+      contentSize: HeatmapConfigSanitizer.sanitizeSizeMode(legacyContent, 'contentSize'),
+      visitTime: HeatmapConfigSanitizer.sanitizeSizeMode(rawSizing['visitTime'], 'visitTime'),
+    };
+  }
+
+  /** A missing/unknown curve falls back to the mode's default (`sqrt`). */
+  private static sanitizeSizeMode(raw: unknown, mode: SizeBy): SizeModeConfig {
+    const r = HeatmapConfigSanitizer.asRecord(raw);
+    const fallback = DEFAULT_HEATMAP_CONFIG.sizing[mode];
+    return {
+      curve: HeatmapConfigSanitizer.oneOf(r['curve'], SIZE_CURVES, fallback.curve),
+      scales: HeatmapConfigSanitizer.sanitizeScales(r['scales'], fallback.scales),
+    };
+  }
+
   /** Exactly the default scale keys survive — unknown extra keys are dropped. */
-  private static sanitizeScales(raw: unknown): Record<string, BoundedValue> {
-    const r = (raw ?? {}) as Record<string, unknown>;
+  private static sanitizeScales(
+    raw: unknown,
+    defaults: Record<string, BoundedValue>,
+  ): Record<string, BoundedValue> {
+    const r = HeatmapConfigSanitizer.asRecord(raw);
     const scales: Record<string, BoundedValue> = {};
-    for (const [type, fallback] of Object.entries(DEFAULT_HEATMAP_CONFIG.scales)) {
+    for (const [type, fallback] of Object.entries(defaults)) {
       scales[type] = HeatmapConfigSanitizer.sanitizeBounded(r[type], fallback, SCALE_HARD_MIN);
     }
     return scales;
@@ -149,6 +226,14 @@ export class HeatmapConfigSanitizer {
       terms = FilterTermOps.add(terms, kind, r.text);
     }
     return terms;
+  }
+
+  private static isObject(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+  }
+
+  private static asRecord(value: unknown): Record<string, unknown> {
+    return HeatmapConfigSanitizer.isObject(value) ? value : {};
   }
 
   private static isFinite(value: unknown): value is number {

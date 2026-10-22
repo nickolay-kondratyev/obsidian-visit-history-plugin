@@ -20,10 +20,24 @@ describe('HeatmapConfigSanitizer', () => {
         field: 'lastVisitedAt',
         hotDays: { value: 14, min: 1, max: 100 },
         coldDays: { value: 90, min: 2, max: 400 },
-        scales: {
-          md: { value: 0.8, min: 0.1, max: 3 },
-          canvas: { value: 0.5, min: 0.05, max: 2 },
-          excalidraw: { value: 0.2, min: 0.05, max: 2 },
+        sizeBy: 'visitTime',
+        sizing: {
+          contentSize: {
+            curve: 'linear',
+            scales: {
+              md: { value: 0.8, min: 0.1, max: 3 },
+              canvas: { value: 0.5, min: 0.05, max: 2 },
+              excalidraw: { value: 0.2, min: 0.05, max: 2 },
+            },
+          },
+          visitTime: {
+            curve: 'log',
+            scales: {
+              md: { value: 1.5, min: 0.05, max: 2 },
+              canvas: { value: 1, min: 0.05, max: 2 },
+              excalidraw: { value: 0.7, min: 0.1, max: 2 },
+            },
+          },
         },
         filterTerms: [
           { kind: 'path', text: 'projects' },
@@ -66,10 +80,11 @@ describe('HeatmapConfigSanitizer', () => {
     it('should fall back to the default min when below the hard floor', () => {
       // GIVEN a scale min of 0 — cell areas would collapse to zero
       const config = HeatmapConfigSanitizer.sanitize({
-        scales: { md: { value: 1, min: 0, max: 2 } },
+        sizing: { contentSize: { scales: { md: { value: 1, min: 0, max: 2 } } } },
       });
       // THEN the default min applies
-      expect(config.scales['md']?.min).toBe(DEFAULT_HEATMAP_CONFIG.scales['md']?.min);
+      expect(config.sizing.contentSize.scales['md']?.min)
+        .toBe(DEFAULT_HEATMAP_CONFIG.sizing.contentSize.scales['md']?.min);
     });
 
     it('should clamp a value that is outside its own bounds', () => {
@@ -105,10 +120,11 @@ describe('HeatmapConfigSanitizer', () => {
     it('should fill in a missing scale entry with its default', () => {
       // GIVEN persisted scales missing the excalidraw key
       const config = HeatmapConfigSanitizer.sanitize({
-        scales: { md: { value: 0.5, min: 0.05, max: 2 } },
+        sizing: { contentSize: { scales: { md: { value: 0.5, min: 0.05, max: 2 } } } },
       });
       // THEN the missing entry gets its default
-      expect(config.scales['excalidraw']).toEqual(DEFAULT_HEATMAP_CONFIG.scales['excalidraw']);
+      expect(config.sizing.contentSize.scales['excalidraw'])
+        .toEqual(DEFAULT_HEATMAP_CONFIG.sizing.contentSize.scales['excalidraw']);
     });
 
     it('should default filterTerms to an empty list when missing', () => {
@@ -204,12 +220,81 @@ describe('HeatmapConfigSanitizer', () => {
     it('should drop unknown extra scale keys', () => {
       // GIVEN a hand-added scale for an unsupported type
       const config = HeatmapConfigSanitizer.sanitize({
-        scales: { pdf: { value: 1, min: 0.05, max: 2 } },
+        sizing: { contentSize: { scales: { pdf: { value: 1, min: 0.05, max: 2 } } } },
       });
       // THEN only the known types survive
-      expect(Object.keys(config.scales).sort()).toEqual(
-        Object.keys(DEFAULT_HEATMAP_CONFIG.scales).sort(),
+      expect(Object.keys(config.sizing.contentSize.scales).sort()).toEqual(
+        Object.keys(DEFAULT_HEATMAP_CONFIG.sizing.contentSize.scales).sort(),
       );
+    });
+
+    describe('sizing', () => {
+      const LEGACY_MD_SCALE = { value: 0.6, min: 0.1, max: 3 };
+      const NEW_MD_SCALE = { value: 1.7, min: 0.05, max: 2 };
+
+      it('should keep legacy top-level content scales when no per-mode sizing is persisted', () => {
+        // GIVEN a data.json from before per-mode sizing (top-level `scales`)
+        const config = HeatmapConfigSanitizer.sanitize({ scales: { md: LEGACY_MD_SCALE } });
+        // THEN the user's saved content scale survives the upgrade
+        expect(config.sizing.contentSize.scales['md']).toEqual(LEGACY_MD_SCALE);
+      });
+
+      it('should prefer the per-mode content scales over the legacy key', () => {
+        // GIVEN both the legacy key and the new per-mode entry
+        const config = HeatmapConfigSanitizer.sanitize({
+          scales: { md: LEGACY_MD_SCALE },
+          sizing: { contentSize: { curve: 'linear', scales: { md: NEW_MD_SCALE } } },
+        });
+        // THEN the new shape wins
+        expect(config.sizing.contentSize.scales['md']).toEqual(NEW_MD_SCALE);
+      });
+
+      it('should not apply legacy content scales to the visit-time mode', () => {
+        // GIVEN legacy content scales only
+        const config = HeatmapConfigSanitizer.sanitize({ scales: { md: LEGACY_MD_SCALE } });
+        // THEN visit-time scales stay at their own defaults
+        expect(config.sizing.visitTime.scales).toEqual(DEFAULT_HEATMAP_CONFIG.sizing.visitTime.scales);
+      });
+
+      it('should keep visit-time scales independent of content scales', () => {
+        // GIVEN only a visit-time scale persisted
+        const config = HeatmapConfigSanitizer.sanitize({
+          sizing: { visitTime: { curve: 'sqrt', scales: { md: NEW_MD_SCALE } } },
+        });
+        // THEN the content scales are untouched defaults
+        expect(config.sizing.contentSize.scales)
+          .toEqual(DEFAULT_HEATMAP_CONFIG.sizing.contentSize.scales);
+      });
+
+      it('should default the content curve to sqrt when upgrading from legacy scales', () => {
+        // GIVEN a pre-curve data.json (documented behavior change: linear → sqrt)
+        const config = HeatmapConfigSanitizer.sanitize({ scales: { md: LEGACY_MD_SCALE } });
+        // THEN the curve is the default sqrt
+        expect(config.sizing.contentSize.curve).toBe('sqrt');
+      });
+
+      it('should fall back to the default curve for an unknown value', () => {
+        // GIVEN a hand-edited unknown curve
+        const config = HeatmapConfigSanitizer.sanitize({
+          sizing: { visitTime: { curve: 'cubic' } },
+        });
+        // THEN the default applies
+        expect(config.sizing.visitTime.curve).toBe(DEFAULT_HEATMAP_CONFIG.sizing.visitTime.curve);
+      });
+
+      it('should fall back to the default sizeBy for an unknown value', () => {
+        // GIVEN a hand-edited unknown sizing mode
+        const config = HeatmapConfigSanitizer.sanitize({ sizeBy: 'wordCount' });
+        // THEN the default applies
+        expect(config.sizeBy).toBe(DEFAULT_HEATMAP_CONFIG.sizeBy);
+      });
+
+      it('should fall back to defaults when sizing is not an object', () => {
+        // GIVEN a corrupt scalar where the sizing map should be
+        const config = HeatmapConfigSanitizer.sanitize({ sizing: 'big' });
+        // THEN both modes get their defaults
+        expect(config.sizing).toEqual(DEFAULT_HEATMAP_CONFIG.sizing);
+      });
     });
   });
 });

@@ -9,7 +9,7 @@ interface SegmentedToggleProps<T extends string> {
 /**
  * Radio group rendered as a segmented switch — a thumb slides to the
  * selected segment. Semantically radios (role=radiogroup / role=radio);
- * used for the binary coloring mode.
+ * used for the coloring mode, size-by mode and size curve (2–3 segments).
  */
 export function SegmentedToggle<T extends string>({
   options,

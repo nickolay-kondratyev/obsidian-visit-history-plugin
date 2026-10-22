@@ -3,9 +3,11 @@ import type { HierarchyNode } from 'd3-hierarchy';
 import { interpolateRgb } from 'd3-interpolate';
 import { GRADIENTS, TYPE_C, type ColorMode, type GradientKey, type HeatField } from './constants';
 import type { VaultNode } from '../core/data/VaultNode';
+import { typeScale, type TileSizing } from '../viewModel/tileSize';
 
 // ── Color helpers ──────────────────────────────────────────────────────────
 
+const MS_PER_SECOND = 1000;
 const MS_PER_MINUTE = 60000;
 const MS_PER_HOUR = 3600000;
 const MS_PER_DAY = 86400000;
@@ -111,6 +113,37 @@ export function fmtAgo(ts: number, nowMs: number): string {
 export function leafFieldAgo(leaf: VaultNode, field: HeatField, nowMs: number): string | undefined {
   const ts = leaf[field];
   return ts == null ? undefined : fmtAgo(ts, nowMs);
+}
+
+/**
+ * Compact total-duration label: `<1s` / `45s` / `12m` / `3h 05m` (floored;
+ * hours never roll up into days). null when there is no time at all.
+ */
+export function fmtDuration(ms: number): string | null {
+  if (!(ms > 0)) return null;
+  if (ms < MS_PER_SECOND) return '<1s';
+  if (ms < MS_PER_MINUTE) return `${Math.floor(ms / MS_PER_SECOND)}s`;
+  if (ms < MS_PER_HOUR) return `${Math.floor(ms / MS_PER_MINUTE)}m`;
+  const hours = Math.floor(ms / MS_PER_HOUR);
+  const minutes = Math.floor((ms % MS_PER_HOUR) / MS_PER_MINUTE);
+  return `${hours}h ${String(minutes).padStart(2, '0')}m`;
+}
+
+const CURVE_LABELS: Record<TileSizing['curve'], string> = { linear: '', sqrt: 'sqrt', log: 'log' };
+
+/**
+ * How a leaf's tile size is computed under the active sizing, for the
+ * tooltip — e.g. `sqrt(12.3 KB) ×0.30`, `log(3h 05m) ×1.00`, `12.3 KB ×1.00`.
+ * Shows the human-readable RAW input (real bytes / focus time), not the
+ * internal size unit (floored bytes / seconds).
+ */
+export function fmtTileSize(leaf: VaultNode, sizing: TileSizing): string {
+  const raw = sizing.sizeBy === 'contentSize'
+    ? fmtBytes(leaf.size ?? 0)
+    : (fmtDuration(leaf.totalFocusMs ?? 0) ?? '0s');
+  const curve = CURVE_LABELS[sizing.curve];
+  const curved = curve === '' ? raw : `${curve}(${raw})`;
+  return `${curved} ×${typeScale(leaf, sizing).toFixed(2)}`;
 }
 
 /** File-count label for a collapsed folder tile: `1 file` / `12 files`. */

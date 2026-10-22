@@ -25,12 +25,26 @@ interface HeaderProps {
   onBack?: () => void;
   /** Resets the treemap zoom/pan to the fitted view (wired to TreemapViz). */
   onResetZoom: () => void;
+  /**
+   * Files in the current view hidden for lacking visit time (visit-time
+   * sizing). 0 = no banner.
+   */
+  hiddenNoVisitCount: number;
+}
+
+function hiddenNotesLabel(count: number): string {
+  return count === 1 ? '1 note' : `${count} notes`;
+}
+
+function hiddenNotesTitle(count: number): string {
+  const verb = count === 1 ? 'is hidden because it has' : 'are hidden because they have';
+  return `${hiddenNotesLabel(count)} in this view ${verb} no visit history (sizing by visit time)`;
 }
 
 /**
  * Top bar — actions only (info lives in the info popover):
- * breadcrumb · filter group (icon + term chips) · field selector · zoom reset ·
- * info · config.
+ * breadcrumb · filter group (icon + term chips) · field selector ·
+ * hidden-notes banner (visit-time sizing) · zoom reset · info · config.
  * Pure presentational — no state; popovers render as App-level siblings.
  */
 export function Header({
@@ -43,6 +57,7 @@ export function Header({
   breadcrumb,
   onBack,
   onResetZoom,
+  hiddenNoVisitCount,
 }: HeaderProps) {
   return (
     <div id="header">
@@ -74,6 +89,15 @@ export function Header({
         </button>
       )}
       <div className="spacer" />
+      {hiddenNoVisitCount > 0 && (
+        <span
+          className="hdr-hidden-banner"
+          role="status"
+          title={hiddenNotesTitle(hiddenNoVisitCount)}
+        >
+          {hiddenNotesLabel(hiddenNoVisitCount)} hidden · no visit history
+        </span>
+      )}
       <button
         type="button"
         className="hdr-icon-btn"

@@ -124,6 +124,19 @@ body.theme-light .vault-heatmap-view {
   min-width: 4px;
 }
 
+/* Hidden-notes banner (visit-time sizing): quiet status text right before the
+   icon buttons. May shrink + ellipsize; the full sentence is in its title. */
+.vault-heatmap-view .hdr-hidden-banner {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--vt-text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex-shrink: 1;
+}
+
 .vault-heatmap-view .legend {
   display: flex;
   gap: 10px;
@@ -259,7 +272,7 @@ body.theme-light .vault-heatmap-view {
   gap: 8px;
   border-left: 1px solid var(--vt-border);
   padding-left: 14px;
-  /* The ONE header child allowed to shrink — chips scroll, header stays 42px. */
+  /* Shrinks (with .hdr-hidden-banner, the only other) — chips scroll, header stays 42px. */
   min-width: 0;
   flex-shrink: 1;
 }
@@ -494,7 +507,7 @@ body.theme-light .vault-heatmap-view {
   border-color: var(--vt-border2);
 }
 
-/* ── Segmented toggle (binary radio rendered as a sliding switch) ── */
+/* ── Segmented toggle (radio group rendered as a sliding switch) ── */
 /* Pill track + filled accent thumb — reads as a switch, not two buttons.
    --seg-pad is read by SegmentedToggle.tsx for the thumb-width calc. */
 .vault-heatmap-view .seg-toggle {
