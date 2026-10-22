@@ -1,13 +1,14 @@
 import { TFile } from 'obsidian';
 import { NoteReference } from '../core/service/inlineNote/NoteReference';
-import { NoteReferenceCollector } from '../core/service/inlineNote/NoteReferenceCollector';
+import { NoteReferenceCollector, ReferenceCensus } from '../core/service/inlineNote/NoteReferenceCollector';
 
-/** NoteReferenceCollector fake answering with a fixed reference list. */
+/** NoteReferenceCollector fake answering with a fixed reference list (or an incomplete index). */
 export class FixedReferenceCollector implements NoteReferenceCollector {
   references: NoteReference[] = [];
+  indexIncomplete = false;
 
-  async collectReferencesTo(_target: TFile): Promise<NoteReference[]> {
-    return this.references;
+  async collectReferencesTo(_target: TFile): Promise<ReferenceCensus> {
+    return this.indexIncomplete ? { kind: 'index-incomplete' } : { kind: 'complete', references: this.references };
   }
 
   /** A body reference to `original` at its first occurrence in `content`. */

@@ -45,6 +45,12 @@ describe('InlineNotePlanner', () => {
       expect(kindOf(await planner.plan(note2))).toBe('no-links');
     });
 
+    it('should refuse while Obsidian is still indexing the vault', async () => {
+      const { planner, note2, collector } = setup('note1.md', 'See [[note2]].');
+      collector.indexIncomplete = true;
+      expect(kindOf(await planner.plan(note2))).toBe('still-indexing');
+    });
+
     it('should refuse up front when headings would get too deep', async () => {
       const { planner, note2 } = setup('note1.md', '###### Deep\nSee [[note2]].');
       expect(kindOf(await planner.plan(note2))).toBe('too-deep');

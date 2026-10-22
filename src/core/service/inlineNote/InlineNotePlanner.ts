@@ -25,8 +25,9 @@ export type InlinePlanResult =
 
 /**
  * Read-only check of every inline-note rule BEFORE anything is changed:
- * plain-note types, the exactly-one-link rule, and a dry-run placement into
- * note1's current text (so "too deep" is refused before the confirm dialog).
+ * plain-note types, a fully indexed vault, the exactly-one-link rule, and a
+ * dry-run placement into note1's current text (so "too deep" is refused
+ * before the confirm dialog).
  */
 export class InlineNotePlanner {
   constructor(
@@ -40,7 +41,11 @@ export class InlineNotePlanner {
     if (!PlainNoteCheck.isPlainMarkdownNote(note2, note2Content)) {
       return InlineNotePlanner.refused(InlineRefusals.unsupportedInlinedNote(note2.path));
     }
-    const verdict = InlineEligibility.evaluate(note2, await this.referenceCollector.collectReferencesTo(note2));
+    const census = await this.referenceCollector.collectReferencesTo(note2);
+    if (census.kind === 'index-incomplete') {
+      return InlineNotePlanner.refused(InlineRefusals.stillIndexing(note2.basename));
+    }
+    const verdict = InlineEligibility.evaluate(note2, census.references);
     if (verdict.kind === 'refused') {
       return verdict;
     }

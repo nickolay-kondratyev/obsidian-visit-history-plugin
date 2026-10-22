@@ -1,4 +1,5 @@
 export type InlineRefusalKind =
+  | 'still-indexing'
   | 'no-links'
   | 'multiple-links'
   | 'partial-link'
@@ -34,6 +35,14 @@ export interface InlineRefusal {
  * plain language, what went wrong, how to fix.
  */
 export class InlineRefusals {
+  static stillIndexing(noteName: string): InlineRefusal {
+    return InlineRefusals.of(
+      'still-indexing',
+      `Obsidian is still indexing your vault, so not every link to "${noteName}" is known yet.`,
+      'Try again in a moment.',
+    );
+  }
+
   static noLinks(noteName: string): InlineRefusal {
     return InlineRefusals.of(
       'no-links',
