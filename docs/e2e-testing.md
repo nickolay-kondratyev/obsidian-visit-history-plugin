@@ -3,7 +3,8 @@
 The `e2e/` suite drives a **real headless Obsidian (Electron)** and asserts on the
 on-disk `.vh_v3` files the plugin actually writes — never on plugin internals. It proves
 Visit-History V3 recording across several scenarios: focus switch, unload flush, opening
-Settings, canvas focus, idle timeout, a sub-floor idle timeout via a dev overrides file,
+Settings (ends the session; re-opens on close), opening the heatmap
+(`switchToHeatmap.e2e.ts`), Obsidian window blur/refocus (`windowBlur.e2e.ts`), canvas focus, idle timeout, a sub-floor idle timeout via a dev overrides file,
 the interim-top-dir → `.plugin_data/visit_history` migration (`pluginDataMoveMigration.e2e.ts`),
 the inline-note key journey (`inlineNote.e2e.ts`: content moved, note2 trashed, history merged in),
 and inlining via the embed icon in live preview (`inlineNoteEmbedIcon.e2e.ts`).
@@ -108,6 +109,13 @@ A dedicated CI workflow + Dockerfile are tracked as follow-ups (not included her
 A hard process-kill (SIGKILL) can lose the last open session (the async append races the
 exit). The unload-flush spec therefore drives the **graceful** `disablePlugin` path
 (runs `onunload` → `dispose()` flush while the process stays alive), which is
-deterministic. Opening **Settings** does not end a session in Obsidian 1.12.7 (the modal
-does not change the active leaf) — the Settings spec captures that current behavior; the
-product question is open for the owner.
+deterministic.
+
+**Settings detection** relies on an undocumented Obsidian DOM contract
+(`WindowActivityMonitor.SETTINGS_MODAL_SELECTOR`, verified on 1.12.7): `switchToSettings.e2e.ts`
+is its guard — re-run it on every Obsidian bump.
+
+**Window blur is synthetic** (`ObsidianHarness.blurWindow`/`focusWindow`): headless Obsidian
+has no real OS focus switch — Electron's `BrowserWindow.blur()` neither fires the DOM `blur`
+nor flips `document.hasFocus()` there. `windowBlur.e2e.ts` proves the plugin's wiring inside
+real Obsidian, not the OS signal.

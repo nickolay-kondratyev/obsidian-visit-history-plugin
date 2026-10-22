@@ -72,8 +72,8 @@ changes, and if any step fails, the original note is kept.
 ## How recording works
 
 While a note, canvas, or Excalidraw drawing is in focus, the plugin times it.
-When you navigate away, switch windows, or go idle, it saves that session (start
-time + duration). Visits under 2 seconds are not recorded.
+When you navigate away, switch windows, open Settings, or go idle, it saves that
+session (start time + duration). Visits under 2 seconds are not recorded.
 
 The first time you open a document, it gets a small permanent **id** (stored in
 the note's frontmatter or the canvas's metadata). History is saved under that id,
