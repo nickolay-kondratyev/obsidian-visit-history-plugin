@@ -46,6 +46,7 @@ Naming: **note1** = the ONE note that links to **note2**. note1 receives note2's
    - Regular link `[[note2]]` → plain text (its alias, else note2's title). Embed `![[note2]]` → removed (its line dropped if left empty).
    - Title heading level = enclosing section level + 1; link not under any heading → `##`.
    - Continuation heading: same level as the title heading, text `<enclosing heading text>-continued` (no enclosing heading → `## <note1 title>-continued`, title picked as in 6). Only "loose" text between the link line and the next heading needs it — existing sub-headings of the section stay as they are.
+   - **Link inside a list / callout / table / blockquote** (e.g. `- see [[note2]]`): the block goes after the END of that enclosing list/callout/table (never splits it); text after it gets the `-continued` heading as usual. The original link (regular or embed) becomes a same-note heading link to the new section, `[[#<note2 title>|<alias, else title>]]`, so the reference still leads to the moved content.
    - **Too deep** (any shifted heading would pass `######`) → refuse. The message says why and what to do: move the link higher up the heading chain in note1, then retry.
 3. **Partial links** (`[[note2#Heading]]`, `![[note2#^block]]`): refuse with a message.
 4. **"Exactly one link"** = one link in the WHOLE vault: body links, embeds, frontmatter property links, AND canvas references (file cards + links in canvas text cards). Self-links inside note2 are ignored. Two links from the same file = 2 → refuse. Single link inside a property → refuse.
@@ -72,8 +73,5 @@ Naming: **note1** = the ONE note that links to **note2**. note1 receives note2's
 - note1's `VisitStatsCache` entry is refreshed so the heatmap updates right away.
 - Read cost: one extra folder listing per note per device on heatmap reads — ceiling noted in code.
 - Headings inside fenced code blocks are NOT shifted.
+- Heading link collision (note1 already has a heading with the same text as note2's title): use Obsidian's nested heading-link form `[[#<enclosing heading>#<note2 title>]]` so the link resolves to the new section, not the older one.
 - `docs/visit-history-format.md` + generated V3 README document the `merged_in_focus_duration_per_device/` dir.
-
-### Open question
-- **G. Link inside a list / callout / table / blockquote** (e.g. `- see [[note2]]`): inserting headings right after that line would split the list or break the callout/table.
-  Rec: insert after the END of the enclosing block (whole list / callout / table); text after that block gets the `-continued` heading as usual.
