@@ -68,6 +68,15 @@ describe('InlinedNoteParser', () => {
       expect(InlinedNoteParser.parse('intro\n# Heading title', 'note2').bodyLines).toEqual(['intro', '# Heading title']);
     });
 
+    it('should strip CR line endings from a CRLF note body', () => {
+      expect(InlinedNoteParser.parse('---\r\nstatus: x\r\n---\r\nline one\r\nline two\r\n', 'note2').bodyLines)
+        .toEqual(['line one', 'line two']);
+    });
+
+    it('should strip CR line endings from CRLF properties', () => {
+      expect(InlinedNoteParser.parse('---\r\nstatus: x\r\n---\r\nbody', 'note2').propertyLines).toEqual(['status: x']);
+    });
+
     it('should handle a note without frontmatter', () => {
       expect(InlinedNoteParser.parse('plain', 'note2').propertyLines).toEqual([]);
     });

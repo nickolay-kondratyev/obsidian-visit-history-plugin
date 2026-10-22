@@ -1,5 +1,6 @@
 import { FrontmatterBlocks } from './FrontmatterBlocks';
 import { InlinedNote } from './InlinedNoteParser';
+import { LineEnding } from './LineEnding';
 import { MarkdownLinkSyntax } from './MarkdownLinkSyntax';
 import { MAX_HEADING_LEVEL, MarkdownHeading, MarkdownStructure } from './MarkdownStructure';
 
@@ -58,7 +59,8 @@ const LINK_DISPLAY_UNSAFE_RE = /[[\]|]|%%/g;
  * A link inside a list / callout / quote / table never splits it: the block
  * goes after the container's end and the link becomes a same-note heading
  * link `[[#<title>|<alias, else title>]]` (owner decisions, see ticket
- * nid_jlkies6u31pmfft2gu3qwom96_e).
+ * nid_jlkies6u31pmfft2gu3qwom96_e). The result keeps note1's line ending
+ * (LineEnding).
  */
 export class MarkdownSectionPlacer {
   static place(content: string, receivingTitle: string, link: InlineLinkSite, inlined: InlinedNote): PlacementResult {
@@ -109,16 +111,17 @@ export class MarkdownSectionPlacer {
       ...(inlined.propertyLines.length > 0 ? ['```yaml', ...inlined.propertyLines, '```'] : []),
       ...MarkdownStructure.shiftHeadings(inlined.bodyLines, bodyHeadingDelta),
     ];
+    // Offsets above index the raw text, so `lines` keep their CR until here.
     return {
       kind: 'placed',
-      content: [
+      content: LineEnding.joinLines([
         ...lines.slice(0, linkLine),
         ...rewrittenSpanLines,
         ...lines.slice(linkEndLine + 1, insertAfter + 1),
         ...block,
         ...continuation,
         ...lines.slice(insertAfter + 1),
-      ].join('\n'),
+      ], LineEnding.detect(content)),
     };
   }
 

@@ -1,6 +1,8 @@
+import { LineEnding } from './LineEnding';
+
 /** A note's lines split at its frontmatter fences. */
 export interface FrontmatterSplit {
-  /** All lines of the note (split on `\n`). */
+  /** All lines of the note (split on `\n`, without CR — see LineEnding). */
   readonly lines: readonly string[];
   /** Index of the closing `---` fence; null when the note has no frontmatter. */
   readonly closingFenceIndex: number | null;
@@ -35,7 +37,7 @@ const SEQUENCE_ITEM_RE = /^\s*-\s+(.*)$/;
  */
 export class FrontmatterBlocks {
   static split(content: string): FrontmatterSplit {
-    const lines = content.split('\n');
+    const lines = LineEnding.splitLines(content);
     if (FrontmatterBlocks.trimmed(lines[0]) !== FENCE) {
       return { lines, closingFenceIndex: null };
     }

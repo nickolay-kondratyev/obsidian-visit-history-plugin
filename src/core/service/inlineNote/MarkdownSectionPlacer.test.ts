@@ -82,6 +82,24 @@ describe('MarkdownSectionPlacer', () => {
     });
   });
 
+  describe('place — line endings', () => {
+    it('should keep a CRLF note CRLF throughout, inserted lines included', () => {
+      // GIVEN a CRLF note1 whose last line has no line break
+      const content = ['### Third', 'See [[note2]].', 'More.'].join('\r\n');
+      // WHEN placed
+      const result = MarkdownSectionPlacer.place(content, NOTE1_TITLE, siteOf(content, '[[note2]]'), inlinedNote());
+      // THEN every line ends with CRLF
+      expect(result.kind === 'placed' && result.content).toBe(
+        ['### Third', 'See note2.', '#### note2', 'note2 body', '#### Third-continued', 'More.'].join('\r\n'),
+      );
+    });
+
+    it('should not carry CR from the inlined body into an LF note', () => {
+      const inlined = inlinedNote({ bodyLines: ['crlf body\r'] });
+      expect(placedLines(['## A', 'See [[note2]].'], '[[note2]]', inlined)).toEqual(['## A', 'See note2.', '### note2', 'crlf body']);
+    });
+  });
+
   describe('place — inserted block', () => {
     it('should put leftover properties in a yaml block right under the title', () => {
       const inlined = inlinedNote({ propertyLines: ['status: draft'] });
