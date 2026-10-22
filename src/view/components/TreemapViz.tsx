@@ -6,6 +6,7 @@ import { Zoom } from '@visx/zoom';
 import type { ProvidedZoom } from '@visx/zoom/lib/types';
 import { FolderNode } from './FolderNode';
 import { LeafNode } from './LeafNode';
+import { CollapsedFolderNode } from './CollapsedFolderNode';
 import { Tooltip } from './Tooltip';
 import { fmtBytes } from '../utils';
 import type { ColorMode, GradientKey, HeatField } from '../constants';
@@ -13,6 +14,7 @@ import type { VaultNode } from '../../core/data/VaultNode';
 import type { IFileOpener } from '../../viewModel/FileOpener';
 import { pruneArchiveFolders } from '../../viewModel/pruneArchiveFolders';
 import { filterVaultTree, isFilterActive, type HeatmapTreeFilter } from '../../viewModel/filterVaultTree';
+import { partitionTreemapNodes, type TreemapPartition } from '../../viewModel/partitionTreemapNodes';
 
 // ── Props ───────────────────────────────────────────────────────────────────
 
@@ -59,6 +61,38 @@ interface TreemapVizProps {
 // only shrinks the map into empty space — cap zoom-out at the fitted view.
 const ZOOM_SCALE_MIN = 1;
 const ZOOM_SCALE_MAX = 30;
+
+// ── Layout result ───────────────────────────────────────────────────────────
+
+/** Totals over the WHOLE rendered subtree — incl. files inside collapsed folders. */
+interface TreemapTotals {
+  files: number;
+  folders: number;
+  bytes: number;
+}
+
+interface TreemapLayout {
+  root: HierarchyRectangularNode<VaultNode>;
+  totals: TreemapTotals;
+}
+
+const EMPTY_TOTALS: TreemapTotals = { files: 0, folders: 0, bytes: 0 };
+const EMPTY_PARTITION: TreemapPartition = { folders: [], collapsedFolders: [], leaves: [] };
+
+/** One pass over the laid-out hierarchy; folder/file split mirrors the partition. */
+function computeTotals(root: HierarchyRectangularNode<VaultNode>): TreemapTotals {
+  const totals: TreemapTotals = { files: 0, folders: 0, bytes: 0 };
+  root.each(d => {
+    if (!d.data.children) {
+      totals.files += 1;
+      totals.bytes += d.data.size ?? 0;
+    } else if (d.depth > 0 && d.children) {
+      // d3 leaves `children` undefined for an EMPTY folder — not counted.
+      totals.folders += 1;
+    }
+  });
+  return totals;
+}
 
 // ── Tooltip state ───────────────────────────────────────────────────────────
 
@@ -160,15 +194,15 @@ export function TreemapViz({
     return filterVaultTree(showArchived ? root : pruneArchiveFolders(root), filter);
   }, [data, currentRoot, showArchived, filter]);
 
-  const { folders, leaves } = useMemo(() => {
+  const layout = useMemo((): TreemapLayout | null => {
     const { w, h } = dims;
-    if (!w || !h) return { folders: [], leaves: [] };
+    if (!w || !h) return null;
 
     const root = hierarchy(treeRoot)
       .sum(d => (d.children ? 0 : Math.max(1, Math.round((d.size ?? 0) * (scales[d.type ?? ''] ?? 1)))))
       .sort((a, b) => b.value! - a.value!);
 
-    treemap<VaultNode>()
+    const laidOut = treemap<VaultNode>()
       .tile(treemapSquarify)
       .size([w, h])
       .paddingOuter(8)
@@ -180,25 +214,29 @@ export function TreemapViz({
       .paddingInner(2)
       .round(true)(root);
 
-    return {
-      folders: root.descendants().filter(
-        d => d.depth > 0 && d.children,
-      ) as HierarchyRectangularNode<VaultNode>[],
-      // d3's leaves() returns a childless ROOT as its own leaf — a filter can
-      // empty the tree, and that folder node must not render as a file cell.
-      leaves: root.leaves().filter(d => !d.data.children) as HierarchyRectangularNode<VaultNode>[],
-    };
+    return { root: laidOut, totals: computeTotals(laidOut) };
   }, [treeRoot, scales, dims]);
+
+  const totals = layout?.totals ?? EMPTY_TOTALS;
+
+  // Separate memo from the layout: switching the heat field only re-picks
+  // collapsed folders' representatives — no re-layout.
+  const { folders, collapsedFolders, leaves } = useMemo(
+    () => (layout ? partitionTreemapNodes(layout.root, field) : EMPTY_PARTITION),
+    [layout, field],
+  );
 
   // ── Bubble stats up to Header ─────────────────────────────────────────
 
+  // From totals, NOT the rendered partition — files inside collapsed folders
+  // still count.
   useEffect(() => {
     onStatsChange({
-      files: leaves.length,
-      folders: folders.length,
-      size: fmtBytes(leaves.reduce((s, d) => s + (d.data.size ?? 0), 0)),
+      files: totals.files,
+      folders: totals.folders,
+      size: fmtBytes(totals.bytes),
     });
-  }, [leaves, folders, onStatsChange]);
+  }, [totals, onStatsChange]);
 
   // ── Hover / tooltip handlers ──────────────────────────────────────────
   //
@@ -302,6 +340,18 @@ export function TreemapViz({
               {folders.map((d, i) => (
                 <FolderNode key={'f' + i} d={d} onClick={handleFolderNodeClick} />
               ))}
+              {collapsedFolders.map((c, i) => (
+                <CollapsedFolderNode
+                  key={'c' + i}
+                  folder={c}
+                  colorMode={colorMode}
+                  gradKey={gradKey}
+                  field={field}
+                  hotDays={hotDays}
+                  coldDays={coldDays}
+                  onClick={handleFolderNodeClick}
+                />
+              ))}
               {leaves.map((d, i) => (
                 <LeafNode
                   key={'l' + i}
@@ -329,7 +379,7 @@ export function TreemapViz({
       {tooltip && (
         <Tooltip x={tooltip.x} y={tooltip.y} node={tooltip.node} scales={scales} />
       )}
-      {isFilterActive(filter) && leaves.length === 0 && (
+      {isFilterActive(filter) && totals.files === 0 && (
         <div className="viz-empty">
           <div className="viz-empty-msg">No files match the current filters</div>
           <button

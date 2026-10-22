@@ -103,12 +103,20 @@ export function fmtAgo(ts: number, nowMs: number): string {
   return '<1m ago';
 }
 
+/** File-count label for a collapsed folder tile: `1 file` / `12 files`. */
+export function fmtFileCount(n: number): string {
+  return n === 1 ? '1 file' : `${n} files`;
+}
+
 // ── Leaf label layout ──────────────────────────────────────────────────────
 // Tile-local geometry (pre-zoom units) for the 9px monospace leaf labels
 // (`.leaf-node__label` in styles.css). Char width is an ESTIMATE (monospace
 // ≈ 0.6em) — no DOM text measurement, so a theme with a wider mono font may
 // clip the last char; upgrade path: measure via getComputedTextLength.
 export const LEAF_LABEL_PAD_PX = 3;
+/** A tile shows its title only when STRICTLY larger than these. */
+export const TILE_TITLE_MIN_WIDTH_PX = 32;
+export const TILE_TITLE_MIN_HEIGHT_PX = 14;
 const LEAF_LABEL_LINE_HEIGHT_PX = 12;
 const LEAF_LABEL_CHAR_WIDTH_PX = 5.5;
 /** Title line + empty spacer line + bottom line — keeps both labels unsquished. */

@@ -817,6 +817,27 @@ body.theme-light .vault-heatmap-view {
   stroke-width: 1;
 }
 
+/* Collapsed dense folder: fill is its most recent file's color (inline);
+   the dashed border says "folder, not a file". Hover goes solid + brighter
+   (CSS-only — no React hover state). */
+.vault-heatmap-view .collapsed-folder-node__bg {
+  stroke: var(--vt-text);
+  stroke-opacity: 0.45;
+  stroke-width: 1;
+  stroke-dasharray: 3 2;
+}
+
+.vault-heatmap-view .collapsed-folder-node:hover .collapsed-folder-node__bg {
+  stroke: var(--vt-accent);
+  stroke-opacity: 1;
+  stroke-dasharray: none;
+  transition: stroke 0.12s;
+}
+
+.vault-heatmap-view .collapsed-folder-node__count {
+  fill: rgba(255, 255, 255, 0.62);
+}
+
 /* ── Tooltip ────────────────────────────────────────────── */
 .vault-heatmap-view #tooltip {
   position: absolute;
