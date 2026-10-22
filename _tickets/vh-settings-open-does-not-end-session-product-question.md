@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-10-22T22:31:09Z
 id: nid_5psjwpcu4tnmjxy1kdjni7u97_E
 title: "VH: does opening Settings intentionally NOT end the focused doc's session?"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-07-21T16:30:00Z
-status_updated_iso: 2026-07-21T16:30:00Z
+status_updated_iso: 2026-10-22T22:31:09Z
 type: question
 priority: 2
 assignee: CC_WITH-nickolaykondratyev
@@ -26,3 +27,13 @@ Owner decision needed: is "Settings does not end a session" the intended semanti
   flip the S3 spec to assert the close.
 - If YES → keep current behavior; S3 stays as-is (documents the continuation).
 Matches the CLAUDE.md pattern of owner-decided session semantics.
+
+## Decision (owner, 2026-10-22)
+
+NO — opening Settings SHOULD end the session. Implemented in
+`src/core/focusDuration/WindowActivityMonitor.ts`: Settings open in a window = that window
+blurred (immediate close, no grace); Settings close while the window is OS-focused = refocus
+(new session). Detected via a body `childList` MutationObserver + undocumented DOM selector
+`:scope > .modal-container > .modal.mod-settings` (verified on Obsidian 1.12.7). S3 spec
+(`e2e/switchToSettings.e2e.ts`) flipped to assert the new behavior and guards the selector.
+Judgment calls: `_agent_decisions/needs_review/settings-ends-vh-session.md`.
