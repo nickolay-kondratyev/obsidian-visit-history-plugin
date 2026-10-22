@@ -1,5 +1,5 @@
 /**
- * Minimal bounded LRU cache (get/set only).
+ * Minimal bounded LRU cache (get/peek/set/delete only).
  *
  * Self-written replacement for the `lru-cache` npm package: the Obsidian
  * scorecard's static analyzer flagged that package's `fetch()` memoization
@@ -33,6 +33,15 @@ export class LruCache<K, V> {
     return value;
   }
 
+  /**
+   * Cached value, or undefined on miss — WITHOUT marking the key used, so
+   * eviction order stays write order (callers reasoning about which entries
+   * can have been evicted rely on that).
+   */
+  peek(key: K): V | undefined {
+    return this.entries.get(key);
+  }
+
   /** Inserts/updates the key as most recently used, evicting the LRU entry when full. */
   set(key: K, value: V): void {
     if (value === undefined) {
@@ -48,6 +57,11 @@ export class LruCache<K, V> {
       }
     }
     this.entries.set(key, value);
+  }
+
+  /** Removes the key (no-op on miss). */
+  delete(key: K): void {
+    this.entries.delete(key);
   }
 
   get size(): number {

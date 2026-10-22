@@ -1,7 +1,7 @@
 # Heatmap refresh dies on a single failed read
 
 `VaultUtilDefault.getTrackedFiles` (src/core/util/vault/VaultUtil.ts) uses
-`Promise.all` over per-file `getLastVisitStamp` lookups with no per-file error
+`Promise.all` over per-file `getVisitStats` lookups with no per-file error
 isolation: one transient `DataAdapter.read`/`list` rejection aborts the entire
 treemap render.
 

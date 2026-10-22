@@ -1,45 +1,44 @@
 import { TFile } from 'obsidian';
-import { LastVisitProvider } from '../LastVisitProvider';
+import { VisitStatsProvider } from '../VisitStatsProvider';
+import { VisitStats } from '../VisitStats';
 import { DocIdService } from 'stable-ids-for-obsidian';
 import { VhV3DurationStore } from './VhV3DurationStore';
-import { LastVisitCache } from './LastVisitCache';
+import { VisitStatsCache } from './VisitStatsCache';
 
 /**
- * LastVisitProvider backed by V3 focus-duration files: last visit = most
- * recent session START stamp across ALL users and devices (matches the old V2
- * semantics, where the stamp was recorded at focus time).
+ * VisitStatsProvider backed by V3 focus-duration files: stats aggregate ALL
+ * users and devices (last visit = most recent session START, matching the old
+ * V2 stamp-at-focus-time semantics; total = sum of session durations).
  */
-export class VisitHistoryServiceV3 implements LastVisitProvider {
+export class VisitHistoryServiceV3 implements VisitStatsProvider {
   constructor(
     private readonly docIdService: DocIdService,
     private readonly vhV3DurationStore: VhV3DurationStore,
-    private readonly lastVisitCache: LastVisitCache,
+    private readonly visitStatsCache: VisitStatsCache,
   ) {
   }
 
-  async getLastVisitStamp(file: TFile): Promise<number | null> {
+  async getVisitStats(file: TFile): Promise<VisitStats> {
     // READ-ONLY id lookup: this runs for every vault file when the heatmap
     // aggregates — it must never write into user files.
     const docId = await this.docIdService.getDocId(file);
     if (docId === null) {
-      return null;
+      return VisitStats.EMPTY;
     }
 
-    const cached = this.lastVisitCache.get(docId);
-    if (cached) {
-      return cached.value;
+    const cached = this.visitStatsCache.get(docId);
+    if (cached !== undefined) {
+      return cached;
     }
 
-    const diskMs = await this.vhV3DurationStore.getLastFocusStartMsAcrossUsersAndDevices(docId);
-    // A recorder write-through can land WHILE we read from disk; caching the
-    // (possibly older) disk value blindly would lose it — merge by max.
-    const racedInMs = this.lastVisitCache.get(docId)?.value ?? null;
-    const lastVisitMs = diskMs === null || racedInMs === null
-      ? diskMs ?? racedInMs
-      : Math.max(diskMs, racedInMs);
-    // "Never visited" (null) is cached too — absence of files is just as
+    // Token BEFORE the disk read: a session write overlapping the read makes
+    // the cache reject this result (see VisitStatsCache) — it is still
+    // returned, just not cached, so the next lookup re-reads disk.
+    const token = this.visitStatsCache.readToken();
+    const diskStats = await this.vhV3DurationStore.getVisitStatsAcrossUsersAndDevices(docId);
+    // "Never visited" (EMPTY) is cached too — absence of files is just as
     // expensive to establish as presence.
-    this.lastVisitCache.set(docId, lastVisitMs);
-    return lastVisitMs;
+    this.visitStatsCache.setIfNoWriteSince(docId, diskStats, token);
+    return diskStats;
   }
 }

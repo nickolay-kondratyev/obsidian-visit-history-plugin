@@ -2,21 +2,22 @@ import { describe, expect, it } from 'vitest';
 import type { App, TFile } from 'obsidian';
 import { VaultUtilDefault } from './VaultUtil';
 import { IsTrackedProviderDefault } from './IsTrackedProvider';
-import type { LastVisitProvider } from '../../service/visitHistoryService/LastVisitProvider';
+import type { VisitStatsProvider } from '../../service/visitHistoryService/VisitStatsProvider';
+import { VisitStats } from '../../service/visitHistoryService/VisitStats';
 import { makeTFile } from '../../../testSupport/fileFactory';
 
 /** GIVEN a vault holding exactly these files (system-boundary App stub). */
-function makeVaultUtil(files: TFile[]): VaultUtilDefault {
+function makeVaultUtil(files: TFile[], visitStats: VisitStats = VisitStats.EMPTY): VaultUtilDefault {
   const app = {
     vault: {
       getName: () => 'test-vault',
       getFiles: () => files,
     },
   } as unknown as App;
-  const lastVisitProvider: LastVisitProvider = {
-    getLastVisitStamp: async () => null,
+  const visitStatsProvider: VisitStatsProvider = {
+    getVisitStats: async () => visitStats,
   };
-  return new VaultUtilDefault(app, lastVisitProvider, new IsTrackedProviderDefault());
+  return new VaultUtilDefault(app, visitStatsProvider, new IsTrackedProviderDefault());
 }
 
 describe('VaultUtilDefault', () => {
@@ -46,6 +47,15 @@ describe('VaultUtilDefault', () => {
       expect(files).toEqual([
         { file: tracked, timeMetadata: { createdMs: 11, modifiedMs: 22, visitedMs: null } },
       ]);
+    });
+
+    it('should map the last visit of the visit stats to visitedMs', async () => {
+      // GIVEN a tracked file with recorded visit stats
+      const vaultUtil = makeVaultUtil([makeTFile({ path: 'a.md' })], new VisitStats(1234, 999));
+      // WHEN resolving tracked files
+      const [trackedFile] = await vaultUtil.getTrackedFiles();
+      // THEN visitedMs is the last visit
+      expect(trackedFile?.timeMetadata.visitedMs).toBe(1234);
     });
   });
 });

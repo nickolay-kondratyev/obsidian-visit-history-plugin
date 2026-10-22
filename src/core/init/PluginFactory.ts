@@ -10,7 +10,7 @@ import { DeviceNameProvider, DeviceNameProviderDefault } from '../util/env/Devic
 import { VhV3DurationStore } from '../service/visitHistoryService/v3/VhV3DurationStore';
 import { VhV3ReadmeWriter } from '../service/visitHistoryService/v3/VhV3ReadmeWriter';
 import { VisitHistoryServiceV3 } from '../service/visitHistoryService/v3/VisitHistoryServiceV3';
-import { LastVisitCache } from '../service/visitHistoryService/v3/LastVisitCache';
+import { VisitStatsCache } from '../service/visitHistoryService/v3/VisitStatsCache';
 import { FocusDurationTracker } from '../focusDuration/FocusDurationTracker';
 import { VhV3DurationRecorder } from '../focusDuration/VhV3DurationRecorder';
 import { MinDurationFilteringSink } from '../focusDuration/MinDurationFilteringSink';
@@ -62,7 +62,7 @@ export class PluginFactory {
   /** Concrete handle so dispose() can close a still-open user-name modal. */
   private readonly modalUserNamePrompt: ModalUserNamePrompt;
   private readonly deviceNameProvider: DeviceNameProvider;
-  private readonly lastVisitCache: LastVisitCache;
+  private readonly visitStatsCache: VisitStatsCache;
   private readonly vhV3DurationStore: VhV3DurationStore;
   /** V3 duration state machine; undefined until a user name is pinned. */
   private focusDurationTracker?: FocusDurationTracker;
@@ -98,9 +98,9 @@ export class PluginFactory {
     // per-path window lock guarding ensureDocId.
     this.docIdService = DocIdServices.createDefault(app.vault);
 
-    // Shared by the V3 read path (heatmap last-visit lookups) and the write
-    // path (recorder write-through on every recorded session).
-    this.lastVisitCache = new LastVisitCache();
+    // In-memory per-note visit stats, shared by the V3 read path (heatmap
+    // lookups) and the write path (recorder write-through on every session).
+    this.visitStatsCache = new VisitStatsCache();
     // Name-free store: the aggregate read spans ALL users, so the heatmap
     // works even before (or without) a pinned user name.
     this.vhV3DurationStore = new VhV3DurationStore(this.hiddenFileUtil);
@@ -112,12 +112,12 @@ export class PluginFactory {
     // registration order relative to this one is preserved by the push.
     this.focusTracker.registerListener(new DocIdFocusListener(this.docIdService));
 
-    const lastVisitProvider = new VisitHistoryServiceV3(
+    const visitStatsProvider = new VisitHistoryServiceV3(
       this.docIdService,
       this.vhV3DurationStore,
-      this.lastVisitCache,
+      this.visitStatsCache,
     );
-    this.vaultUtil = new VaultUtilDefault(app, lastVisitProvider, this.isTrackedProvider);
+    this.vaultUtil = new VaultUtilDefault(app, visitStatsProvider, this.isTrackedProvider);
     this.docIdBackfillService = new DocIdBackfillServiceDefault(this.vaultUtil, this.docIdService);
     this.contentTermMatcher = new ContentTermMatcherDefault(this.vaultUtil, noteFileUtil);
   }
@@ -145,7 +145,7 @@ export class PluginFactory {
       // BEFORE the recorder, so a quick in-and-out visit leaves no trace at all.
       // Threshold read live per record (settings change applies without reload).
       new MinDurationFilteringSink(
-        new VhV3DurationRecorder(this.vhV3DurationStore, this.lastVisitCache, this.deviceNameProvider, userName),
+        new VhV3DurationRecorder(this.vhV3DurationStore, this.visitStatsCache, this.deviceNameProvider, userName),
         () => this.configProvider.getMinFocusMsToRecord(),
       ),
       // Effective idle timeout via the config seam: a dev override wins (e2e),

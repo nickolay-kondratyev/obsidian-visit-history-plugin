@@ -10,7 +10,7 @@ export type MinRecordDurationMsProvider = () => number;
 /**
  * A {@link FocusDurationSink} decorator that drops sessions shorter than the
  * configured minimum BEFORE they reach the real recorder — so a sub-threshold
- * session leaves NO trace at all (no `.vh_v3` line, no LastVisitCache/heatmap
+ * session leaves NO trace at all (no `.vh_v3` line, no VisitStatsCache/heatmap
  * bump). Quick in-and-out jumps into a note are thereby not counted as visits.
  *
  * WHY a decorator (not logic inside FocusDurationTracker or VhV3DurationRecorder):
