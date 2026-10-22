@@ -21,4 +21,10 @@ export interface NoteFileUtil {
    * (Obsidian Vault.process — avoids the read()+modify() race).
    */
   process(file: TFile, transform: (content: string) => string): Promise<void>;
+
+  /**
+   * Moves the file to the trash the normal Obsidian way (FileManager.trashFile
+   * — respects the user's "Deleted files" setting).
+   */
+  trashFile(file: TFile): Promise<void>;
 }
