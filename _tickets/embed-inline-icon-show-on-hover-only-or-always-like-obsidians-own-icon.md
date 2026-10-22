@@ -1,15 +1,16 @@
 ---
+closed_iso: 2026-10-22T21:50:37Z
 id: nid_mrd8gbvxgxbkopite8muxzrnd_e
 title: "Embed inline icon: show on hover only, or always like Obsidian's own icon?"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-10-22T21:38:27Z
-status_updated_iso: 2026-10-22T21:38:27Z
+status_updated_iso: 2026-10-22T21:50:37Z
 type: task
 priority: 3
 assignee: CC_WITH-nickolaykondratyev
-tags: [inline_note, decide, need-human]
+tags: [inline_note, decide]
 ---
 
 **What needs deciding:** how the "Inline note" icon on a note embed should appear.
@@ -26,3 +27,6 @@ tags: [inline_note, decide, need-human]
 
 Reply with a or b; (b) is a one-line CSS change.
 
+
+## Decision (owner, 2026-10-22)
+(a) Keep hover-only for now. No code change.
