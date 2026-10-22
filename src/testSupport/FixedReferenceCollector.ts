@@ -1,5 +1,5 @@
 import { TFile } from 'obsidian';
-import { NoteReference } from '../core/service/inlineNote/NoteReference';
+import { BodyNoteReference, NoteReference } from '../core/service/inlineNote/NoteReference';
 import { NoteReferenceCollector, ReferenceCensus } from '../core/service/inlineNote/NoteReferenceCollector';
 
 /** NoteReferenceCollector fake answering with a fixed reference list (or an incomplete index). */
@@ -12,13 +12,13 @@ export class FixedReferenceCollector implements NoteReferenceCollector {
   }
 
   /** A body reference to `original` at its first occurrence in `content`. */
-  static bodyReferenceIn(sourceFile: TFile, content: string, original: string): NoteReference {
+  static bodyReferenceIn(sourceFile: TFile, content: string, original: string, subpath = ''): BodyNoteReference {
     const startOffset = content.indexOf(original);
     if (startOffset < 0) {
       throw new Error(`link not found in content original=[${original}]`);
     }
     return {
-      kind: 'body', sourceFile, isEmbed: original.startsWith('!'), subpath: '',
+      kind: 'body', sourceFile, isEmbed: original.startsWith('!'), subpath,
       original, startOffset, endOffset: startOffset + original.length,
     };
   }

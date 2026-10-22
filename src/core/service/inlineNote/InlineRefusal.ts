@@ -135,10 +135,10 @@ export class InlineRefusals {
     );
   }
 
-  static noteChanged(receivingPath: string): InlineRefusal {
+  static noteChanged(notePath: string): InlineRefusal {
     return InlineRefusals.of(
       'note-changed',
-      `"${receivingPath}" changed while inlining, so its link could not be found where expected. Nothing was changed.`,
+      `"${notePath}" changed while inlining, so its link could not be found where expected. Nothing was changed.`,
       'Wait a moment and try again.',
     );
   }

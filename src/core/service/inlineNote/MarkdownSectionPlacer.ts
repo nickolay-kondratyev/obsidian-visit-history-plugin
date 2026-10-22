@@ -90,9 +90,10 @@ export class MarkdownSectionPlacer {
 
     const container = MarkdownSectionPlacer.containerKindAt(lines, linkLine, bodyStart);
     const alias = MarkdownLinkSyntax.parse(link.original)?.alias;
+    const sectionTarget = MarkdownSectionPlacer.sectionLinkTarget(inlined.title, enclosing, headings);
     const replacement = container === null
       ? (link.isEmbed ? '' : alias ?? inlined.title)
-      : MarkdownSectionPlacer.headingLink(container, inlined.title, alias, enclosing, headings);
+      : MarkdownSectionPlacer.headingLink(sectionTarget, alias ?? inlined.title, container === 'table');
     const spanStart = lineStarts[linkLine] ?? 0;
     const spanEnd = (lineStarts[linkEndLine] ?? 0) + (lines[linkEndLine] ?? '').length;
     const rewrittenSpan = content.slice(spanStart, link.startOffset) + replacement + content.slice(link.endOffset, spanEnd);
@@ -109,7 +110,8 @@ export class MarkdownSectionPlacer {
     const block = [
       `${titlePrefix} ${inlined.title}`,
       ...(inlined.propertyLines.length > 0 ? ['```yaml', ...inlined.propertyLines, '```'] : []),
-      ...MarkdownStructure.shiftHeadings(inlined.bodyLines, bodyHeadingDelta),
+      // Self-links first: shifting headings moves columns on heading lines.
+      ...MarkdownStructure.shiftHeadings(MarkdownSectionPlacer.withSelfLinksToSection(inlined, sectionTarget), bodyHeadingDelta),
     ];
     // Offsets above index the raw text, so `lines` keep their CR until here.
     return {
@@ -145,28 +147,49 @@ export class MarkdownSectionPlacer {
   }
 
   /**
-   * `[[#<title>|<display>]]` — or the nested `[[#<enclosing>#<title>|…]]`
-   * when note1 already has a heading with the title's text (a bare link
-   * would resolve to that older heading). Characters a heading link can't
-   * hold are blanked like Obsidian's own link autocomplete does (see
-   * HEADING_LINK_UNSAFE_RE); "same text" is judged the way Obsidian matches.
+   * Link target of the new section: `<title>` — or the nested
+   * `<enclosing>#<title>` when note1 already has a heading with the title's
+   * text (a bare link would resolve to that older heading). Characters a
+   * heading link can't hold are blanked like Obsidian's own link
+   * autocomplete does (see HEADING_LINK_UNSAFE_RE); "same text" is judged
+   * the way Obsidian matches.
    */
-  private static headingLink(
-    container: ContainerKind,
+  private static sectionLinkTarget(
     title: string,
-    alias: string | undefined,
     enclosing: MarkdownHeading | undefined,
     headings: readonly MarkdownHeading[],
   ): string {
     const titleTarget = MarkdownSectionPlacer.cleanLinkText(title, HEADING_LINK_UNSAFE_RE);
     const titleKey = MarkdownSectionPlacer.headingMatchKey(title);
     const collides = headings.some(heading => MarkdownSectionPlacer.headingMatchKey(heading.text) === titleKey);
-    const target = collides && enclosing !== undefined
+    return collides && enclosing !== undefined
       ? `${MarkdownSectionPlacer.cleanLinkText(enclosing.text, HEADING_LINK_UNSAFE_RE)}#${titleTarget}`
       : titleTarget;
-    // A bare `|` inside a table row would split the cell.
-    const pipe = container === 'table' ? '\\|' : '|';
-    return `[[#${target}${pipe}${MarkdownSectionPlacer.cleanLinkText(alias ?? title, LINK_DISPLAY_UNSAFE_RE)}]]`;
+  }
+
+  /** `[[#<target>|<display>]]`; in a table row the pipe is escaped (a bare `|` would split the cell). */
+  private static headingLink(target: string, display: string, inTable: boolean): string {
+    const pipe = inTable ? '\\|' : '|';
+    return `[[#${target}${pipe}${MarkdownSectionPlacer.cleanLinkText(display, LINK_DISPLAY_UNSAFE_RE)}]]`;
+  }
+
+  /**
+   * note2's body with each whole-note self-link turned into a link to the
+   * new section (`[[note2]]` → `[[#<target>|<alias, else title>]]`; an embed
+   * stays an embed), like the original link inside a container.
+   */
+  private static withSelfLinksToSection(inlined: InlinedNote, sectionTarget: string): string[] {
+    const bodyLines = [...inlined.bodyLines];
+    // Right to left, so earlier columns on the same line stay valid.
+    const rightToLeft = [...inlined.wholeNoteSelfLinks]
+      .sort((a, b) => b.lineIndex - a.lineIndex || b.startColumn - a.startColumn);
+    for (const link of rightToLeft) {
+      const line = bodyLines[link.lineIndex] ?? '';
+      const headingLink = MarkdownSectionPlacer.headingLink(sectionTarget, link.alias ?? inlined.title, TABLE_ROW_RE.test(line));
+      bodyLines[link.lineIndex] = line.slice(0, link.startColumn) + (link.isEmbed ? '!' : '') + headingLink
+        + line.slice(link.endColumn);
+    }
+    return bodyLines;
   }
 
   /** How Obsidian's resolveSubpath compares a heading with a link part. */

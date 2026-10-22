@@ -1,6 +1,7 @@
-import { FrontmatterBlock, FrontmatterBlocks } from './FrontmatterBlocks';
+import { FrontmatterBlock, FrontmatterBlocks, FrontmatterSplit } from './FrontmatterBlocks';
 import { MarkdownStructure } from './MarkdownStructure';
 import { NoteTitle } from './NoteTitle';
+import { WholeNoteSelfLinkAt } from './SelfLinkRewriter';
 
 /** What the inlined note adds to the receiving note's frontmatter. */
 export interface FrontmatterAdditions {
@@ -9,6 +10,15 @@ export interface FrontmatterAdditions {
   readonly aliases: readonly string[];
   /** Empty-value "tag property" keys (e.g. `locations:`). */
   readonly flagKeys: readonly string[];
+}
+
+/** A whole-note link from note2 to itself, located in `InlinedNote.bodyLines`. */
+export interface WholeNoteSelfLink {
+  readonly lineIndex: number;
+  readonly startColumn: number;
+  readonly endColumn: number;
+  readonly isEmbed: boolean;
+  readonly alias: string | undefined;
 }
 
 /** The inlined note (note2), taken apart for placement into note1. */
@@ -20,6 +30,8 @@ export interface InlinedNote {
   /** Body lines, headings NOT yet shifted; a leading duplicate-title H1 is dropped. */
   readonly bodyLines: readonly string[];
   readonly frontmatterAdditions: FrontmatterAdditions;
+  /** Become links to the new section once placed (see MarkdownSectionPlacer). */
+  readonly wholeNoteSelfLinks: readonly WholeNoteSelfLink[];
 }
 
 const ID_KEY = 'id';
@@ -27,6 +39,12 @@ const TITLE_KEY = 'title';
 const TAGS_KEY = 'tags';
 const ALIASES_KEY = 'aliases';
 const H1_LEVEL = 1;
+
+/** Half-open line index range [start, end). */
+interface LineRange {
+  readonly start: number;
+  readonly end: number;
+}
 
 /**
  * Splits note2 per the owner's frontmatter rules:
@@ -37,21 +55,24 @@ const H1_LEVEL = 1;
  * - all other properties → kept verbatim in the yaml block.
  */
 export class InlinedNoteParser {
-  static parse(content: string, basename: string): InlinedNote {
+  /** @param wholeNoteSelfLinks offsets into `content` (see SelfLinkRewriter). */
+  static parse(content: string, basename: string, wholeNoteSelfLinks: readonly WholeNoteSelfLinkAt[] = []): InlinedNote {
     const split = FrontmatterBlocks.split(content);
     const { blocks } = FrontmatterBlocks.parseBlocks(FrontmatterBlocks.frontmatterLines(split));
     const title = NoteTitle.resolve(content, basename);
+    const body = InlinedNoteParser.keptBodyRange(split, title);
     return {
       title,
       propertyLines: MarkdownStructure.trimBlankLines(
         blocks.filter(block => InlinedNoteParser.keepsInYamlBlock(block)).flatMap(block => block.lines),
       ),
-      bodyLines: InlinedNoteParser.bodyWithoutTitleH1(FrontmatterBlocks.bodyLines(split), title),
+      bodyLines: split.lines.slice(body.start, body.end),
       frontmatterAdditions: {
         tags: InlinedNoteParser.valuesOf(blocks, TAGS_KEY).map(tag => tag.replace(/^#/, '')),
         aliases: InlinedNoteParser.valuesOf(blocks, ALIASES_KEY),
         flagKeys: blocks.filter(block => InlinedNoteParser.isFlagKey(block)).map(block => block.key),
       },
+      wholeNoteSelfLinks: InlinedNoteParser.inBodyCoordinates(content, wholeNoteSelfLinks, body),
     };
   }
 
@@ -73,13 +94,51 @@ export class InlinedNoteParser {
     return blocks.filter(block => block.key === key).flatMap(block => FrontmatterBlocks.listValues(block));
   }
 
-  /** Trimmed body; a body STARTING with `# <title>` loses that H1 (no duplicate title). */
-  private static bodyWithoutTitleH1(bodyLines: readonly string[], title: string): string[] {
-    const trimmed = MarkdownStructure.trimBlankLines(bodyLines);
-    const firstHeading = MarkdownStructure.parseHeading(trimmed[0] ?? '');
-    if (firstHeading?.level === H1_LEVEL && firstHeading.text === title) {
-      return MarkdownStructure.trimBlankLines(trimmed.slice(1));
+  /**
+   * Line range [start, end) of the kept body: blank-trimmed; a body STARTING
+   * with `# <title>` loses that H1 (no duplicate title).
+   */
+  private static keptBodyRange(split: FrontmatterSplit, title: string): LineRange {
+    const bodyStart = split.closingFenceIndex === null ? 0 : split.closingFenceIndex + 1;
+    let range = InlinedNoteParser.trimmedRange(split.lines, bodyStart, split.lines.length);
+    const firstHeading = MarkdownStructure.parseHeading(split.lines[range.start] ?? '');
+    if (range.start < range.end && firstHeading?.level === H1_LEVEL && firstHeading.text === title) {
+      range = InlinedNoteParser.trimmedRange(split.lines, range.start + 1, range.end);
     }
-    return trimmed;
+    return range;
+  }
+
+  private static trimmedRange(lines: readonly string[], start: number, end: number): LineRange {
+    const isBlank = (index: number): boolean => (lines[index] ?? '').trim() === '';
+    while (start < end && isBlank(start)) start++;
+    while (end > start && isBlank(end - 1)) end--;
+    return { start, end };
+  }
+
+  /** Self-links inside the kept body, positioned by body line + column (others are dropped). */
+  private static inBodyCoordinates(
+    content: string,
+    links: readonly WholeNoteSelfLinkAt[],
+    body: LineRange,
+  ): WholeNoteSelfLink[] {
+    const lineStarts = [0];
+    for (let index = content.indexOf('\n'); index >= 0; index = content.indexOf('\n', index + 1)) {
+      lineStarts.push(index + 1);
+    }
+    return links.flatMap((link) => {
+      let lineIndex = 0;
+      while ((lineStarts[lineIndex + 1] ?? Infinity) <= link.startOffset) lineIndex++;
+      const lineStart = lineStarts[lineIndex] ?? 0;
+      if (lineIndex < body.start || lineIndex >= body.end) {
+        return [];
+      }
+      return [{
+        lineIndex: lineIndex - body.start,
+        startColumn: link.startOffset - lineStart,
+        endColumn: link.endOffset - lineStart,
+        isEmbed: link.isEmbed,
+        alias: link.alias,
+      }];
+    });
   }
 }

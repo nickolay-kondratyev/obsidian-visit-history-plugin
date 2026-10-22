@@ -77,6 +77,18 @@ describe('InlinedNoteParser', () => {
       expect(InlinedNoteParser.parse('---\r\nstatus: x\r\n---\r\nbody', 'note2').propertyLines).toEqual(['status: x']);
     });
 
+    it('should report whole-note self-links in body line coordinates', () => {
+      // GIVEN a self-link two lines below a dropped title H1, under frontmatter
+      const content = '---\nid: x\n---\n\n# note2\nintro\nsee [[note2]]';
+      const startOffset = content.indexOf('[[note2]]');
+      const selfLink = { startOffset, endOffset: startOffset + 9, isEmbed: false, alias: undefined };
+      // WHEN parsed
+      // THEN its position is given in the kept body lines
+      expect(InlinedNoteParser.parse(content, 'note2', [selfLink]).wholeNoteSelfLinks).toEqual([
+        { lineIndex: 1, startColumn: 4, endColumn: 13, isEmbed: false, alias: undefined },
+      ]);
+    });
+
     it('should handle a note without frontmatter', () => {
       expect(InlinedNoteParser.parse('plain', 'note2').propertyLines).toEqual([]);
     });

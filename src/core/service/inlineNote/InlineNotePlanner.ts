@@ -7,6 +7,8 @@ import { PlainNoteCheck } from './PlainNoteCheck';
 import { InlinedNote, InlinedNoteParser } from './InlinedNoteParser';
 import { NoteTitle } from './NoteTitle';
 import { InlineLinkSite, MarkdownSectionPlacer } from './MarkdownSectionPlacer';
+import { BodyNoteReference, NoteReference } from './NoteReference';
+import { SelfLinkRewriter } from './SelfLinkRewriter';
 
 /** Everything needed to inline note2 into note1, checked up front. */
 export interface InlinePlan {
@@ -49,6 +51,11 @@ export class InlineNotePlanner {
     if (verdict.kind === 'refused') {
       return verdict;
     }
+    const selfLinkRewrite = SelfLinkRewriter.rewrite(note2Content, InlineNotePlanner.selfLinksOf(note2, census.references));
+    if (selfLinkRewrite === null) {
+      // metadataCache offsets lag a just-edited note — retry shortly.
+      return InlineNotePlanner.refused(InlineRefusals.noteChanged(note2.path));
+    }
     const { reference } = verdict;
     const note1 = reference.sourceFile;
     const note1Content = await this.noteFileUtil.cachedRead(note1);
@@ -65,7 +72,7 @@ export class InlineNotePlanner {
         original: reference.original,
         isEmbed: reference.isEmbed,
       },
-      inlined: InlinedNoteParser.parse(note2Content, note2.basename),
+      inlined: InlinedNoteParser.parse(selfLinkRewrite.content, note2.basename, selfLinkRewrite.wholeNoteLinks),
       note1Title: NoteTitle.resolve(note1Content, note1.basename),
     };
     const dryRun = MarkdownSectionPlacer.place(note1Content, plan.note1Title, plan.linkSite, plan.inlined);
@@ -83,6 +90,12 @@ export class InlineNotePlanner {
   }
 
   // ── private ─────────────────────────────────────────────────────────────
+
+  /** note2's body links to itself (the link count ignores them; they are rewritten instead). */
+  private static selfLinksOf(note2: TFile, references: readonly NoteReference[]): BodyNoteReference[] {
+    return references.filter((reference): reference is BodyNoteReference =>
+      reference.kind === 'body' && reference.sourceFile.path === note2.path);
+  }
 
   private static refused(refusal: InlineRefusal): InlinePlanResult {
     return { kind: 'refused', refusal };
