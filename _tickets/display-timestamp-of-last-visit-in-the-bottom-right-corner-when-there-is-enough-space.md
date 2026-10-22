@@ -45,3 +45,9 @@ Assumptions made (non-interactive run):
 - The age is computed at render time (`Date.now()`), so it refreshes on re-render (hover, data change) and not on a timer. Same behavior as `heatColor`.
 
 Not done: no visual/e2e check in a real Obsidian window. The heatmap has no screenshot e2e. Verified by unit tests, `npm run build`, and `npm run lint` (0 errors).
+
+## Notes
+
+**2026-10-22T17:43:57Z**
+
+__READY_AS_IS__: review found no bugs (fmtAgo boundaries, cornerLabelFits geometry, CSS specificity, title/label overlap all check out); npm test 485 pass, build ok, lint 0 errors
