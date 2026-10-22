@@ -6,7 +6,7 @@ shows your whole vault as a colourful **activity heatmap** — so you can see, a
 glance, what's hot, what's gone cold, and what you've never touched.
 
 Everything runs **fully offline and local**: no network calls, no accounts, no
-telemetry. Your history never leaves your machine.
+telemetry. Your history never leaves your device.
 
 ![Sample heatmap — vault activity coloured by recency](images/sample-heatmap.png)
 
@@ -16,7 +16,8 @@ Brighter green = recent, deep blue = long ago, dim = no data yet.*
 ## See your vault's activity, from day one
 
 The heatmap is a zoomable **treemap** of your entire vault: every file is a
-rectangle nested inside its folders, sized by file size. Colour is where it gets
+rectangle nested inside its folders, sized by file size or by how long you've
+spent in it (see [Sizing](#sizing-content-size-or-visit-time)). Colour is where it gets
 interesting — you pick which timestamp drives it:
 
 - **Visited** — where your attention actually goes, based on recorded focus time.
@@ -35,6 +36,19 @@ touch daily wants a different scale than a decade-old archive.
 Files can also be coloured **by type** (note / canvas / Excalidraw) when you want
 a structural view instead of a temporal one.
 
+### Sizing: content size or visit time
+
+Pick what a rectangle's size means:
+
+- **Content size** — bigger file, bigger rectangle.
+- **Visit time** — the more total time you've spent in a file, the bigger its
+  rectangle. Files you've never visited are left out, so the view shows only
+  where your time actually went.
+
+Each mode has its own **curve** (**Linear**, **Sqrt**, or **Log**) to tame a few
+huge files that would otherwise crowd out everything else, and its own per-type
+size scales. Both are remembered separately for each mode.
+
 ### Getting around
 
 - **Drill down** — click a folder to zoom in, step back up the trail, click a
@@ -48,7 +62,7 @@ a structural view instead of a temporal one.
 
 ![sample-open-heatmap-for-folder.png](images/sample-open-heatmap-for-folder.png)
 
-Heatmap options (colouring mode, gradient, timestamp field, hot/cold thresholds)
+Heatmap options (colouring mode, sizing, gradient, timestamp field, hot/cold thresholds)
 live in the heatmap's own config panel and are **saved automatically** — your
 setup is exactly as you left it.
 
@@ -56,7 +70,8 @@ setup is exactly as you left it.
 
 Open a note, canvas, or Excalidraw drawing and Visit History times how long it
 stays in focus. When you move on — navigate away, switch windows, or go idle — it
-saves that session (start time + duration). Over time you get an honest picture
+saves that session (start time + duration). Very quick in-and-out visits (under
+2 seconds by default) are not recorded at all. Over time you get an honest picture
 of where your attention goes.
 
 ## Your history survives renames
@@ -66,16 +81,37 @@ canvas, the plugin assigns it a small, permanent **id** (in the note's
 frontmatter, or the canvas's metadata) and files history under that id — **not**
 the path. Move or refactor freely; every second of history follows.
 
+## Inline a note into the note that links to it
+
+Have a small note that only one other note links to? **Inline note (visit history
+aware)** merges it into that note — content **and** visit history — then moves the
+small note to the trash. Run it from the small note's file menu or the command
+palette, or click the inline icon that appears when you hover a `![[note]]`
+embed of it.
+
+- The note's content is placed right after the link, with its headings shifted
+  to fit; its frontmatter properties are added to the receiving note (existing
+  ones are kept as they are).
+- Its visit history is merged in, so the time you spent there counts toward the
+  receiving note from now on.
+- It only runs when the whole vault (canvases included) has **exactly one** link
+  to the note. Otherwise a dialog explains why it can't, and nothing changes.
+- You confirm before anything changes. If any step fails, the original note is
+  kept.
+
 ## Where your data is saved
 
-All of it lives **inside your vault**, in `__visit_history/` — one small text
-file per document, organised per user and per device. Nothing is uploaded.
+All of it lives **inside your vault**, in the hidden `.plugin_data/visit_history/`
+folder — one small text file per document, organised per user and per device.
+Nothing is uploaded.
 
-- **Per user** keeps people who sync the same vault from mixing histories.
-- **Per device** avoids sync conflicts between your machines.
+- **Per user** keeps people who share the same vault from mixing histories.
+- **Per device** avoids conflicts between your machines.
 
-Being plain files, it syncs wherever your vault syncs, and you can back it up or
-delete it like any note. Curious about the exact layout and line format? See
+Because the folder is hidden (dot-prefixed), it stays out of Obsidian's file
+explorer and search — and **Obsidian Sync skips it**, so with Obsidian Sync each
+device keeps its own history. Being plain files, you can back it up or delete it
+like any other file. Curious about the exact layout and line format? See
 [The files it writes](#the-files-it-writes-and-their-format) below.
 
 ## Installing & enabling
@@ -94,6 +130,8 @@ Under **Settings → Visit History**:
 
 - **Idle timeout (seconds)** — how long without interaction before the current
   session is considered finished (default 180). Applies immediately.
+- **Minimum focus time (seconds)** — visits shorter than this are not recorded
+  at all (default 2). Set to 0 to record everything. Applies immediately.
 - **Add ids to all eligible files** — assigns the persistent id to every note and
   canvas at once, instead of waiting until you next open each. Modifies files, so
   it's behind a confirmation.
@@ -112,21 +150,23 @@ what the history enables:*
 ## The files it writes (and their format)
 
 Your history is just **plain text** — nothing proprietary, nothing locked away.
-You can open it, read it, sync it, back it up, or delete it like any other note.
+You can open it, read it, back it up, or delete it like any other file.
 Here's exactly what gets written and where, so there are no surprises.
 
-Everything lives under `__visit_history/` at the root of your vault, organised by
-**user** and then by **device**:
+Everything lives under `.plugin_data/visit_history/` at the root of your vault,
+organised by **user** and then by **device**:
 
 ```
-__visit_history/
+.plugin_data/visit_history/
   user/
     <your-name>/                       # keeps people who share a vault separate
       v3/
         README__generated__vh_v3_format.md   # a copy of this format, written by the plugin
         focus_duration_per_device/
-          <device-name>/               # one folder per machine — no sync conflicts
+          <device-name>/               # one folder per machine — no conflicts
             <doc-id>.vh_v3             # one file per document you've visited
+        merged_in_focus_duration_per_device/
+          ...                          # history of notes inlined into another note
 ```
 
 - The **file name is the document's permanent id** — the same id stored in the
@@ -151,9 +191,11 @@ For example, a 5.6-second visit that began on 9 July 2026 looks like:
 That's the whole format. The plugin also drops a `README__generated__vh_v3_format.md`
 next to your data describing the same thing, so it's documented right where it lives.
 
-> **Note:** `__visit_history/` is intentionally **not** a hidden (dot-prefixed)
-> folder — Obsidian Sync skips dot-folders, and your history should sync with the
-> rest of your vault. The plugin excludes it from its own tracking and heatmap.
+> **Note:** `.plugin_data/` is intentionally a hidden (dot-prefixed) folder, so it
+> never clutters your file explorer or search. The trade-off: Obsidian Sync skips
+> dot-folders, so with Obsidian Sync your history stays on each device.
+> Older versions stored history in `.visit_history/` or `__visit_history/`; the
+> plugin moves it to the new location automatically.
 
 ## Appendix: fixing file times after a `git` clone (`git-restore-mtime`)
 
@@ -174,7 +216,7 @@ git restore-mtime
 
 Install it from the [git-tools](https://github.com/MestreLion/git-tools) project
 (e.g. `pipx install git-tools`, or your package manager). Visit-based colouring
-is unaffected — it comes from `__visit_history/`, not the filesystem.
+is unaffected — it comes from `.plugin_data/visit_history/`, not file timestamps.
 
 ## License
 
