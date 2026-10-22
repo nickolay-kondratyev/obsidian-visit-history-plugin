@@ -1,6 +1,6 @@
 ---
 closed_iso: 2026-10-22T18:20:26Z
-session_ids: [{"a": "claude", "type": "execution", "id": "fbc687da-49f0-4295-acbf-8e0742a46f49"}]
+session_ids: [{"a": "claude", "type": "execution", "id": "fbc687da-49f0-4295-acbf-8e0742a46f49"}, {"a": "claude", "type": "review", "id": "d6f9e559-4bdf-43e7-83f6-e5c821e4003e"}]
 working_dir: nickolay-kondratyev_obsidian-visit-history-plugin
 id: nid_1ld735zqcn0a6kyyqymijaabi_e
 title: "timestamp that is shown at the bottom should be based on the current setting"
