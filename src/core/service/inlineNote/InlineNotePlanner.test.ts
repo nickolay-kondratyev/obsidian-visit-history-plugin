@@ -45,9 +45,36 @@ describe('InlineNotePlanner', () => {
       expect(kindOf(await planner.plan(note2))).toBe('no-links');
     });
 
+    it('should refuse while Obsidian is still indexing the vault', async () => {
+      const { planner, note2, collector } = setup('note1.md', 'See [[note2]].');
+      collector.indexIncomplete = true;
+      expect(kindOf(await planner.plan(note2))).toBe('still-indexing');
+    });
+
+    it('should rewrite note2 links to its own parts into same-note links', async () => {
+      // GIVEN note2 linking one of its own headings
+      const { planner, note2, collector } = setup('note1.md', 'See [[note2]].', 'note2.md', 'see [[note2#Part]]\n## Part');
+      collector.references.push(FixedReferenceCollector.bodyReferenceIn(note2, 'see [[note2#Part]]\n## Part', '[[note2#Part]]', '#Part'));
+      // WHEN planned
+      const result = await planner.plan(note2);
+      // THEN the inlined body links the heading within note1
+      expect(result.kind === 'ready' && result.plan.inlined.bodyLines[0]).toBe('see [[#Part]]');
+    });
+
+    it('should refuse when a note2 self-link is no longer at its cached offsets', async () => {
+      const { planner, note2, collector } = setup('note1.md', 'See [[note2]].', 'note2.md', 'edited, see [[note2#Part]]');
+      collector.references.push(FixedReferenceCollector.bodyReferenceIn(note2, 'see [[note2#Part]]', '[[note2#Part]]', '#Part'));
+      expect(kindOf(await planner.plan(note2))).toBe('note-changed');
+    });
+
     it('should refuse up front when headings would get too deep', async () => {
       const { planner, note2 } = setup('note1.md', '###### Deep\nSee [[note2]].');
       expect(kindOf(await planner.plan(note2))).toBe('too-deep');
+    });
+
+    it('should refuse when the link sits in a heading line', async () => {
+      const { planner, note2 } = setup('note1.md', '## A\n### See [[note2]]\ntext');
+      expect(kindOf(await planner.plan(note2))).toBe('link-in-heading');
     });
 
     it('should refuse when the cached link offsets no longer match the note', async () => {

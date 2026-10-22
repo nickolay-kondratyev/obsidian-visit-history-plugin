@@ -158,10 +158,15 @@ file menu (.md) / command 'inline-note' on note2
   → InlineNoteAction.run
       → InlineNotePlanner.plan (read-only; refuses with InlineRefusals)
           NoteReferenceCollector (metadataCache links/embeds/property links
-            + our own canvas JSON scan) → InlineEligibility (exactly ONE
-            whole-note body link in the vault, self-links ignored)
-          → PlainNoteCheck (plain .md both sides) → InlinedNoteParser
-          → MarkdownSectionPlacer dry run (too deep → refuse)
+            + our own canvas JSON scan; any unindexed .md → refuse, still
+            indexing) → InlineEligibility (exactly ONE whole-note body link
+            in the vault, self-links ignored)
+          → PlainNoteCheck (plain .md both sides)
+          → SelfLinkRewriter (note2's links to itself: `[[note2#X]]` → `[[#X]]`)
+          → InlinedNoteParser
+          → MarkdownSectionPlacer dry run (too deep / link in a heading line
+            → refuse; whole-note self-links → link to the new section;
+            output keeps note1's line ending)
       → InlineNoteDialogs.confirmInline → re-plan → execute:
           FocusSessionReleaser (close + flush note2's session)
           → Vault.process(note1): MarkdownSectionPlacer + FrontmatterMerger

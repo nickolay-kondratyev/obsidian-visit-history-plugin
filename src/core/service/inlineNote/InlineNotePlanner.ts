@@ -7,6 +7,8 @@ import { PlainNoteCheck } from './PlainNoteCheck';
 import { InlinedNote, InlinedNoteParser } from './InlinedNoteParser';
 import { NoteTitle } from './NoteTitle';
 import { InlineLinkSite, MarkdownSectionPlacer } from './MarkdownSectionPlacer';
+import { BodyNoteReference, NoteReference } from './NoteReference';
+import { SelfLinkRewriter } from './SelfLinkRewriter';
 
 /** Everything needed to inline note2 into note1, checked up front. */
 export interface InlinePlan {
@@ -25,8 +27,9 @@ export type InlinePlanResult =
 
 /**
  * Read-only check of every inline-note rule BEFORE anything is changed:
- * plain-note types, the exactly-one-link rule, and a dry-run placement into
- * note1's current text (so "too deep" is refused before the confirm dialog).
+ * plain-note types, a fully indexed vault, the exactly-one-link rule, and a
+ * dry-run placement into note1's current text (so "too deep" is refused
+ * before the confirm dialog).
  */
 export class InlineNotePlanner {
   constructor(
@@ -40,9 +43,18 @@ export class InlineNotePlanner {
     if (!PlainNoteCheck.isPlainMarkdownNote(note2, note2Content)) {
       return InlineNotePlanner.refused(InlineRefusals.unsupportedInlinedNote(note2.path));
     }
-    const verdict = InlineEligibility.evaluate(note2, await this.referenceCollector.collectReferencesTo(note2));
+    const census = await this.referenceCollector.collectReferencesTo(note2);
+    if (census.kind === 'index-incomplete') {
+      return InlineNotePlanner.refused(InlineRefusals.stillIndexing(note2.basename));
+    }
+    const verdict = InlineEligibility.evaluate(note2, census.references);
     if (verdict.kind === 'refused') {
       return verdict;
+    }
+    const selfLinkRewrite = SelfLinkRewriter.rewrite(note2Content, InlineNotePlanner.selfLinksOf(note2, census.references));
+    if (selfLinkRewrite === null) {
+      // metadataCache offsets lag a just-edited note — retry shortly.
+      return InlineNotePlanner.refused(InlineRefusals.noteChanged(note2.path));
     }
     const { reference } = verdict;
     const note1 = reference.sourceFile;
@@ -60,13 +72,15 @@ export class InlineNotePlanner {
         original: reference.original,
         isEmbed: reference.isEmbed,
       },
-      inlined: InlinedNoteParser.parse(note2Content, note2.basename),
+      inlined: InlinedNoteParser.parse(selfLinkRewrite.content, note2.basename, selfLinkRewrite.wholeNoteLinks),
       note1Title: NoteTitle.resolve(note1Content, note1.basename),
     };
     const dryRun = MarkdownSectionPlacer.place(note1Content, plan.note1Title, plan.linkSite, plan.inlined);
     switch (dryRun.kind) {
       case 'too-deep':
         return InlineNotePlanner.refused(InlineRefusals.tooDeep(note2.basename, note1.path));
+      case 'link-in-heading':
+        return InlineNotePlanner.refused(InlineRefusals.linkInHeading(note2.basename, note1.path));
       case 'link-moved':
         // metadataCache offsets lag a just-edited note — retry shortly.
         return InlineNotePlanner.refused(InlineRefusals.noteChanged(note1.path));
@@ -76,6 +90,12 @@ export class InlineNotePlanner {
   }
 
   // ── private ─────────────────────────────────────────────────────────────
+
+  /** note2's body links to itself (the link count ignores them; they are rewritten instead). */
+  private static selfLinksOf(note2: TFile, references: readonly NoteReference[]): BodyNoteReference[] {
+    return references.filter((reference): reference is BodyNoteReference =>
+      reference.kind === 'body' && reference.sourceFile.path === note2.path);
+  }
 
   private static refused(refusal: InlineRefusal): InlinePlanResult {
     return { kind: 'refused', refusal };

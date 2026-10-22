@@ -218,6 +218,19 @@ export class ObsidianHarness {
     if (!ran) throw new Error(`command did not run commandId=[${commandId}]`);
   }
 
+  /**
+   * Waits until every markdown file has a metadataCache entry (bounded) — the
+   * inline-note action refuses while any is missing. Times out (fails plainly)
+   * if some file never gets one.
+   */
+  async waitForMarkdownIndexed(): Promise<void> {
+    await this.page.waitForFunction(
+      () => window.app.vault.getMarkdownFiles().every(file => window.app.metadataCache.getFileCache(file) !== null),
+      undefined,
+      { timeout: 30_000 },
+    );
+  }
+
   /** Waits until Obsidian's link index has resolved `fromPath` → `toPath` (bounded). */
   async waitForResolvedLink(fromPath: string, toPath: string): Promise<void> {
     await this.page.waitForFunction(
@@ -345,8 +358,11 @@ declare global {
         layoutReady: boolean;
         getLeaf(newLeaf: boolean): { openFile(file: unknown): Promise<void> };
       };
-      vault: { getAbstractFileByPath(path: string): unknown };
-      metadataCache: { resolvedLinks: Record<string, Record<string, number> | undefined> };
+      vault: { getAbstractFileByPath(path: string): unknown; getMarkdownFiles(): unknown[] };
+      metadataCache: {
+        resolvedLinks: Record<string, Record<string, number> | undefined>;
+        getFileCache(file: unknown): unknown;
+      };
       commands: { executeCommandById(id: string): boolean };
       plugins: {
         plugins: Record<string, unknown>;

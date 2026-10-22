@@ -1,10 +1,16 @@
-import { MetadataCache, TFile, Vault } from 'obsidian';
+import { CachedMetadata, MetadataCache, TFile, Vault } from 'obsidian';
 import { NoteReference } from './NoteReference';
 import { CanvasReferenceScanner } from './CanvasReferenceScanner';
 
+/** Every reference to a note — or none at all when the index can't be trusted yet. */
+export type ReferenceCensus =
+  | { readonly kind: 'complete'; readonly references: readonly NoteReference[] }
+  /** Some markdown file has no metadataCache entry yet (e.g. right after startup): its links are unknown. */
+  | { readonly kind: 'index-incomplete' };
+
 /** Finds every reference to a note across the whole vault. */
 export interface NoteReferenceCollector {
-  collectReferencesTo(target: TFile): Promise<NoteReference[]>;
+  collectReferencesTo(target: TFile): Promise<ReferenceCensus>;
 }
 
 /** The slices of Obsidian's Vault / MetadataCache the collector reads. */
@@ -22,6 +28,8 @@ const CANVAS_EXTENSION = 'canvas';
  * lookups + one cachedRead per canvas). Raw `.excalidraw` JSON drawings are
  * not scanned (no known link format) — accepted ceiling.
  * Self-links are NOT filtered here (InlineEligibility owns that rule).
+ * A markdown file without a cache entry makes the census incomplete — a
+ * link missed there would break once the note is trashed, so we never guess.
  */
 export class NoteReferenceCollectorDefault implements NoteReferenceCollector {
   constructor(
@@ -30,10 +38,14 @@ export class NoteReferenceCollectorDefault implements NoteReferenceCollector {
   ) {
   }
 
-  async collectReferencesTo(target: TFile): Promise<NoteReference[]> {
+  async collectReferencesTo(target: TFile): Promise<ReferenceCensus> {
     const references: NoteReference[] = [];
     for (const sourceFile of this.vault.getMarkdownFiles()) {
-      references.push(...this.markdownReferences(sourceFile, target));
+      const cache = this.metadataCache.getFileCache(sourceFile);
+      if (cache === null) {
+        return { kind: 'index-incomplete' };
+      }
+      references.push(...this.markdownReferences(sourceFile, cache, target));
     }
     for (const canvasFile of this.vault.getFiles().filter(file => file.extension === CANVAS_EXTENSION)) {
       const canvasJson = await this.vault.cachedRead(canvasFile);
@@ -44,16 +56,12 @@ export class NoteReferenceCollectorDefault implements NoteReferenceCollector {
         (linkpath, sourcePath) => this.metadataCache.getFirstLinkpathDest(linkpath, sourcePath)?.path ?? null,
       ));
     }
-    return references;
+    return { kind: 'complete', references };
   }
 
   // ── private ─────────────────────────────────────────────────────────────
 
-  private markdownReferences(sourceFile: TFile, target: TFile): NoteReference[] {
-    const cache = this.metadataCache.getFileCache(sourceFile);
-    if (cache === null) {
-      return [];
-    }
+  private markdownReferences(sourceFile: TFile, cache: CachedMetadata, target: TFile): NoteReference[] {
     const references: NoteReference[] = [];
     const bodyLinks = [
       ...(cache.links ?? []).map(link => ({ link, isEmbed: false })),
