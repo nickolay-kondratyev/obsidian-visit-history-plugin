@@ -1,6 +1,6 @@
 ---
 closed_iso: 2026-10-22T19:42:17Z
-session_ids: [{"a": "claude", "type": "execution", "id": "cfa2f73d-9e68-4aaf-ab4b-a3221eca3c2b"}]
+session_ids: [{"a": "claude", "type": "execution", "id": "cfa2f73d-9e68-4aaf-ab4b-a3221eca3c2b"}, {"a": "claude", "type": "review", "id": "932e447c-97cd-46ba-b970-8f28c4e39643"}]
 working_dir: nickolay-kondratyev_obsidian-visit-history-plugin
 id: nid_8uor1go1v8imlhz953kbhiip4_e
 title: "Add visualization where size is based on total sum of visitation time."
