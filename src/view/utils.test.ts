@@ -4,7 +4,9 @@ import {
   fmtAgo,
   fmtBytes,
   fmtDate,
+  fmtDuration,
   fmtFileCount,
+  fmtTileSize,
   heatColor,
   leafFieldAgo,
 } from './utils';
@@ -101,6 +103,58 @@ describe('view utils', () => {
 
     it('should keep counting in days beyond a year', () => {
       expect(fmtAgo(NOW_MS - 400 * MS_PER_DAY, NOW_MS)).toBe('400d ago');
+    });
+  });
+
+  describe('fmtDuration', () => {
+    it('should return null for no time at all', () => {
+      expect(fmtDuration(0)).toBeNull();
+    });
+
+    it('should show <1s under a second', () => {
+      expect(fmtDuration(400)).toBe('<1s');
+    });
+
+    it('should floor seconds under a minute', () => {
+      expect(fmtDuration(45_900)).toBe('45s');
+    });
+
+    it('should floor minutes under an hour', () => {
+      expect(fmtDuration(12 * MS_PER_MINUTE + 59_000)).toBe('12m');
+    });
+
+    it('should show hours with zero-padded minutes', () => {
+      expect(fmtDuration(3 * MS_PER_HOUR + 5 * MS_PER_MINUTE)).toBe('3h 05m');
+    });
+
+    it('should keep counting in hours beyond a day', () => {
+      expect(fmtDuration(30 * MS_PER_HOUR)).toBe('30h 00m');
+    });
+  });
+
+  describe('fmtTileSize', () => {
+    const note: VaultNode = {
+      name: 'a.md', path: 'a.md', type: 'md', size: 2048, totalFocusMs: 3 * MS_PER_HOUR + 5 * MS_PER_MINUTE,
+    };
+
+    it('should show plain bytes and scale under the linear content curve', () => {
+      expect(fmtTileSize(note, { sizeBy: 'contentSize', curve: 'linear', scales: { md: 1 } }))
+        .toBe('2.0 KB ×1.00');
+    });
+
+    it('should wrap the bytes in sqrt under the sqrt content curve', () => {
+      expect(fmtTileSize(note, { sizeBy: 'contentSize', curve: 'sqrt', scales: { md: 0.3 } }))
+        .toBe('sqrt(2.0 KB) ×0.30');
+    });
+
+    it('should wrap the focus time in log under the log visit-time curve', () => {
+      expect(fmtTileSize(note, { sizeBy: 'visitTime', curve: 'log', scales: {} }))
+        .toBe('log(3h 05m) ×1.00');
+    });
+
+    it('should show 0s for an unvisited note in visit-time mode', () => {
+      expect(fmtTileSize({ ...note, totalFocusMs: 0 }, { sizeBy: 'visitTime', curve: 'linear', scales: {} }))
+        .toBe('0s ×1.00');
     });
   });
 

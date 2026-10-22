@@ -19,7 +19,7 @@ export class FakeVaultUtil implements VaultUtil {
   async getTrackedFiles(): Promise<TrackedFile[]> {
     return this.files.map(file => ({
       file,
-      timeMetadata: { createdMs: 0, modifiedMs: 0, visitedMs: null },
+      timeMetadata: { createdMs: 0, modifiedMs: 0, visitedMs: null, totalFocusMs: 0 },
     }));
   }
 }

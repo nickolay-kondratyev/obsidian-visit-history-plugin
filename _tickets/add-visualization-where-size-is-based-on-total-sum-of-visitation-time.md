@@ -1,12 +1,14 @@
 ---
+closed_iso: 2026-10-22T19:42:17Z
+session_ids: [{"a": "claude", "type": "execution", "id": "cfa2f73d-9e68-4aaf-ab4b-a3221eca3c2b"}, {"a": "claude", "type": "review", "id": "932e447c-97cd-46ba-b970-8f28c4e39643"}]
 working_dir: nickolay-kondratyev_obsidian-visit-history-plugin
 id: nid_8uor1go1v8imlhz953kbhiip4_e
 title: "Add visualization where size is based on total sum of visitation time."
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-10-22T18:57:10Z
-status_updated_iso: 2026-10-22T19:29:19Z
+status_updated_iso: 2026-10-22T19:42:17Z
 type: task
 priority: 3
 assignee: nickolaykondratyev
@@ -49,3 +51,28 @@ Status: CLEAR TO PROCEED — no blocking human decisions.
   - Raw `.excalidraw` files never get a doc id, so they never have visit time. They're always hidden in visit-time mode and counted in the banner.
   - Visit-time sizes refresh when the view refreshes, not live per session close. The "last visited" field has the same lag.
 - **Docs**: update `docs/` (heatmap view) and the CLAUDE.md heatmap bullet in the same change.
+
+## Resolution (2026-10-22)
+
+Built as specified above. Commits `6b6bad9` (plumbing), `c861b4c` (config + sizing + view), `28e8d1d` (docs), `227cf2a` (review fixes).
+
+- **Plumbing**: `VisitStats.totalFocusMs` → `FileTimeMetadata.totalFocusMs` (`VaultUtil.getTrackedFiles`) → `VaultNode.totalFocusMs` (`buildVaultTree`).
+- **Config** (`src/viewModel/heatmapConfig.ts`): top-level `scales` REPLACED by `sizeBy: 'contentSize' | 'visitTime'` + `sizing: Record<SizeBy, { curve, scales }>`, so each mode's curve and scales are saved separately. Upgrade: when `sizing.contentSize.scales` is missing, the sanitizer reads the legacy top-level `scales` (marked for cleanup after 2027-April). A missing curve becomes `sqrt` (the behavior change noted above).
+- **Sizing** (new `src/viewModel/tileSize.ts`, pure, obsidian-free): `tileValue` = `curve(raw) × typeScale`, not rounded. Raw = bytes with a 1-byte floor applied BEFORE the curve, or focus seconds. `hideUnvisitedFiles` (visit-time mode only) removes leaves whose focus time is not > 0 (NaN and negative count as unvisited) and drops folders left empty. It runs in `TreemapViz` after `_archive` pruning and filters, and returns the hidden count.
+- **View**:
+  - `ConfigPanel` has one "Size" section: size-by toggle, curve toggle, and only the active mode's sliders.
+  - `Header` shows the banner `N notes hidden · no visit history` (full sentence on hover; visit-time mode only, `.hdr-hidden-banner` in `styles.css`).
+  - `TreemapViz` shows a "no visit history" empty state with a "size by content" button. It takes priority over the filter empty state, and the two never show together.
+  - `Tooltip` has a new "visited for" row (`fmtDuration` in `view/utils.ts`). The old "effective" row is renamed "tile size" and shows the real computation, e.g. `sqrt(2.0 KB) ×0.30`. The old `bytes × scale` text was wrong under sqrt/log.
+- **Collapsed folders**: no extra code. A d3 test in `tileSize.test.ts` checks that a folder's value equals the sum of its files' curved values.
+- **Docs**: `docs/heatmap-view.md` ("Tile sizing" section), `docs/architecture.md`, CLAUDE.md/AGENTS.md.
+- **Checks**: 595/595 unit tests pass, lint has 0 errors (1 pre-existing `setWarning` warning), build passes. e2e was not run and the UI was not checked in a real Obsidian.
+- **Gaps**:
+  - No React component tests (the repo has none). The "write only the active mode" merge in `ConfigPanel` is covered only by type checks.
+  - The accepted gaps above still apply: raw `.excalidraw` files are always hidden in visit-time mode, and visit times refresh only on view refresh.
+
+## Notes
+
+**2026-10-22T19:44:00Z**
+
+__READY_AS_IS__: review round 1 found no bugs (sizing/sanitizer upgrade/hiding/banner/empty-state logic verified); 595/595 tests, lint 0 errors, build pass — no changes made

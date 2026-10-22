@@ -15,8 +15,20 @@ import type { IFileOpener } from '../../viewModel/FileOpener';
 import { pruneArchiveFolders } from '../../viewModel/pruneArchiveFolders';
 import { filterVaultTree, isFilterActive, type HeatmapTreeFilter } from '../../viewModel/filterVaultTree';
 import { partitionTreemapNodes, type TreemapPartition } from '../../viewModel/partitionTreemapNodes';
+import { hideUnvisitedFiles, tileValue, type TileSizing } from '../../viewModel/tileSize';
 
 // ── Props ───────────────────────────────────────────────────────────────────
+
+/** Stats of the CURRENT view (after drill-down, _archive pruning, filters, sizing). */
+export interface TreemapStats {
+  /** Visible files (incl. those inside collapsed folders). */
+  files: number;
+  folders: number;
+  /** Formatted raw byte total of the visible files. */
+  size: string;
+  /** Files left out because they have no visit time (visit-time sizing only; else 0). */
+  hiddenNoVisitCount: number;
+}
 
 interface TreemapVizProps {
   /** Full vault tree — always available, used as fallback when currentRoot is null. */
@@ -38,8 +50,9 @@ interface TreemapVizProps {
   field: HeatField;
   hotDays: number;
   coldDays: number;
-  scales: Record<string, number>;
-  onStatsChange: (stats: { files: number; folders: number; size: string }) => void;
+  /** Active tile sizing (mode, curve, plain per-type factors). */
+  sizing: TileSizing;
+  onStatsChange: (stats: TreemapStats) => void;
   /**
    * Called when the user clicks a folder to drill into its subtree.
    * Receives the folder's path segments RELATIVE to the rendered root
@@ -54,6 +67,8 @@ interface TreemapVizProps {
   registerResetZoom: (reset: () => void) => void;
   /** Clears ALL filter terms — the empty state's escape hatch. */
   onClearFilters: () => void;
+  /** Switches sizing to content size — the all-unvisited empty state's escape hatch. */
+  onSizeByContent: () => void;
 }
 
 // ── Zoom limits ─────────────────────────────────────────────────────────────
@@ -122,12 +137,13 @@ export function TreemapViz({
   field,
   hotDays,
   coldDays,
-  scales,
+  sizing,
   onStatsChange,
   onFolderClick,
   fileOpener,
   registerResetZoom,
   onClearFilters,
+  onSizeByContent,
 }: TreemapVizProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
@@ -187,19 +203,23 @@ export function TreemapViz({
   // _archive folders below the view root are hidden; scoping the view INTO
   // an archive (file-explorer context menu) is the way to see its contents —
   // and within one, nothing is pruned (showArchived).
-  const treeRoot = useMemo(() => {
+  const { sizeBy } = sizing;
+  const { tree: treeRoot, hiddenCount: hiddenNoVisitCount } = useMemo(() => {
     const root = currentRoot ?? data;
-    // Filter composes AFTER archive pruning — both are pure tree copies; the
-    // stats/legend automatically reflect the result (they derive from layout).
-    return filterVaultTree(showArchived ? root : pruneArchiveFolders(root), filter);
-  }, [data, currentRoot, showArchived, filter]);
+    // Filter composes AFTER archive pruning, hiding of zero-size (unvisited)
+    // files AFTER the filter — all pure tree copies; the stats/legend
+    // automatically reflect the result (they derive from layout), and the
+    // hidden count covers exactly the files the user would otherwise see.
+    const filtered = filterVaultTree(showArchived ? root : pruneArchiveFolders(root), filter);
+    return hideUnvisitedFiles(filtered, sizeBy);
+  }, [data, currentRoot, showArchived, filter, sizeBy]);
 
   const layout = useMemo((): TreemapLayout | null => {
     const { w, h } = dims;
     if (!w || !h) return null;
 
     const root = hierarchy(treeRoot)
-      .sum(d => (d.children ? 0 : Math.max(1, Math.round((d.size ?? 0) * (scales[d.type ?? ''] ?? 1)))))
+      .sum(d => (d.children ? 0 : tileValue(d, sizing)))
       .sort((a, b) => b.value! - a.value!);
 
     const laidOut = treemap<VaultNode>()
@@ -215,7 +235,7 @@ export function TreemapViz({
       .round(true)(root);
 
     return { root: laidOut, totals: computeTotals(laidOut) };
-  }, [treeRoot, scales, dims]);
+  }, [treeRoot, sizing, dims]);
 
   const totals = layout?.totals ?? EMPTY_TOTALS;
 
@@ -235,8 +255,14 @@ export function TreemapViz({
       files: totals.files,
       folders: totals.folders,
       size: fmtBytes(totals.bytes),
+      hiddenNoVisitCount,
     });
-  }, [totals, onStatsChange]);
+  }, [totals, hiddenNoVisitCount, onStatsChange]);
+
+  // Mutually exclusive empty states: "nothing visited" wins — clearing filters
+  // would not help when the remaining files simply have no visit time.
+  const allHiddenByVisitTime = totals.files === 0 && hiddenNoVisitCount > 0;
+  const noFilterMatch = !allHiddenByVisitTime && isFilterActive(filter) && totals.files === 0;
 
   // ── Hover / tooltip handlers ──────────────────────────────────────────
   //
@@ -377,9 +403,22 @@ export function TreemapViz({
         }}
       </Zoom>
       {tooltip && (
-        <Tooltip x={tooltip.x} y={tooltip.y} node={tooltip.node} scales={scales} />
+        <Tooltip x={tooltip.x} y={tooltip.y} node={tooltip.node} sizing={sizing} />
       )}
-      {isFilterActive(filter) && totals.files === 0 && (
+      {allHiddenByVisitTime && (
+        <div className="viz-empty">
+          <div className="viz-empty-msg">None of these notes have visit history yet</div>
+          <button
+            type="button"
+            className="header-btn"
+            onClick={onSizeByContent}
+            title="Size tiles by file content size instead of visit time"
+          >
+            size by content
+          </button>
+        </div>
+      )}
+      {noFilterMatch && (
         <div className="viz-empty">
           <div className="viz-empty-msg">No files match the current filters</div>
           <button

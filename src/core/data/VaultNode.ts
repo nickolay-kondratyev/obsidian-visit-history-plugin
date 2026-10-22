@@ -12,7 +12,8 @@
  * Relationship to FileTimeMetadata:
  * - `FileTimeMetadata` (src/core/data/FileTimeMetadata.ts) is the flat per-file
  *   tracking record with `visitedMs`.
- * - `buildVaultTree` maps `FileTimeMetadata.visitedMs` → `VaultNode.lastVisitedAt`.
+ * - `buildVaultTree` maps `FileTimeMetadata.visitedMs` → `VaultNode.lastVisitedAt`
+ *   and `FileTimeMetadata.totalFocusMs` → `VaultNode.totalFocusMs`.
  * - They remain separate types — different purposes, different consumers.
  */
 export interface VaultNode {
@@ -48,4 +49,11 @@ export interface VaultNode {
    * `undefined` on folder nodes.
    */
   lastVisitedAt?: number | null;
+
+  /**
+   * Sum of all closed focus session durations (ms), across all users and
+   * devices. 0 = never visited. `undefined` on folder nodes.
+   * Drives tile size in the heatmap's "visit time" sizing mode.
+   */
+  totalFocusMs?: number;
 }

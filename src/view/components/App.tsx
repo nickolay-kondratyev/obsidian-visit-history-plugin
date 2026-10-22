@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { Header, type HeaderPanel } from './Header';
 import { ConfigPanel } from './ConfigPanel';
-import { TreemapViz } from './TreemapViz';
+import { TreemapViz, type TreemapStats } from './TreemapViz';
 import { FilterPopover } from './header/FilterPopover';
 import { FieldPopover } from './header/FieldPopover';
 import { InfoPopover } from './header/InfoPopover';
@@ -14,6 +14,7 @@ import { FILTER_TERM_KEY_SEP, FilterTermOps } from '../../viewModel/FilterTermOp
 import type { HeatmapTreeFilter } from '../../viewModel/filterVaultTree';
 import { findFolderTrail } from '../../viewModel/folderTrail';
 import { isWithinArchive } from '../../viewModel/pruneArchiveFolders';
+import type { TileSizing } from '../../viewModel/tileSize';
 
 interface AppProps {
   data: VaultNode;
@@ -67,7 +68,9 @@ export function App({
   const [config, setConfig] = useState<HeatmapConfig>(() => configStore.load());
   /** The single open header panel — at most one popover/panel at a time. */
   const [openPanel, setOpenPanel] = useState<HeaderPanel | null>(null);
-  const [stats, setStats] = useState({ files: 0, folders: 0, size: '—' });
+  const [stats, setStats] = useState<TreemapStats>(
+    { files: 0, folders: 0, size: '—', hiddenNoVisitCount: 0 },
+  );
 
   /** Applies a config change AND writes it through to the persistent store. */
   function updateConfig(partial: Partial<HeatmapConfig>): void {
@@ -171,12 +174,23 @@ export function App({
     updateConfig({ filterTerms: [] });
   }
 
-  // TreemapViz consumes plain per-type factors — strip the slider bounds.
-  const scaleFactors = useMemo(
-    () =>
-      Object.fromEntries(Object.entries(config.scales).map(([type, s]) => [type, s.value])),
-    [config.scales],
+  // TreemapViz consumes the ACTIVE mode's sizing with plain per-type factors
+  // — strip the slider bounds.
+  const activeSizing = config.sizing[config.sizeBy];
+  const tileSizing = useMemo<TileSizing>(
+    () => ({
+      sizeBy: config.sizeBy,
+      curve: activeSizing.curve,
+      scales: Object.fromEntries(
+        Object.entries(activeSizing.scales).map(([type, s]) => [type, s.value]),
+      ),
+    }),
+    [config.sizeBy, activeSizing],
   );
+
+  function sizeByContent(): void {
+    updateConfig({ sizeBy: 'contentSize' });
+  }
 
   // ── Folder drill-down state (path-based — see component doc) ────────────
 
@@ -244,6 +258,9 @@ export function App({
           breadcrumb={breadcrumb}
           onBack={breadcrumb.length > 0 ? handleBack : undefined}
           onResetZoom={handleResetZoom}
+          // Stats bubble up one effect late — gate on the LIVE mode so the
+          // banner never lingers for a frame after switching to content size.
+          hiddenNoVisitCount={config.sizeBy === 'visitTime' ? stats.hiddenNoVisitCount : 0}
         />
         {/* Popovers are SIBLINGS of the header (it clips overflow); at most one
             is open (openPanel), so the shared left/right anchors never collide. */}
@@ -278,12 +295,13 @@ export function App({
         field={config.field}
         hotDays={config.hotDays.value}
         coldDays={config.coldDays.value}
-        scales={scaleFactors}
+        sizing={tileSizing}
         onStatsChange={setStats}
         onFolderClick={handleFolderClick}
         fileOpener={fileOpener}
         registerResetZoom={registerResetZoom}
         onClearFilters={clearFilterTerms}
+        onSizeByContent={sizeByContent}
       />
     </>
   );

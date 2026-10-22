@@ -58,6 +58,7 @@ export function buildVaultTree(vaultName: string, trackedFiles: TrackedFile[]): 
       createdAt: timeMetadata.createdMs,
       lastModifiedAt: timeMetadata.modifiedMs,
       lastVisitedAt: timeMetadata.visitedMs,
+      totalFocusMs: timeMetadata.totalFocusMs,
     });
   }
 
