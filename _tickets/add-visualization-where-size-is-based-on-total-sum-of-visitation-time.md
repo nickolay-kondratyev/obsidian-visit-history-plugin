@@ -1,11 +1,12 @@
 ---
+working_dir: nickolay-kondratyev_obsidian-visit-history-plugin
 id: nid_8uor1go1v8imlhz953kbhiip4_e
 title: "Add visualization where size is based on total sum of visitation time."
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-10-22T18:57:10Z
-status_updated_iso: 2026-10-22T18:57:10Z
+status_updated_iso: 2026-10-22T19:29:19Z
 type: task
 priority: 3
 assignee: nickolaykondratyev
