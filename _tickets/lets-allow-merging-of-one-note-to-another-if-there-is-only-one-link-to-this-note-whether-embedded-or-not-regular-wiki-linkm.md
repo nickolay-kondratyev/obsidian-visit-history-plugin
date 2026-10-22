@@ -1,12 +1,12 @@
 ---
+closed_iso: 2026-10-22T21:12:18Z
 id: nid_jlkies6u31pmfft2gu3qwom96_e
 title: "Lets allow merging of one note to another if there is only one link to this note (whether embedded or not regular wiki link)"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-10-22T19:39:34Z
-status_updated_iso: 2026-10-22T20:39:13Z
-pwd: /home/nickolaykondratyev/git_repos/nickolay-kondratyev_obsidian-visit-history-plugin/.worktree/t-jlkies6u
+status_updated_iso: 2026-10-22T21:12:18Z
 type: task
 priority: 3
 assignee: nickolaykondratyev
