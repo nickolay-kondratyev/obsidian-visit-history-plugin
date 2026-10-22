@@ -1,4 +1,5 @@
 ---
+session_ids: [{"a": "claude", "type": "execution", "id": "cfa2f73d-9e68-4aaf-ab4b-a3221eca3c2b"}]
 working_dir: nickolay-kondratyev_obsidian-visit-history-plugin
 id: nid_8uor1go1v8imlhz953kbhiip4_e
 title: "Add visualization where size is based on total sum of visitation time."
