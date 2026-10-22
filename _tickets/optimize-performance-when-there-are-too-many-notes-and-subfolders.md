@@ -66,3 +66,7 @@ Not verified in a running Obsidian (no visual/manual check in this run).
 **2026-10-22T18:05:27Z**
 
 __REVIEW_AGAIN__: no code bugs found and test/lint/build pass, but the flat-folder perf gap (view-root direct files never collapse) is left open as ticket nid_j9j1mc5myj1zfjdgs8nmvjywn_e, and the collapse was never checked visually in Obsidian
+
+**2026-10-22T18:06:55Z**
+
+__READY_AS_IS__: re-reviewed partition/collapse/totals/click wiring — no bugs found; test 511/511, lint 0, build OK; flat-folder gap already tracked in nid_j9j1mc5myj1zfjdgs8nmvjywn_e
