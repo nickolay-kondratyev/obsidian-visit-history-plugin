@@ -318,6 +318,17 @@ describe('WindowActivityMonitor', () => {
       expect(rig.sink.records).toHaveLength(1);
     });
 
+    it('should NOT revive an idle-closed session on an unrelated body mutation', () => {
+      // WHEN the session idles out and a non-Settings body child mutation fires
+      // (e.g. a notice) while the window stays OS-focused
+      vi.advanceTimersByTime(IDLE_MS);
+      rig.mainObserver.trigger();
+      vi.advanceTimersByTime(DWELL_MS);
+      rig.tracker.dispose();
+      // THEN only the idle-closed session exists — no input, no new session
+      expect(rig.sink.records).toHaveLength(1);
+    });
+
     it('should start a NEW session for the still-focused doc when Settings closes', () => {
       // WHEN Settings opens, closes, and the doc dwells again before a blur
       rig.setSettingsOpen(true);
