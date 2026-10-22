@@ -1,11 +1,12 @@
 ---
 id: nid_1pt4xcr428953lt5qgxbmiij7_e
 title: "Inline icon on a note embed that is the note's only link in the vault"
-status: open
+status: in_progress
 deps: [nid_jlkies6u31pmfft2gu3qwom96_e]
 links: [nid_jlkies6u31pmfft2gu3qwom96_e]
 created_iso: 2026-10-22T20:11:58Z
-status_updated_iso: 2026-10-22T20:11:58Z
+status_updated_iso: 2026-10-22T21:14:41Z
+pwd: /home/nickolaykondratyev/git_repos/nickolay-kondratyev_obsidian-visit-history-plugin/.worktree/t-1pt4xcr4
 type: task
 priority: 3
 assignee: CC_WITH-nickolaykondratyev
