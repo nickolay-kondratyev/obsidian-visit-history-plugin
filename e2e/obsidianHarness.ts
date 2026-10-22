@@ -240,7 +240,22 @@ export class ObsidianHarness {
     );
   }
 
-  /** Open the Settings modal (does NOT change the active leaf — see S3). */
+  /**
+   * Dispatch a SYNTHETIC `blur` on the main window. WHY synthetic: headless Obsidian has
+   * no real OS focus switch — Electron's `BrowserWindow.blur()` neither fires the DOM
+   * `blur` nor flips `document.hasFocus()` there (verified on 1.12.7). This proves the
+   * plugin's blur wiring in real Obsidian, NOT that the OS delivers the signal.
+   */
+  async blurWindow(): Promise<void> {
+    await this.page.evaluate(() => window.dispatchEvent(new Event('blur')));
+  }
+
+  /** SYNTHETIC `focus` on the main window — counterpart of blurWindow (same caveat). */
+  async focusWindow(): Promise<void> {
+    await this.page.evaluate(() => window.dispatchEvent(new Event('focus')));
+  }
+
+  /** Open the Settings modal (does NOT change the active leaf; ends the session — see S3). */
   async openSettings(): Promise<void> {
     await this.page.evaluate(() => window.app.setting.open());
   }
