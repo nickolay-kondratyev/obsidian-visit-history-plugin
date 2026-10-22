@@ -1,11 +1,12 @@
 ---
+working_dir: nickolay-kondratyev_obsidian-visit-history-plugin
 id: nid_38nug4v7v30e1pe2r4bsrque2_e
 title: "Display timestamp of last visit in the bottom right corner when there is enough space"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-10-22T17:37:59Z
-status_updated_iso: 2026-10-22T17:37:59Z
+status_updated_iso: 2026-10-22T17:40:41Z
 type: task
 priority: 3
 assignee: nickolaykondratyev
