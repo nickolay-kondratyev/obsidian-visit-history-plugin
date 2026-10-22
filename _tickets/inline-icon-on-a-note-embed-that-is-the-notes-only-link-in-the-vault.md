@@ -9,7 +9,7 @@ status_updated_iso: 2026-10-22T20:11:58Z
 type: task
 priority: 3
 assignee: CC_WITH-nickolaykondratyev
-tags: []
+tags: [inline_note]
 ---
 
 ## Goal

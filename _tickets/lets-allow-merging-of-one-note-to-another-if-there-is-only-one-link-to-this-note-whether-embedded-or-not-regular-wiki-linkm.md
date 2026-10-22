@@ -9,7 +9,7 @@ status_updated_iso: 2026-10-22T19:39:34Z
 type: task
 priority: 3
 assignee: nickolaykondratyev
-tags: []
+tags: [inline_note]
 ---
 
 This refactoring option is ONLY available when there is only ONE link to the note.
