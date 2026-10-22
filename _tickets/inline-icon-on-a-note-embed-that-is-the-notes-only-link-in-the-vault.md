@@ -17,6 +17,7 @@ Make the "Inline note (visit history aware)" action (ticket `nid_jlkies6u31pmfft
 
 ## Done criteria
 - In BOTH reading view and live preview, a whole-note embed `![[note2]]` of a plain `.md` note shows an inline icon (lucide-style, matching Obsidian's embed chrome; tooltip in sentence case, e.g. "Inline note into this note") when note2's link count is exactly 1.
+- **Placement** (owner decision): right beside Obsidian's built-in "open link" icon in the embed's top-right corner, and shown ON HOVER the same way — it must look like part of the native embed chrome. Independent of the foldable-embedded-notes plugin being installed. (The native icon's class is believed to be `.markdown-embed-link` — UNVERIFIED; confirm in DevTools on the pinned e2e Obsidian before relying on it.)
 - No icon when: note2 has 0 or 2+ links; the embed is partial (`![[note2#Heading]]`, `![[note2#^block]]`); the embed is not a plain `.md` note (image, PDF, canvas, Excalidraw…); the embed is nested inside another embed.
 - Clicking the icon runs the SAME action/service as the note2 context-menu entry — every refusal and the confirm dialog behave identically (no parallel implementation).
 - The icon updates without reload when links change (e.g. adding a second link to note2 elsewhere hides it on next render).
