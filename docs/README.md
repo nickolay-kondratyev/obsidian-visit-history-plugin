@@ -3,7 +3,7 @@
 Obsidian plugin that records when you visit notes, canvases, and Excalidraw
 drawings, and visualizes vault activity as a treemap heatmap.
 
-**Two features, one data flow:**
+**Three features, one data flow:**
 
 1. **Recording** — each completed focus session (start timestamp + duration)
    is appended to a per-user, per-document, per-device V3 log under
@@ -16,7 +16,11 @@ drawings, and visualizes vault activity as a treemap heatmap.
    interim `__visit_history/`, its live files then moved under
    `.plugin_data/visit_history/`, and pre-user-scoped `v2|v3` dirs auto-moved
    under the user.
-2. **Visualization** — the "Open vault heatmap" command renders the vault as a
+2. **Inline note (visit history aware)** — file menu / command on a note
+   linked from exactly ONE place: moves its content into the linking note,
+   its visit history under that note (`merged_in_focus_duration_per_device/`),
+   and the note itself to the trash.
+3. **Visualization** — the "Open vault heatmap" command renders the vault as a
    zoomable treemap, colored by created/modified/visited recency ("visited" =
    latest V3 session start across ALL users' devices).
 

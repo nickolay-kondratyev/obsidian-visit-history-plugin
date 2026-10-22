@@ -54,6 +54,10 @@ export class NoteFileUtilDefault implements NoteFileUtil {
     await this.app.vault.process(file, transform);
   }
 
+  async trashFile(file: TFile): Promise<void> {
+    await this.app.fileManager.trashFile(file);
+  }
+
   // ---------------------------------------------------------------------------
   // Private helpers
   // ---------------------------------------------------------------------------

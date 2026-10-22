@@ -4,7 +4,8 @@ The `e2e/` suite drives a **real headless Obsidian (Electron)** and asserts on t
 on-disk `.vh_v3` files the plugin actually writes — never on plugin internals. It proves
 Visit-History V3 recording across several scenarios: focus switch, unload flush, opening
 Settings, canvas focus, idle timeout, a sub-floor idle timeout via a dev overrides file,
-and the interim-top-dir → `.plugin_data/visit_history` migration (`pluginDataMoveMigration.e2e.ts`).
+the interim-top-dir → `.plugin_data/visit_history` migration (`pluginDataMoveMigration.e2e.ts`),
+and the inline-note key journey (`inlineNote.e2e.ts`: content moved, note2 trashed, history merged in).
 
 ## Run it
 

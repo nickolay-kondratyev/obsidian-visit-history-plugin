@@ -29,6 +29,12 @@ import { ModalUserNamePrompt } from '../service/visitHistoryService/user/impl/Mo
 import { ConfigProvider, ConfigProviderDefault } from '../config/ConfigProvider';
 import { DevConfigOverridesReader } from '../config/DevConfigOverridesReader';
 import { DevOverridesFileSourceDefault } from '../config/DevOverridesFileSource';
+import { FocusSessionReleaser } from '../focusDuration/FocusSessionReleaser';
+import { VhV3HistoryMerger } from '../service/visitHistoryService/v3/VhV3HistoryMerger';
+import { InlineNoteAction } from '../service/inlineNote/InlineNoteAction';
+import { InlineNotePlanner } from '../service/inlineNote/InlineNotePlanner';
+import { NoteReferenceCollectorDefault } from '../service/inlineNote/NoteReferenceCollector';
+import { ModalInlineNoteDialogs } from '../service/inlineNote/impl/ModalInlineNoteDialogs';
 
 // ── PluginFactory ─────────────────────────────────────────────────────────────
 // Constructs and wires all plugin dependencies.
@@ -55,6 +61,8 @@ export class PluginFactory {
   readonly contentTermMatcher: ContentTermMatcher;
   /** Effective runtime config (settings + inert-in-prod dev overrides). */
   readonly configProvider: ConfigProvider;
+  /** "Inline note (visit history aware)" — file menu + command entry point. */
+  readonly inlineNoteAction: InlineNoteAction;
 
   // Held for activateUserScopedRecording (post-pin wiring).
   private readonly plugin: VisitHistoryPlugin;
@@ -66,6 +74,8 @@ export class PluginFactory {
   private readonly vhV3DurationStore: VhV3DurationStore;
   /** V3 duration state machine; undefined until a user name is pinned. */
   private focusDurationTracker?: FocusDurationTracker;
+  /** Held so inline note can flush a released session; undefined until pinned. */
+  private vhV3DurationRecorder?: VhV3DurationRecorder;
   /**
    * Held for explicit ownership only. The monitor self-registers ALL its DOM
    * listeners via plugin.registerDomEvent / workspace events in its ctor (kept
@@ -120,6 +130,24 @@ export class PluginFactory {
     this.vaultUtil = new VaultUtilDefault(app, visitStatsProvider, this.isTrackedProvider);
     this.docIdBackfillService = new DocIdBackfillServiceDefault(this.vaultUtil, this.docIdService);
     this.contentTermMatcher = new ContentTermMatcherDefault(this.vaultUtil, noteFileUtil);
+
+    // Name-independent: moves ALL users' local history files; the session
+    // release reads the recording fields lazily (no-op before the pin).
+    const focusSessionReleaser: FocusSessionReleaser = {
+      releaseAndFlush: async (docId) => {
+        this.focusDurationTracker?.releaseDoc(docId);
+        await this.vhV3DurationRecorder?.flush();
+      },
+    };
+    this.inlineNoteAction = new InlineNoteAction(
+      new InlineNotePlanner(new NoteReferenceCollectorDefault(app.vault, app.metadataCache), noteFileUtil),
+      noteFileUtil,
+      this.docIdService,
+      new VhV3HistoryMerger(this.hiddenFileUtil, this.visitStatsCache),
+      focusSessionReleaser,
+      new ModalInlineNoteDialogs(app),
+      this.userNotifier,
+    );
   }
 
   /**
@@ -140,12 +168,15 @@ export class PluginFactory {
     const mainWindow = this.plugin.app.workspace.rootSplit.win;
     const mainDocument = this.plugin.app.workspace.rootSplit.doc;
 
+    this.vhV3DurationRecorder = new VhV3DurationRecorder(
+      this.vhV3DurationStore, this.visitStatsCache, this.deviceNameProvider, userName,
+    );
     this.focusDurationTracker = new FocusDurationTracker(
       // Min-focus gate: sessions shorter than the configured minimum are dropped
       // BEFORE the recorder, so a quick in-and-out visit leaves no trace at all.
       // Threshold read live per record (settings change applies without reload).
       new MinDurationFilteringSink(
-        new VhV3DurationRecorder(this.vhV3DurationStore, this.visitStatsCache, this.deviceNameProvider, userName),
+        this.vhV3DurationRecorder,
         () => this.configProvider.getMinFocusMsToRecord(),
       ),
       // Effective idle timeout via the config seam: a dev override wins (e2e),

@@ -12,6 +12,8 @@ export class FakeNoteFileUtil implements NoteFileUtil {
   processCallCount = 0;
   /** Number of cachedRead() calls — lets tests assert the no-read fast path. */
   cachedReadCallCount = 0;
+  /** Paths passed to trashFile(), in call order. */
+  readonly trashedPaths: string[] = [];
 
   /** Seeds a note directly, bypassing createNote's duplicate check. */
   seedNote(path: string, content: string): TFile {
@@ -67,5 +69,12 @@ export class FakeNoteFileUtil implements NoteFileUtil {
       throw new Error(`File not found: ${file.path}`);
     }
     this.contentByPath.set(file.path, transform(content));
+  }
+
+  async trashFile(file: TFile): Promise<void> {
+    if (!this.contentByPath.delete(file.path)) {
+      throw new Error(`File not found: ${file.path}`);
+    }
+    this.trashedPaths.push(file.path);
   }
 }

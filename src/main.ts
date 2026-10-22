@@ -1,4 +1,4 @@
-import { Plugin, TFolder, WorkspaceLeaf } from 'obsidian';
+import { Plugin, TFile, TFolder, WorkspaceLeaf } from 'obsidian';
 import { SettingsSanitizer, VisitHistoryPluginSettings } from './settings';
 import { PluginFactory } from './core/init/PluginFactory';
 import { HiddenFileUtil } from './core/util/file/hidden/HiddenFileUtil';
@@ -11,6 +11,7 @@ import { UserNotifierDefault } from './core/util/userComm/impl/UserNotifierDefau
 import { CSS_CLASS_HEATMAP_ACTIVE, VaultTreemapView, VIEW_TYPE_TREEMAP } from './view/VaultTreemapView';
 import { VaultRootHeatmapFinder } from './view/VaultRootHeatmapFinder';
 import { VisitHistorySettingTab } from './settingsTab/VisitHistorySettingTab';
+import { INLINE_NOTE_ACTION_NAME } from './core/service/inlineNote/impl/ModalInlineNoteDialogs';
 
 // ── VisitHistoryPlugin ────────────────────────────────────────────────────────
 export default class VisitHistoryPlugin extends Plugin {
@@ -57,6 +58,7 @@ export default class VisitHistoryPlugin extends Plugin {
     this.userNotifier = factory.userNotifier;
 
     this.initVaultTreeMapView(factory);
+    this.initInlineNote(factory);
 
     this.addSettingTab(new VisitHistorySettingTab(
       this.app,
@@ -172,6 +174,39 @@ export default class VisitHistoryPlugin extends Plugin {
             .setTitle('Open heatmap for folder')
             .setIcon('layout-grid')
             .onClick(() => openHeatmap(file.path)),
+        );
+      }),
+    );
+  }
+
+  /**
+   * "Inline note (visit history aware)", started FROM the note to inline
+   * (note2): file context menu (explorer / tab menu) + a command for the
+   * active note. Offered for every `.md` file; the action itself refuses
+   * (with reasons) whatever it can't inline.
+   */
+  private initInlineNote(pluginFactory: PluginFactory) {
+    const isMarkdownFile = (file: unknown): file is TFile => file instanceof TFile && file.extension === 'md';
+
+    this.addCommand({
+      id: 'inline-note',
+      name: INLINE_NOTE_ACTION_NAME,
+      checkCallback: (checking) => {
+        const activeFile = this.app.workspace.getActiveFile();
+        if (!isMarkdownFile(activeFile)) return false;
+        if (!checking) void pluginFactory.inlineNoteAction.run(activeFile);
+        return true;
+      },
+    });
+
+    this.registerEvent(
+      this.app.workspace.on('file-menu', (menu, file) => {
+        if (!isMarkdownFile(file)) return;
+        menu.addItem(item =>
+          item
+            .setTitle(INLINE_NOTE_ACTION_NAME)
+            .setIcon('merge')
+            .onClick(() => void pluginFactory.inlineNoteAction.run(file)),
         );
       }),
     );

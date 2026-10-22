@@ -16,5 +16,11 @@ describe('VhV3ReadmeWriter', () => {
       // THEN the README documents the V3 duration format
       expect(hidden.getContent(VhV3Paths.readmePath(USER))).toContain('D:<millis spent in focus>');
     });
+
+    it('should document the merged-in (inlined note) history dir', async () => {
+      const hidden = new FakeHiddenFileUtil();
+      await new VhV3ReadmeWriter(hidden, USER).writeReadme();
+      expect(hidden.getContent(VhV3Paths.readmePath(USER))).toContain('merged_in_focus_duration_per_device/');
+    });
   });
 });

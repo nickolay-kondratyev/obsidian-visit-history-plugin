@@ -202,6 +202,21 @@ export class ObsidianHarness {
     }, path);
   }
 
+  /** Runs a command by its full id (`<plugin-id>:<command-id>`); throws when it did not run. */
+  async runCommand(commandId: string): Promise<void> {
+    const ran = await this.page.evaluate((id) => window.app.commands.executeCommandById(id), commandId);
+    if (!ran) throw new Error(`command did not run commandId=[${commandId}]`);
+  }
+
+  /** Waits until Obsidian's link index has resolved `fromPath` → `toPath` (bounded). */
+  async waitForResolvedLink(fromPath: string, toPath: string): Promise<void> {
+    await this.page.waitForFunction(
+      ([from, to]) => (window.app.metadataCache.resolvedLinks[from]?.[to] ?? 0) > 0,
+      [fromPath, toPath] as const,
+      { timeout: 30_000 },
+    );
+  }
+
   /** Open the Settings modal (does NOT change the active leaf — see S3). */
   async openSettings(): Promise<void> {
     await this.page.evaluate(() => window.app.setting.open());
@@ -321,6 +336,8 @@ declare global {
         getLeaf(newLeaf: boolean): { openFile(file: unknown): Promise<void> };
       };
       vault: { getAbstractFileByPath(path: string): unknown };
+      metadataCache: { resolvedLinks: Record<string, Record<string, number> | undefined> };
+      commands: { executeCommandById(id: string): boolean };
       plugins: {
         plugins: Record<string, unknown>;
         setEnable(enabled: boolean): Promise<void>;
