@@ -1,13 +1,14 @@
 ---
+closed_iso: 2026-10-22T18:20:26Z
 session_ids: [{"a": "claude", "type": "execution", "id": "fbc687da-49f0-4295-acbf-8e0742a46f49"}]
 working_dir: nickolay-kondratyev_obsidian-visit-history-plugin
 id: nid_1ld735zqcn0a6kyyqymijaabi_e
 title: "timestamp that is shown at the bottom should be based on the current setting"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-10-22T18:03:02Z
-status_updated_iso: 2026-10-22T18:19:11Z
+status_updated_iso: 2026-10-22T18:20:26Z
 type: task
 priority: 3
 assignee: nickolaykondratyev
