@@ -2,7 +2,7 @@
 // beforeEach and close it in afterEach. Keeps the per-spec boilerplate (let h + hooks +
 // the HIGH_IDLE constant) DRY so the launch/close contract has a single source of truth.
 import { test } from '@playwright/test';
-import { DevConfigOverrides, ObsidianHarness } from './obsidianHarness';
+import { type DevConfigOverrides, ObsidianHarness } from './obsidianHarness';
 
 /** Idle timeout high enough that the idle timer never fires during a brief dwell. */
 export const HIGH_IDLE_SECONDS = 180;

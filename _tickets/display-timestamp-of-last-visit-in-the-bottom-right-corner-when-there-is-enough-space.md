@@ -51,3 +51,7 @@ Not done: no visual/e2e check in a real Obsidian window. The heatmap has no scre
 **2026-10-22T17:43:57Z**
 
 __READY_AS_IS__: review found no bugs (fmtAgo boundaries, cornerLabelFits geometry, CSS specificity, title/label overlap all check out); npm test 485 pass, build ok, lint 0 errors
+
+**2026-10-22T17:50:00Z**
+
+Test gate fix (unrelated to this ticket's code): `npm run test:e2e` failed with "No tests found". Cause: Node 26 loads the e2e specs with its built-in type stripping, and Playwright 1.49.1 does not transform them first. Native stripping rejects constructor parameter properties (`e2e/obsidianHarness.ts`) and needs `import type` for type-only imports. Fixed both, and added `erasableSyntaxOnly` + `verbatimModuleSyntax` to `e2e/tsconfig.json` so `tsc` catches this from now on. Gate passes: unit 485/485, e2e 9/9.
