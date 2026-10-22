@@ -6,6 +6,7 @@
 //   - note2 moved to the trash (vault set to the local `.trash/` for determinism),
 //   - note2's history MOVED (not copied) under note1's merged-in dir — the seeded line
 //     first, followed by the session closed when note2 was released before the move.
+// The vault also holds an empty note, which must not read as "still indexing".
 // Placement/heading/frontmatter rules are covered by unit tests, not here.
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -46,6 +47,9 @@ test.describe('S9 inline note (visit history aware)', () => {
         { path: '.obsidian/app.json', content: JSON.stringify({ trashOption: 'local' }) },
         { path: NOTE1, content: `---\nid: ${NOTE1_ID}\n---\n## Topic\nSee [[Inline source]].\n` },
         { path: NOTE2, content: `---\nid: ${NOTE2_ID}\n---\n${NOTE2_BODY}\n` },
+        // An empty note must still get a metadataCache entry, or the still-indexing
+        // refusal (any unindexed .md) would block inlining forever.
+        { path: 'Empty note.md', content: '' },
         {
           path: `${VH_TOP_DIR}/user/${USER_NAME}/v3/focus_duration_per_device/${DEVICE_NAME}/${NOTE2_ID}.vh_v3`,
           content: SEEDED_SESSION,
@@ -54,6 +58,7 @@ test.describe('S9 inline note (visit history aware)', () => {
     });
     harness = h;
     await h.waitForResolvedLink(NOTE1, NOTE2);
+    await h.waitForMarkdownIndexed();
 
     await h.openFile(NOTE2);
     await h.runCommand(`${PLUGIN_ID}:inline-note`);
