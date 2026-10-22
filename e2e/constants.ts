@@ -10,6 +10,7 @@
 //   - localStorage keys        → UserNameProvider.ts / DeviceNameProvider.ts
 //   - SESSION_LINE_RE          → VhV3SessionLineParser.ts
 //   - DEV_OVERRIDES_* env var  → src/core/config/DevOverridesFileSource.ts
+//   - UNFOCUS_GRACE_MS         → src/core/focusDuration/FocusDurationTracker.ts
 
 export const PLUGIN_ID = 'visit-history';
 
@@ -42,6 +43,14 @@ export const LS_KEY_DEVICE_NAME = 'obsidian-device-name';
 export const DOC_ID_A = 'docid_aaaaaaaaaaaaaaaaaaaaaaaa_e';
 export const DOC_ID_B = 'docid_bbbbbbbbbbbbbbbbbbbbbbbb_e';
 export const DOC_ID_C = 'docid_cccccccccccccccccccccccc_e';
+
+// Fixed grace before navigating away (to another doc/untracked view) closes a
+// session; the close is stamped at the ORIGINAL unfocus moment. Keep in sync
+// with UNFOCUS_GRACE_MS in FocusDurationTracker.ts.
+export const UNFOCUS_GRACE_MS = 10_000;
+
+// Full command id (`<plugin-id>:<command-id>`) that opens the vault heatmap.
+export const CMD_OPEN_VAULT_HEATMAP = `${PLUGIN_ID}:open-vault-heatmap`;
 
 export const FILE_A = 'A.md';
 export const FILE_B = 'B.md';

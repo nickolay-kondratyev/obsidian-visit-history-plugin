@@ -1,40 +1,47 @@
-// S3 — Switching to Settings (BEHAVIOR-CAPTURING; human decision: capture CURRENT behavior).
+// S3 — Opening Settings ends the focused doc's session (owner decision,
+// ticket nid_5psjwpcu4tnmjxy1kdjni7u97_E).
 //
-// Empirically confirmed against Obsidian 1.12.7 (Milestone 2 probe): opening the Settings
-// modal does NOT change the active leaf (stays `markdown`) and does NOT blur the OS window,
-// so it does NOT end the focused document's session on its own. This spec encodes that
-// truth: Settings alone records nothing for A; the session closes only on the subsequent
-// switch to B. The "does Settings end a session?" product question is raised for the owner
-// (#QUESTION_FOR_HUMAN in the plan) and ticketed — we do NOT assert a close the product
-// does not perform.
+// Settings is a modal: it does NOT change the active leaf nor blur the OS window
+// (Obsidian 1.12.7). The plugin detects it via an undocumented DOM contract
+// (WindowActivityMonitor.SETTINGS_MODAL_SELECTOR) and treats it like a window blur:
+// open → A's session closes immediately (no unfocus grace); close → a NEW session
+// starts for the still-focused A. This spec is the guard for that DOM contract on
+// Obsidian bumps — if Obsidian renames the classes, the first poll times out.
 import { expect, test } from '@playwright/test';
-import { DOC_ID_A, FILE_A, FILE_B } from './constants';
+import { DOC_ID_A, FILE_A, FILE_B, UNFOCUS_GRACE_MS } from './constants';
 import { HIGH_IDLE_SECONDS, useHarness } from './harnessFixture';
-import { parseDurationMs, pollForSessionLine, sessionLines, sleep, vhFilePath } from './vhAssert';
+import { parseDurationMs, pollForSessionLine, pollUntil, sessionLines, sleep, vhFilePath } from './vhAssert';
 
-test.describe('S3 switch to Settings (current behavior)', () => {
+const DWELL_MS = 1000;
+// Well under the unfocus grace: the close must come from Settings-open itself.
+const IMMEDIATE_CLOSE_TIMEOUT_MS = UNFOCUS_GRACE_MS / 2;
+const SECOND_SESSION_TIMEOUT_MS = 15_000;
+const MAX_SANE_DURATION_MS = 60_000;
+
+test.describe('S3 switch to Settings', () => {
   const getHarness = useHarness(HIGH_IDLE_SECONDS);
 
-  test('Settings-open alone does not end the session; the later doc switch does', async () => {
+  test('Settings-open closes A at once; Settings-close starts a new session for A', async () => {
     const h = getHarness();
     const aFile = vhFilePath(h.vaultDir, DOC_ID_A);
 
     await h.openFile(FILE_A);
-    await sleep(1000);
+    await sleep(DWELL_MS);
     await h.openSettings();
 
-    // AC3 (captured behavior) — Settings does not close A's session.
-    await sleep(2000);
-    expect(sessionLines(aFile)).toHaveLength(0);
+    const first = await pollForSessionLine(aFile, { timeoutMs: IMMEDIATE_CLOSE_TIMEOUT_MS });
+    const firstDurationMs = parseDurationMs(first.firstLine);
+    expect(firstDurationMs).toBeGreaterThanOrEqual(0);
+    expect(firstDurationMs).toBeLessThan(MAX_SANE_DURATION_MS);
 
-    // Closing Settings + switching to a different tracked doc DOES close A.
+    // Closing Settings re-opens a session for A; switching to B then closes it.
     await h.closeSettings();
+    await sleep(DWELL_MS);
     await h.openFile(FILE_B);
 
-    const result = await pollForSessionLine(aFile, { timeoutMs: 15_000 });
-    expect(result.lines).toHaveLength(1);
-    const durationMs = parseDurationMs(result.firstLine);
-    expect(durationMs).toBeGreaterThanOrEqual(0);
-    expect(durationMs).toBeLessThan(60_000);
+    await pollUntil(() => sessionLines(aFile).length >= 2, 'a second session line for A', {
+      timeoutMs: SECOND_SESSION_TIMEOUT_MS,
+    });
+    expect(sessionLines(aFile)).toHaveLength(2);
   });
 });

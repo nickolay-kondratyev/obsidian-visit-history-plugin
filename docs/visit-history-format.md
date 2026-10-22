@@ -80,7 +80,8 @@ It is the only history the plugin reads and writes.
   the close FINALIZES, ≤ 10 s after the unfocus, with the end stamped at the
   unfocus moment), blur of the
   Obsidian window HOSTING it (main or popout — switching between popout
-  windows closes the left-behind doc's session), the idle timeout elapsing
+  windows closes the left-behind doc's session; opening Settings in that
+  window counts as a blur, and closing it starts a NEW session), the idle timeout elapsing
   without user interaction (settings → "Idle timeout (seconds)", default
   180 s, min 5 s, applied live; the recorded duration then ends at the LAST
   interaction — the idle tail is not counted), or plugin unload (best-effort

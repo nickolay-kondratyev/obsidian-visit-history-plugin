@@ -25,7 +25,8 @@ core/init/PluginFactory ──── DI container: constructs & wires everything
    │                         VhV3DurationRecorder (serialized store appends +
    │                         VisitStatsCache write-through),
    │                         WindowActivityMonitor (DOM boundary: window
-   │                         blur/focus, visibility, user-input events)
+   │                         blur/focus, visibility, user-input events,
+   │                         Settings modal open/close = blur/refocus)
    │
    ├── core/service ──────── VhV3DurationStore owns the .vh_v3 duration format
    │                         (append + read; VhV3SessionLineParser parses the
@@ -99,6 +100,7 @@ core/init/PluginFactory ──── DI container: constructs & wires everything
 active-leaf-change ──► VhV3FocusDurationListener (ensureDocId → docId
                        + hosting window via FocusEvent.ownerDocument)
 window blur/focus  ──► WindowActivityMonitor ─┐   registered on EVERY window:
+Settings open/close──► (= blur / refocus)     │
 user input events  ──► (idle detection)       │   main at load, popouts via
                                               │   'window-open'/'window-close';
                                               │   popouts already open at load
@@ -111,7 +113,8 @@ user input events  ──► (idle detection)       │   main at load, popouts 
                                 │  the session; close is stamped at the
                                 │  original unfocus time), blur of
                                 │  the window HOSTING the doc (incl. popout →
-                                │  popout switches), idle timeout (setting,
+                                │  popout switches; opening Settings in it
+                                │  counts as a blur), idle timeout (setting,
                                 │  default 180 s, live-read; duration then
                                 │  ends at the LAST interaction; also enforced
                                 │  retroactively — OS sleep never counts), or
