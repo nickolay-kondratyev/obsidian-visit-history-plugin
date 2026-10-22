@@ -80,8 +80,16 @@ export class InlineNoteAction {
     let note2Id: string | null;
     try {
       note2Id = await this.docIdService.getDocId(plan.note2);
-      if (note2Id !== null && note2Id === await this.docIdService.getDocId(plan.note1)) {
+      const note1Id = await this.docIdService.getDocId(plan.note1);
+      if (note2Id !== null && note2Id === note1Id) {
         this.dialogs.showRefusal(InlineRefusals.sameDocId(note2Name, plan.note1.path));
+        return;
+      }
+      // Checked BEFORE editing note1: discovered later, the content would
+      // already be moved while the history could not follow.
+      const note2MayHaveHistory = note2Id !== null && DocIdFilenameSafety.isFilenameSafeId(note2Id);
+      if (note2MayHaveHistory && note1Id !== null && !DocIdFilenameSafety.isFilenameSafeId(note1Id)) {
+        this.dialogs.showRefusal(InlineRefusals.unusableReceivingId(note2Name, plan.note1.path, note1Id));
         return;
       }
       if (note2Id !== null) {

@@ -225,6 +225,21 @@ describe('InlineNoteAction', () => {
       expect(dialogs.refusals.map(refusal => refusal.kind)).toEqual(['same-doc-id']);
     });
 
+    it('should leave note1 unchanged when its id cannot hold note2 history', async () => {
+      // GIVEN note1 carries an id that is not usable as a folder name
+      const { action, notes, note2 } = setup({ note1Id: 'bad/id' });
+      // WHEN inlining is confirmed
+      await action.inlineConfirmed(note2);
+      // THEN nothing is edited (refused BEFORE the content moves, not half-way)
+      expect(notes.processCallCount).toBe(0);
+    });
+
+    it('should explain the refusal when note1 id cannot hold note2 history', async () => {
+      const { action, dialogs, note2 } = setup({ note1Id: 'bad/id' });
+      await action.inlineConfirmed(note2);
+      expect(dialogs.refusals.map(refusal => refusal.kind)).toEqual(['unusable-receiving-id']);
+    });
+
     it('should keep note2 when moving the history fails', async () => {
       const { action, notes, note2 } = setup({ hidden: new FailingRenameHiddenFileUtil() });
       await action.inlineConfirmed(note2);

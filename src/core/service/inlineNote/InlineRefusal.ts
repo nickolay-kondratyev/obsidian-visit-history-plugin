@@ -8,6 +8,7 @@ export type InlineRefusalKind =
   | 'unsupported-receiving-note'
   | 'too-deep'
   | 'same-doc-id'
+  | 'unusable-receiving-id'
   | 'note-changed';
 
 /** A file referencing the note, with how many links it holds. */
@@ -104,6 +105,15 @@ export class InlineRefusals {
       'same-doc-id',
       `"${noteName}" and "${receivingPath}" carry the same id property, so their visit history can't be told apart.`,
       'Remove the id property from one of them (a new one is assigned on next focus), then try again.',
+    );
+  }
+
+  static unusableReceivingId(noteName: string, receivingPath: string, docId: string): InlineRefusal {
+    return InlineRefusals.of(
+      'unusable-receiving-id',
+      `"${receivingPath}" has the id property "${docId}", which can't hold the visit history of "${noteName}" `
+        + '(it is not usable as a file name).',
+      `Remove the id property from "${receivingPath}" (a new one is assigned on next focus), then try again.`,
     );
   }
 
