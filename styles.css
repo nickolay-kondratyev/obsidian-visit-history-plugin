@@ -19,6 +19,39 @@ body.vault-heatmap-active .status-bar-mobile {
   display: none;
 }
 
+/* Embed "inline note" icon (src/editorChrome/embedInlineIcon/) — sits right
+   beside Obsidian's own "open link" icon (.markdown-embed-link) in a note
+   embed's top-right corner. Mirrors that icon's rules (Obsidian 1.12.7
+   app.css) so it reads as native chrome in any theme; offset by one native
+   icon box (icon + 2× padding) plus a small gap. Shown on hover of the embed
+   (owner decision); touch devices have no hover, so it stays visible there. */
+.vhp-embed-inline-link {
+  position: absolute;
+  top: 4px;
+  inset-inline-end: calc(4px + var(--icon-s) + 2 * var(--size-2-2) + var(--size-2-1));
+  color: var(--icon-color);
+  opacity: var(--icon-opacity);
+  cursor: var(--cursor-link);
+  padding: var(--size-2-2);
+  border-radius: var(--radius-s);
+  display: flex;
+  align-items: center;
+  --icon-size: var(--icon-s);
+  --icon-stroke: var(--icon-s-stroke-width);
+}
+
+@media (hover: hover) {
+  .internal-embed:not(:hover) > .vhp-embed-inline-link {
+    opacity: 0;
+  }
+
+  .vhp-embed-inline-link:hover {
+    color: var(--icon-color-hover);
+    opacity: var(--icon-opacity-hover);
+    background: var(--background-modifier-hover);
+  }
+}
+
 .vault-heatmap-view {
   /* ── Theme variable mapping ─────────────────────────────── */
   --vt-bg:       var(--background-primary);
