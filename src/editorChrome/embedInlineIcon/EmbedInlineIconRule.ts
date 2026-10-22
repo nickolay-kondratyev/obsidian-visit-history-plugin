@@ -30,7 +30,24 @@ const SUBPATH_SEPARATOR = '#';
  * canvas-link index).
  */
 export class EmbedInlineIconRule {
+  /**
+   * Incoming link count per target path, built lazily from ONE scan of
+   * `resolvedLinks` — both callers re-sync on every DOM mutation (each
+   * keystroke in live preview), so a per-check O(vault) scan would lag large
+   * vaults. Undefined = stale, rebuilt on the next check.
+   */
+  private incomingLinkCounts: Map<string, number> | undefined;
+
   constructor(private readonly linkIndex: EmbedLinkIndex) {
+  }
+
+  /**
+   * Obsidian re-resolved links (metadataCache `resolved` / `deleted`): drop
+   * the cached counts. Until then a count may lag one edit behind — harmless,
+   * the click re-checks everything (InlineNoteAction).
+   */
+  onLinksResolved(): void {
+    this.incomingLinkCounts = undefined;
   }
 
   /** The note the icon would inline, or null when the embed gets no icon. */
@@ -58,18 +75,21 @@ export class EmbedInlineIconRule {
     return PlainNoteCheck.hasPlainMarkdownName(file) && !markedExcalidraw;
   }
 
-  /**
-   * Links to `target` across the vault, self-links ignored (as InlineEligibility does).
-   * O(vault files) per call — a lookup per source; fine per render. Upgrade
-   * path if it ever shows in profiles: a reverse index rebuilt on `resolved`.
-   */
   private incomingLinkCount(target: TFile): number {
-    let count = 0;
+    this.incomingLinkCounts ??= this.countIncomingLinks();
+    return this.incomingLinkCounts.get(target.path) ?? 0;
+  }
+
+  /** Links per target across the vault, self-links ignored (as InlineEligibility does). O(vault links). */
+  private countIncomingLinks(): Map<string, number> {
+    const counts = new Map<string, number>();
     for (const [sourcePath, links] of Object.entries(this.linkIndex.resolvedLinks)) {
-      if (sourcePath !== target.path) {
-        count += links[target.path] ?? 0;
+      for (const [targetPath, count] of Object.entries(links)) {
+        if (targetPath !== sourcePath) {
+          counts.set(targetPath, (counts.get(targetPath) ?? 0) + count);
+        }
       }
     }
-    return count;
+    return counts;
   }
 }

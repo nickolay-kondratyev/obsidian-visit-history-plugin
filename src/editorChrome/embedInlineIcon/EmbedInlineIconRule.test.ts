@@ -8,7 +8,9 @@ const NOTE2 = makeTFile({ path: 'folder/note2.md' });
 
 /** GIVEN-builder: a vault link index with only the given files and resolved links. */
 class FakeLinkIndex implements EmbedLinkIndex {
-  resolvedLinks: Record<string, Record<string, number>> = {};
+  /** How often the rule read the whole-vault link table (each read = an O(vault) scan). */
+  linkTableReads = 0;
+  private readonly links: Record<string, Record<string, number>> = {};
   private readonly files = new Map<string, TFile>();
   private readonly frontmatterByPath = new Map<string, Record<string, unknown>>();
 
@@ -20,8 +22,13 @@ class FakeLinkIndex implements EmbedLinkIndex {
     return this;
   }
 
+  get resolvedLinks(): Record<string, Record<string, number>> {
+    this.linkTableReads++;
+    return this.links;
+  }
+
   withLinks(sourcePath: string, targetPath: string, count: number): this {
-    this.resolvedLinks[sourcePath] = { ...this.resolvedLinks[sourcePath], [targetPath]: count };
+    this.links[sourcePath] = { ...this.links[sourcePath], [targetPath]: count };
     return this;
   }
 
@@ -129,6 +136,33 @@ describe('EmbedInlineIconRule', () => {
 
     it('should return null for an embed inside a canvas card', () => {
       expect(new EmbedInlineIconRule(onlyLinkedFromNote1()).inlineTargetOf(embedOf('note2', { isInCanvas: true }))).toBeNull();
+    });
+  });
+
+  describe('link counting cost', () => {
+    it('should scan the vault link table once across repeated checks', () => {
+      // GIVEN a rule that already checked the embed once
+      const index = onlyLinkedFromNote1();
+      const rule = new EmbedInlineIconRule(index);
+      rule.inlineTargetOf(embedOf('note2'));
+      // WHEN the embed is checked again (e.g. the next keystroke's re-sync)
+      rule.inlineTargetOf(embedOf('note2'));
+      // THEN the link table was scanned only for the first check
+      expect(index.linkTableReads).toBe(1);
+    });
+  });
+
+  describe('onLinksResolved', () => {
+    it('should see a link added since the last check', () => {
+      // GIVEN the embed was checked while it was note2's only link
+      const index = onlyLinkedFromNote1();
+      const rule = new EmbedInlineIconRule(index);
+      rule.inlineTargetOf(embedOf('note2'));
+      // WHEN another note links note2 and Obsidian re-resolves links
+      index.withLinks('other.md', NOTE2.path, 1);
+      rule.onLinksResolved();
+      // THEN the embed no longer gets the icon
+      expect(rule.inlineTargetOf(embedOf('note2'))).toBeNull();
     });
   });
 });

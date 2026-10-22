@@ -67,6 +67,8 @@ export class PluginFactory {
   readonly inlineNoteAction: InlineNoteAction;
   /** Embed "inline note" icon — the same action, one click away on the embed. */
   readonly embedInlineIconDecorator: EmbedInlineIconDecorator;
+  /** Its show-or-not rule; main.ts feeds it metadataCache link-change events. */
+  readonly embedInlineIconRule: EmbedInlineIconRule;
 
   // Held for activateUserScopedRecording (post-pin wiring).
   private readonly plugin: VisitHistoryPlugin;
@@ -152,8 +154,9 @@ export class PluginFactory {
       new ModalInlineNoteDialogs(app),
       this.userNotifier,
     );
+    this.embedInlineIconRule = new EmbedInlineIconRule(app.metadataCache);
     this.embedInlineIconDecorator = new EmbedInlineIconDecorator(
-      new EmbedInlineIconRule(app.metadataCache),
+      this.embedInlineIconRule,
       (note2) => void this.inlineNoteAction.run(note2),
     );
   }

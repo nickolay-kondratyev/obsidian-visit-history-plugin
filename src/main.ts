@@ -215,6 +215,9 @@ export default class VisitHistoryPlugin extends Plugin {
       }),
     );
 
+    const embedIconRule = pluginFactory.embedInlineIconRule;
+    this.registerEvent(this.app.metadataCache.on('resolved', () => embedIconRule.onLinksResolved()));
+    this.registerEvent(this.app.metadataCache.on('deleted', () => embedIconRule.onLinksResolved()));
     const readingViewEmbedIcons = new ReadingViewEmbedIconProcessor(pluginFactory.embedInlineIconDecorator);
     this.registerMarkdownPostProcessor(readingViewEmbedIcons.process);
     this.register(() => readingViewEmbedIcons.teardown());
