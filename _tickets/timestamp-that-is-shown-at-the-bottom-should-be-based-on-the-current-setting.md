@@ -17,3 +17,13 @@ tags: []
 We have recently added an optional timestamp that is shown if there is enough space in the heat map.
 
 However, right now it always shows the visitation history timestamp while it should show the timstamp of the current 'timestamp' field that we are using for visualization: created, modified, visited.
+## Resolution
+
+The bottom-right in-tile age label on heatmap leaf tiles now shows the age of the **active timestamp field** (created / modified / visited), not always last-visit.
+
+- `src/view/utils.ts` — new pure `leafFieldAgo(leaf, field, nowMs)`: `fmtAgo` of `leaf[field]`, `undefined` when that stamp is missing (label hidden).
+- `src/view/components/LeafNode.tsx` — uses `leafFieldAgo(d.data, field, …)`; CSS class renamed `leaf-node__visit-ago` → `leaf-node__field-ago` (`styles.css`).
+- Tests: `src/view/utils.test.ts` › `leafFieldAgo` (one per field + missing stamp).
+- Docs: `docs/heatmap-view.md` LeafNode line updated.
+
+Assumption (agent decision): the label follows the active field in **both** color modes (heatmap and type). The field setting is kept while in type mode, so this stays consistent and avoids a mode-dependent special case.

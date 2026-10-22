@@ -111,7 +111,8 @@ App                     state owner: HeatmapConfig (color mode, gradient,
      ├─ CollapsedFolderNode  dense folder as ONE tile: name + "N files",
      │                  most-recent-file color, dashed border; click → drill in
      ├─ LeafNode        click → IFileOpener.openFile(path); title top-left,
-     │                  last-visit age ("3d ago") bottom-right when the tile
+     │                  active-field age ("3d ago" — created/modified/visited
+     │                  per the timestamp field) bottom-right when the tile
      │                  fits title + blank line + label (cornerLabelFits)
      └─ Tooltip
 ```

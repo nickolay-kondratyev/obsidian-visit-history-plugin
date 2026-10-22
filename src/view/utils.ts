@@ -90,7 +90,7 @@ export function fmtDate(ts: number | null | undefined): string | null {
 }
 
 /**
- * Compact age of `ts` relative to `nowMs` for the in-tile last-visit label:
+ * Compact age of `ts` relative to `nowMs` for the in-tile corner label:
  * `<1m ago` / `33m ago` / `12h ago` / `3d ago` (floored to the largest whole
  * unit; days never roll up further). Future stamps (clock skew between synced
  * devices) clamp to `<1m ago`.
@@ -101,6 +101,16 @@ export function fmtAgo(ts: number, nowMs: number): string {
   if (ageMs >= MS_PER_HOUR) return `${Math.floor(ageMs / MS_PER_HOUR)}h ago`;
   if (ageMs >= MS_PER_MINUTE) return `${Math.floor(ageMs / MS_PER_MINUTE)}m ago`;
   return '<1m ago';
+}
+
+/**
+ * In-tile corner label: age of the leaf's stamp for the ACTIVE heat `field`
+ * (created / modified / visited), so the label always matches what the
+ * timestamp-field setting is about. `undefined` when that stamp is missing.
+ */
+export function leafFieldAgo(leaf: VaultNode, field: HeatField, nowMs: number): string | undefined {
+  const ts = leaf[field];
+  return ts == null ? undefined : fmtAgo(ts, nowMs);
 }
 
 /** File-count label for a collapsed folder tile: `1 file` / `12 files`. */
