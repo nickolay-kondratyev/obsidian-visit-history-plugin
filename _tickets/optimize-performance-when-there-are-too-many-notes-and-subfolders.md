@@ -6,7 +6,7 @@ id: nid_zxh1nwsmchemmzg2fdwu98y22_e
 title: "Optimize performance when there are too many notes and subfolders"
 status: closed
 deps: []
-links: []
+links: [nid_j9j1mc5myj1zfjdgs8nmvjywn_e]
 created_iso: 2026-10-22T17:53:55Z
 status_updated_iso: 2026-10-22T18:03:46Z
 type: task
@@ -60,3 +60,9 @@ Come up with logical hueristic of when to allow display of individual notes in t
 
 Verified: `npm test` 511/511, `npm run lint` 0 errors, `npm run build` OK.
 Not verified in a running Obsidian (no visual/manual check in this run).
+
+## Notes
+
+**2026-10-22T18:05:27Z**
+
+__REVIEW_AGAIN__: no code bugs found and test/lint/build pass, but the flat-folder perf gap (view-root direct files never collapse) is left open as ticket nid_j9j1mc5myj1zfjdgs8nmvjywn_e, and the collapse was never checked visually in Obsidian
