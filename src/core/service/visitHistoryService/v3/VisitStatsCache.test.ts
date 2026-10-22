@@ -87,6 +87,17 @@ describe('VisitStatsCache', () => {
       // THEN it is rejected — caching it would double-count at endSessionWrite
       expect(cache.setIfNoWriteSince(DOC_ID, DISK_STATS, token)).toBe(false);
     });
+
+    it('should reject while a second overlapping write on the doc is still in flight', () => {
+      // GIVEN two overlapping writes on the doc, the first of which has ended
+      const cache = new VisitStatsCache();
+      cache.beginSessionWrite(DOC_ID);
+      cache.beginSessionWrite(DOC_ID);
+      cache.endSessionWrite(DOC_ID, 5000, 10);
+      // WHEN a read taken after that end is offered
+      // THEN it is rejected — the second write's append may or may not be in it
+      expect(cache.setIfNoWriteSince(DOC_ID, DISK_STATS, cache.readToken())).toBe(false);
+    });
   });
 
   describe('endSessionWrite', () => {
