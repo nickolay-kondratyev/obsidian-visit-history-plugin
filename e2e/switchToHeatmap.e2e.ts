@@ -1,4 +1,4 @@
-// S6 — Opening the vault heatmap from a focused note.
+// S11 — Opening the vault heatmap from a focused note.
 // The heatmap opens in a NEW tab → the active leaf becomes an untracked view → A is
 // unfocused. The close resolves after the fixed unfocus grace and is stamped at the
 // ORIGINAL unfocus moment, so A gets exactly one line whose duration excludes the grace.
@@ -14,7 +14,7 @@ const POLL_TIMEOUT_MS = UNFOCUS_GRACE_MS + 10_000;
 // again only on a later close, which nothing triggers — so a second line here is a bug.
 const NO_SECOND_LINE_WINDOW_MS = 2000;
 
-test.describe('S6 switch to the vault heatmap', () => {
+test.describe('S11 switch to the vault heatmap', () => {
   const getHarness = useHarness(HIGH_IDLE_SECONDS);
 
   test('opening the heatmap closes A with exactly one bounded session', async () => {

@@ -1,4 +1,4 @@
-// S7 — Obsidian loses focus to another app (window blur).
+// S12 — Obsidian loses focus to another app (window blur).
 // A window blur closes the hosting doc's session IMMEDIATELY (no unfocus grace); a
 // refocus starts a NEW session for the still-current doc.
 //
@@ -16,7 +16,7 @@ const IMMEDIATE_CLOSE_TIMEOUT_MS = UNFOCUS_GRACE_MS / 2;
 const SECOND_SESSION_TIMEOUT_MS = 15_000;
 const MAX_SANE_DURATION_MS = 60_000;
 
-test.describe('S7 Obsidian window blur (app deactivation)', () => {
+test.describe('S12 Obsidian window blur (app deactivation)', () => {
   const getHarness = useHarness(HIGH_IDLE_SECONDS);
 
   test('window blur closes A at once; refocus starts a new session for A', async () => {
