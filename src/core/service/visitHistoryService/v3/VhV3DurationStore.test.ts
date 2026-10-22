@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { VhV3DurationStore } from './VhV3DurationStore';
+import { VisitStats } from '../VisitStats';
 import { FakeHiddenFileUtil } from '../../../../testSupport/FakeHiddenFileUtil';
 
 const USER = 'alice';
@@ -90,17 +91,17 @@ describe('VhV3DurationStore', () => {
     });
   });
 
-  describe('getLastFocusStartMsAcrossUsersAndDevices', () => {
+  describe('getVisitStatsAcrossUsersAndDevices', () => {
     const OTHER_DEVICE = 'other-host';
     const OTHER_DEVICE_FILE_PATH = `.plugin_data/visit_history/user/${USER}/v3/focus_duration_per_device/${OTHER_DEVICE}/${DOC_ID}.vh_v3`;
     const OTHER_USER_FILE_PATH = `.plugin_data/visit_history/user/bob/v3/focus_duration_per_device/bobs-host/${DOC_ID}.vh_v3`;
 
-    it('should return null when no user folders exist at all (fresh vault)', async () => {
+    it('should return EMPTY when no user folders exist at all (fresh vault)', async () => {
       const { store } = setup();
-      expect(await store.getLastFocusStartMsAcrossUsersAndDevices(DOC_ID)).toBeNull();
+      expect(await store.getVisitStatsAcrossUsersAndDevices(DOC_ID)).toEqual(VisitStats.EMPTY);
     });
 
-    it('should return null when devices exist but none tracked the doc', async () => {
+    it('should return EMPTY when devices exist but none tracked the doc', async () => {
       // GIVEN a device folder holding only another doc
       const { store, hidden } = setup();
       hidden.seedFile(
@@ -109,10 +110,10 @@ describe('VhV3DurationStore', () => {
       );
       // WHEN looked up
       // THEN the doc was never focused
-      expect(await store.getLastFocusStartMsAcrossUsersAndDevices(DOC_ID)).toBeNull();
+      expect(await store.getVisitStatsAcrossUsersAndDevices(DOC_ID)).toEqual(VisitStats.EMPTY);
     });
 
-    it('should return null for a user dir without any device dirs', async () => {
+    it('should return EMPTY for a user dir without any device dirs', async () => {
       // GIVEN a user tree holding only the generated README (no device dirs)
       const { store, hidden } = setup();
       hidden.seedFile(
@@ -121,7 +122,7 @@ describe('VhV3DurationStore', () => {
       );
       // WHEN looked up
       // THEN the doc was never focused
-      expect(await store.getLastFocusStartMsAcrossUsersAndDevices(DOC_ID)).toBeNull();
+      expect(await store.getVisitStatsAcrossUsersAndDevices(DOC_ID)).toEqual(VisitStats.EMPTY);
     });
 
     it('should return the max session START across devices', async () => {
@@ -131,7 +132,7 @@ describe('VhV3DurationStore', () => {
       hidden.seedFile(OTHER_DEVICE_FILE_PATH, '2026-07-10T10:00:00.000Z D:100\n');
       // WHEN looked up
       // THEN the newest start stamp wins
-      expect(await store.getLastFocusStartMsAcrossUsersAndDevices(DOC_ID))
+      expect((await store.getVisitStatsAcrossUsersAndDevices(DOC_ID)).lastVisitMs)
         .toBe(Date.parse('2026-07-10T10:00:00.000Z'));
     });
 
@@ -142,7 +143,7 @@ describe('VhV3DurationStore', () => {
       hidden.seedFile(OTHER_USER_FILE_PATH, '2026-07-10T10:00:00.000Z D:100\n');
       // WHEN looked up
       // THEN the other user's more recent focus wins
-      expect(await store.getLastFocusStartMsAcrossUsersAndDevices(DOC_ID))
+      expect((await store.getVisitStatsAcrossUsersAndDevices(DOC_ID)).lastVisitMs)
         .toBe(Date.parse('2026-07-10T10:00:00.000Z'));
     });
 
@@ -156,7 +157,7 @@ describe('VhV3DurationStore', () => {
       );
       // WHEN looked up
       // THEN the present device's stamp is returned
-      expect(await store.getLastFocusStartMsAcrossUsersAndDevices(DOC_ID))
+      expect((await store.getVisitStatsAcrossUsersAndDevices(DOC_ID)).lastVisitMs)
         .toBe(Date.parse('2026-07-09T10:00:00.000Z'));
     });
 
@@ -166,17 +167,37 @@ describe('VhV3DurationStore', () => {
       hidden.seedFile(FILE_PATH, '2026-07-09T10:00:00.000Z D:100\ngarbage line\n');
       // WHEN looked up
       // THEN the valid stamp is still returned
-      expect(await store.getLastFocusStartMsAcrossUsersAndDevices(DOC_ID))
+      expect((await store.getVisitStatsAcrossUsersAndDevices(DOC_ID)).lastVisitMs)
         .toBe(Date.parse('2026-07-09T10:00:00.000Z'));
     });
 
-    it('should return null for an unsafe doc id', async () => {
+    it('should return EMPTY for an unsafe doc id', async () => {
       // GIVEN a device folder exists
       const { store, hidden } = setup();
       hidden.seedFile(FILE_PATH, '2026-07-09T10:00:00.000Z D:100\n');
       // WHEN an unsafe id is looked up
       // THEN it reads nothing (never builds a path from it)
-      expect(await store.getLastFocusStartMsAcrossUsersAndDevices('a/b')).toBeNull();
+      expect(await store.getVisitStatsAcrossUsersAndDevices('a/b')).toEqual(VisitStats.EMPTY);
+    });
+
+    it('should sum focus time across users and devices', async () => {
+      // GIVEN sessions on two devices of one user and on another user's device
+      const { store, hidden } = setup();
+      hidden.seedFile(FILE_PATH, '2026-07-09T10:00:00.000Z D:100\n2026-07-09T11:00:00.000Z D:20\n');
+      hidden.seedFile(OTHER_DEVICE_FILE_PATH, '2026-07-10T10:00:00.000Z D:300\n');
+      hidden.seedFile(OTHER_USER_FILE_PATH, '2026-07-11T10:00:00.000Z D:4000\n');
+      // WHEN looked up
+      // THEN every session's duration counts
+      expect((await store.getVisitStatsAcrossUsersAndDevices(DOC_ID)).totalFocusMs).toBe(4420);
+    });
+
+    it('should skip malformed lines when summing focus time', async () => {
+      // GIVEN a file with garbage between two valid sessions
+      const { store, hidden } = setup();
+      hidden.seedFile(FILE_PATH, '2026-07-09T10:00:00.000Z D:100\ngarbage D:999\n2026-07-09T11:00:00.000Z D:20\n');
+      // WHEN looked up
+      // THEN only the valid sessions are summed
+      expect((await store.getVisitStatsAcrossUsersAndDevices(DOC_ID)).totalFocusMs).toBe(120);
     });
   });
 });

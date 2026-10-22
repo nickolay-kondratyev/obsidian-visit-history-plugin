@@ -1,6 +1,6 @@
 import { App, TFile } from 'obsidian';
 import { FileTimeMetadata } from "../../data/FileTimeMetadata";
-import { LastVisitProvider } from "../../service/visitHistoryService/LastVisitProvider";
+import { VisitStatsProvider } from "../../service/visitHistoryService/VisitStatsProvider";
 import { IsTrackedProvider } from "./IsTrackedProvider";
 
 export interface VaultUtil {
@@ -28,7 +28,7 @@ export interface TrackedFile {
 export class VaultUtilDefault implements VaultUtil {
   constructor(
     private readonly app: App,
-    private readonly lastVisitProvider: LastVisitProvider,
+    private readonly visitStatsProvider: VisitStatsProvider,
     private readonly isTrackedProvider: IsTrackedProvider
   ) {
   }
@@ -44,12 +44,12 @@ export class VaultUtilDefault implements VaultUtil {
 
   async getTrackedFiles(): Promise<TrackedFile[]> {
     const promises = this.getTrackedTFiles().map(f =>
-      this.lastVisitProvider.getLastVisitStamp(f).then(visitedMs => ({
+      this.visitStatsProvider.getVisitStats(f).then(visitStats => ({
         file: f,
         timeMetadata: {
           createdMs: f.stat.ctime,
           modifiedMs: f.stat.mtime,
-          visitedMs,
+          visitedMs: visitStats.lastVisitMs,
         },
       }))
     );

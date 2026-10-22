@@ -54,6 +54,28 @@ describe('LruCache', () => {
     });
   });
 
+  describe('peek', () => {
+    it('should return the stored value on a hit', () => {
+      // GIVEN a stored value
+      const cache = new LruCache<string, number>(2);
+      cache.set('a', 1);
+      // WHEN/THEN peeking returns it
+      expect(cache.peek('a')).toBe(1);
+    });
+
+    it('should NOT mark the key used, leaving it first in line for eviction', () => {
+      // GIVEN a full cache where 'a' is oldest
+      const cache = new LruCache<string, number>(2);
+      cache.set('a', 1);
+      cache.set('b', 2);
+      // WHEN 'a' is peeked and a new key evicts one entry
+      cache.peek('a');
+      cache.set('c', 3);
+      // THEN 'a' (still least recently used) was evicted
+      expect(cache.peek('a')).toBeUndefined();
+    });
+  });
+
   describe('set', () => {
     it('should overwrite an existing key without growing the cache', () => {
       // GIVEN a cached entry
@@ -119,6 +141,30 @@ describe('LruCache', () => {
       // WHEN storing undefined THEN it is rejected — a silent store would
       // occupy a slot that get() forever reports as a miss
       expect(() => cache.set('a', undefined)).toThrow();
+    });
+  });
+
+  describe('delete', () => {
+    it('should turn a hit into a miss', () => {
+      // GIVEN a stored value
+      const cache = new LruCache<string, number>(2);
+      cache.set('a', 1);
+      // WHEN deleted
+      cache.delete('a');
+      // THEN it is a miss
+      expect(cache.get('a')).toBeUndefined();
+    });
+
+    it('should free the slot so a new key evicts nothing', () => {
+      // GIVEN a full cache with 'b' deleted
+      const cache = new LruCache<string, number>(2);
+      cache.set('a', 1);
+      cache.set('b', 2);
+      cache.delete('b');
+      // WHEN a new key is added
+      cache.set('c', 3);
+      // THEN 'a' survives
+      expect(cache.get('a')).toBe(1);
     });
   });
 });

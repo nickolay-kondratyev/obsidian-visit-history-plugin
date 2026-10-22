@@ -1,6 +1,6 @@
 import { FocusDurationSink } from './FocusDurationTracker';
 import { VhV3DurationStore } from '../service/visitHistoryService/v3/VhV3DurationStore';
-import { LastVisitCache } from '../service/visitHistoryService/v3/LastVisitCache';
+import { VisitStatsCache } from '../service/visitHistoryService/v3/VisitStatsCache';
 import { DeviceNameProvider } from '../util/env/DeviceNameProvider';
 
 /**
@@ -11,15 +11,16 @@ import { DeviceNameProvider } from '../util/env/DeviceNameProvider';
  * ends for the same doc must not interleave appends to the same file.
  * Errors are isolated per write — a failed append never breaks the chain.
  *
- * Each persisted session is also written through to the shared LastVisitCache,
- * so heatmap last-visit lookups see it without re-reading disk.
+ * Each persisted session is also written through to the shared VisitStatsCache
+ * (begin/end write-window protocol — see VisitStatsCache), so visit-stats
+ * lookups see it without re-reading disk.
  */
 export class VhV3DurationRecorder implements FocusDurationSink {
   private writeChain: Promise<void> = Promise.resolve();
 
   constructor(
     private readonly vhV3DurationStore: VhV3DurationStore,
-    private readonly lastVisitCache: LastVisitCache,
+    private readonly visitStatsCache: VisitStatsCache,
     private readonly deviceNameProvider: DeviceNameProvider,
     /** The PINNED user name — the recorder only exists once a name is pinned. */
     private readonly userName: string,
@@ -29,16 +30,24 @@ export class VhV3DurationRecorder implements FocusDurationSink {
   recordFocusDuration(docId: string, focusStartEpochMs: number, durationMs: number): void {
     this.writeChain = this.writeChain
       .then(async () => {
-        await this.vhV3DurationStore.appendFocusDuration(
-          this.userName,
-          this.deviceNameProvider.getDeviceName(),
-          docId,
-          focusStartEpochMs,
-          durationMs,
-        );
+        this.visitStatsCache.beginSessionWrite(docId);
+        try {
+          await this.vhV3DurationStore.appendFocusDuration(
+            this.userName,
+            this.deviceNameProvider.getDeviceName(),
+            docId,
+            focusStartEpochMs,
+            durationMs,
+          );
+        } catch (error) {
+          // The append may have partially landed — drop the doc's cached
+          // stats so nothing stale/partial survives (next lookup re-reads).
+          this.visitStatsCache.abortSessionWrite(docId);
+          throw error;
+        }
         // Write-through AFTER the append succeeds: the cache must never
         // claim a visit that failed to persist.
-        this.lastVisitCache.noteVisit(docId, focusStartEpochMs);
+        this.visitStatsCache.endSessionWrite(docId, focusStartEpochMs, durationMs);
       })
       .catch((error) => {
         console.error(`[VHP][VhV3DurationRecorder] failed to record focus duration docId=[${docId}]`, error);

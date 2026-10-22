@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { VhV3DurationRecorder } from './VhV3DurationRecorder';
 import { VhV3DurationStore } from '../service/visitHistoryService/v3/VhV3DurationStore';
-import { LastVisitCache } from '../service/visitHistoryService/v3/LastVisitCache';
+import { VisitStatsCache } from '../service/visitHistoryService/v3/VisitStatsCache';
+import { VisitStats } from '../service/visitHistoryService/VisitStats';
 import { FakeHiddenFileUtil } from '../../testSupport/FakeHiddenFileUtil';
 import { FixedDeviceNameProvider } from '../../testSupport/fakes';
 
@@ -12,10 +13,10 @@ const DOC_FILE = `.plugin_data/visit_history/user/${USER}/v3/focus_duration_per_
 function setup(): {
   recorder: VhV3DurationRecorder;
   hidden: FakeHiddenFileUtil;
-  cache: LastVisitCache;
+  cache: VisitStatsCache;
 } {
   const hidden = new FakeHiddenFileUtil();
-  const cache = new LastVisitCache();
+  const cache = new VisitStatsCache();
   const recorder = new VhV3DurationRecorder(
     new VhV3DurationStore(hidden),
     cache,
@@ -63,26 +64,71 @@ describe('VhV3DurationRecorder', () => {
       errorSpy.mockRestore();
     });
 
-    it('should write the session start through to the last-visit cache', async () => {
-      // GIVEN a recorder
+    it('should merge the session into cached visit stats', async () => {
+      // GIVEN cached stats for the doc
       const { recorder, cache } = setup();
+      cache.setIfNoWriteSince('docid_A_E', new VisitStats(1000, 300), cache.readToken());
       // WHEN a session is recorded and persisted
       const startMs = Date.parse('2026-07-09T22:02:15.745Z');
       recorder.recordFocusDuration('docid_A_E', startMs, 5600);
       await recorder.flush();
-      // THEN the cache serves the new last visit without a disk read
-      expect(cache.get('docid_A_E')).toEqual({ value: startMs });
+      // THEN the cache serves the new last visit and total without a disk read
+      expect(cache.get('docid_A_E')).toEqual({ lastVisitMs: startMs, totalFocusMs: 5900 });
     });
 
-    it('should NOT update the cache when the write fails', async () => {
-      // GIVEN a record whose write fails (unsafe id → store throws)
+    it('should NOT create cached stats for a doc that was not cached', async () => {
+      // GIVEN an empty cache
       const { recorder, cache } = setup();
-      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-      // WHEN it is recorded
-      recorder.recordFocusDuration('un/safe', 100, 1);
+      // WHEN a session is recorded and persisted
+      recorder.recordFocusDuration('docid_A_E', Date.parse('2026-07-09T22:02:15.745Z'), 5600);
       await recorder.flush();
-      // THEN the cache never claims a visit that failed to persist
-      expect(cache.get('un/safe')).toBeUndefined();
+      // THEN no one-session total is invented (next lookup reads disk)
+      expect(cache.get('docid_A_E')).toBeUndefined();
+    });
+
+    it('should invalidate cached stats when the write fails', async () => {
+      // GIVEN cached stats for a doc whose write will fail
+      const { recorder, hidden, cache } = setup();
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      cache.setIfNoWriteSince('docid_A_E', new VisitStats(1000, 300), cache.readToken());
+      hidden.append = async () => {
+        throw new Error('disk full');
+      };
+      // WHEN a session is recorded
+      recorder.recordFocusDuration('docid_A_E', 2000, 50);
+      await recorder.flush();
+      // THEN the entry is dropped — no merge of a session that failed to persist
+      expect(cache.get('docid_A_E')).toBeUndefined();
+      errorSpy.mockRestore();
+    });
+
+    it('should log the failed write', async () => {
+      // GIVEN a write that will fail
+      const { recorder, hidden } = setup();
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      hidden.append = async () => {
+        throw new Error('disk full');
+      };
+      // WHEN a session is recorded
+      recorder.recordFocusDuration('docid_A_E', 2000, 50);
+      await recorder.flush();
+      // THEN the failure is reported
+      expect(errorSpy).toHaveBeenCalledTimes(1);
+      errorSpy.mockRestore();
+    });
+
+    it('should accept fresh cache reads again after a failed write', async () => {
+      // GIVEN a failed write (write window must not stay open)
+      const { recorder, hidden, cache } = setup();
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      hidden.append = async () => {
+        throw new Error('disk full');
+      };
+      recorder.recordFocusDuration('docid_A_E', 2000, 50);
+      await recorder.flush();
+      // WHEN a fresh read result is offered
+      // THEN it is cached
+      expect(cache.setIfNoWriteSince('docid_A_E', VisitStats.EMPTY, cache.readToken())).toBe(true);
       errorSpy.mockRestore();
     });
   });

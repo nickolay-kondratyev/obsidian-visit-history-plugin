@@ -1,5 +1,6 @@
 import { HiddenFileUtil } from '../../../util/file/hidden/HiddenFileUtil';
 import { DocIdFilenameSafety } from '../DocIdFilenameSafety';
+import { VisitStats } from '../VisitStats';
 import { VhUserPaths } from '../user/VhUserPaths';
 import { VhV3Paths } from './VhV3Paths';
 import { VhV3FocusSession, VhV3SessionLineParser } from './VhV3SessionLineParser';
@@ -70,28 +71,22 @@ export class VhV3DurationStore {
   }
 
   /**
-   * Most recent session START stamp for the doc across ALL users and devices,
-   * or null if never focused. Session start (not end) is the "last visited"
-   * stamp — it matches the old V2 semantics of stamping at focus time.
+   * Visit stats for the doc across ALL users and devices ({@link VisitStats}
+   * owns the fold: max session START, sum of durations); EMPTY if never
+   * focused. Session start (not end) is the "last visited" stamp — it matches
+   * the old V2 semantics of stamping at focus time.
    */
-  async getLastFocusStartMsAcrossUsersAndDevices(docId: string): Promise<number | null> {
+  async getVisitStatsAcrossUsersAndDevices(docId: string): Promise<VisitStats> {
     // Guard up front: an unsafe id has no file anywhere — skip the
     // per-user/per-device dir listings entirely.
     if (!DocIdFilenameSafety.isFilenameSafeId(docId)) {
-      return null;
+      return VisitStats.EMPTY;
     }
     const userNames = await this.hiddenFileUtil.listSubfolderNames(VhUserPaths.USERS_DIR);
     const sessionsPerUser = await Promise.all(
       userNames.map(userName => this.readAllDeviceSessionsForUser(userName, docId)),
     );
-    // reduce, not Math.max(...spread): spreading a years-long history
-    // (100k+ sessions) can blow the call stack and kill the whole heatmap refresh.
-    return sessionsPerUser
-      .flat()
-      .reduce<number | null>(
-        (maxMs, session) => (maxMs === null ? session.focusStartEpochMs : Math.max(maxMs, session.focusStartEpochMs)),
-        null,
-      );
+    return VisitStats.fromSessions(sessionsPerUser.flat());
   }
 
   // ── private ─────────────────────────────────────────────────────────────

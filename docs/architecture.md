@@ -23,7 +23,7 @@ core/init/PluginFactory ──── DI container: constructs & wires everything
    │
    ├── core/focusDuration ── FocusDurationTracker (V3 session state machine),
    │                         VhV3DurationRecorder (serialized store appends +
-   │                         LastVisitCache write-through),
+   │                         VisitStatsCache write-through),
    │                         WindowActivityMonitor (DOM boundary: window
    │                         blur/focus, visibility, user-input events)
    │
@@ -35,9 +35,10 @@ core/init/PluginFactory ──── DI container: constructs & wires everything
    │                         user/: VhUserPaths (.plugin_data/visit_history/user/<user-name>/)
    │                         + UserNameProvider (prompts + pins the user name via
    │                         the UserNamePrompt modal; UserNameSafety charset)
-   │                         LastVisitProvider (read-only interface) ←
-   │                         VisitHistoryServiceV3: last-visit stamp for the
-   │                         heatmap (LastVisitCache, LRU keyed by doc id)
+   │                         VisitStatsProvider (read-only interface) ←
+   │                         VisitHistoryServiceV3: per-note VisitStats (last
+   │                         visit + total focus time; heatmap uses last visit)
+   │                         (VisitStatsCache, LRU keyed by doc id)
    │                         DocIdService (stable-ids-for-obsidian): ensure
    │                         per-document id on focus — generator/stores/
    │                         service/lock live in the stable-ids-for-obsidian
@@ -78,7 +79,7 @@ core/init/PluginFactory ──── DI container: constructs & wires everything
 - **`view/VaultTreemapView.tsx` is the only file in `view/` importing
   `obsidian`.** React components receive data + callbacks as props and stay
   Obsidian-agnostic (this is why they are unit-testable).
-- **Depend on interfaces** (`NoteFileUtil`, `LastVisitProvider`,
+- **Depend on interfaces** (`NoteFileUtil`, `VisitStatsProvider`,
   `IsTrackedProvider`, `IFileOpener`); `*Default` classes are the Obsidian
   implementations.
 
@@ -110,8 +111,8 @@ user input events  ──► (idle detection)       │   main at load, popouts 
                                 │  keeps its session
                                 ▼
                               VhV3DurationRecorder (one serialized write chain;
-                                │  writes each session start through to
-                                │  LastVisitCache after a successful append)
+                                │  writes each session through to
+                                │  VisitStatsCache after a successful append)
                                 ▼
                               VhV3DurationStore.appendFocusDuration
                                 (.plugin_data/visit_history/user/<user>/v3/
@@ -128,12 +129,13 @@ heatmap only once its session closes.
 ```
 VaultTreemapView.refresh
   → VaultUtilDefault.getTrackedFiles (single vault walk)
-  → VisitHistoryServiceV3.getLastVisitStamp (LastVisitProvider)
+  → VisitHistoryServiceV3.getVisitStats (VisitStatsProvider)
        (READ-ONLY DocIdService.getDocId — bulk reads never write into user
-        files; LastVisitCache hit → done)
-  → VhV3DurationStore.getLastFocusStartMsAcrossUsersAndDevices
-       (max session START across ALL users' device dirs — the heatmap shows
-        whole-vault activity; writes go to the current user only)
+        files; VisitStatsCache hit → done)
+  → VhV3DurationStore.getVisitStatsAcrossUsersAndDevices
+       (VisitStats fold over ALL users' device dirs: max session START = last
+        visit, sum of durations = total focus time — whole-vault activity;
+        writes go to the current user only)
 ```
 
 ## Doc id flow
@@ -209,10 +211,10 @@ no VH is recorded that session and the modal returns on the next start.
 
 | Cache | Where | Why safe |
 |-------|-------|----------|
-| doc id → last visit stamp (10k, `LastVisitCache`) | shared by VisitHistoryServiceV3 (read) and VhV3DurationRecorder (write-through) | Write-through after each successful session append (max-merge, so a racing cache-miss read cannot clobber it); refreshed on plugin reload |
+| doc id → `VisitStats` (last visit + total focus time; 10k, `VisitStatsCache`) | shared by VisitHistoryServiceV3 (read) and VhV3DurationRecorder (write-through) | Write-seq protocol (see class doc): a disk read overlapping a session write is never cached; write-through merges only into an existing entry; a failed append drops the entry; refreshed on plugin reload |
 
 Known limitation: visits synced in from another device are not seen until the
-stamp cache entry is evicted or the plugin reloads.
+stats cache entry is evicted or the plugin reloads.
 
 ## Error philosophy
 
