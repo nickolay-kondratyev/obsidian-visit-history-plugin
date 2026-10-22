@@ -807,7 +807,7 @@ body.theme-light .vault-heatmap-view {
   stroke-linejoin: round;
 }
 
-.vault-heatmap-view .leaf-node__visit-ago {
+.vault-heatmap-view .leaf-node__field-ago {
   fill: rgba(255, 255, 255, 0.62);
 }
 

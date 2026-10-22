@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { cornerLabelFits, fmtAgo, fmtBytes, fmtDate, fmtFileCount, heatColor } from './utils';
+import {
+  cornerLabelFits,
+  fmtAgo,
+  fmtBytes,
+  fmtDate,
+  fmtFileCount,
+  heatColor,
+  leafFieldAgo,
+} from './utils';
 import { GRADIENTS } from './constants';
+import type { VaultNode } from '../core/data/VaultNode';
 
 const MS_PER_MINUTE = 60000;
 const MS_PER_HOUR = 3600000;
@@ -125,6 +134,31 @@ describe('view utils', () => {
 
     it('should require more width for a longer label', () => {
       expect(cornerLabelFits(45, 36, '400d ago')).toBe(false);
+    });
+  });
+  describe('leafFieldAgo', () => {
+    // GIVEN a leaf whose three stamps are each a distinct age.
+    const leaf: VaultNode = {
+      name: 'note.md',
+      createdAt: NOW_MS - 3 * MS_PER_DAY,
+      lastModifiedAt: NOW_MS - 5 * MS_PER_HOUR,
+      lastVisitedAt: NOW_MS - 7 * MS_PER_MINUTE,
+    };
+
+    it('should show the created age when the field is createdAt', () => {
+      expect(leafFieldAgo(leaf, 'createdAt', NOW_MS)).toBe('3d ago');
+    });
+
+    it('should show the modified age when the field is lastModifiedAt', () => {
+      expect(leafFieldAgo(leaf, 'lastModifiedAt', NOW_MS)).toBe('5h ago');
+    });
+
+    it('should show the visited age when the field is lastVisitedAt', () => {
+      expect(leafFieldAgo(leaf, 'lastVisitedAt', NOW_MS)).toBe('7m ago');
+    });
+
+    it('should be undefined when the active field has no stamp', () => {
+      expect(leafFieldAgo({ ...leaf, lastVisitedAt: null }, 'lastVisitedAt', NOW_MS)).toBeUndefined();
     });
   });
 });
