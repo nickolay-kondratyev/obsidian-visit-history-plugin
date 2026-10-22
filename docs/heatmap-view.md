@@ -110,7 +110,7 @@ App                     state owner: HeatmapConfig (color mode, gradient,
  │                      scale RangeSliders)
  └─ TreemapViz          d3 treemap layout (useMemo), @visx/zoom pan/zoom,
      │                  hover + edge-flipping tooltip, filter empty-state,
- │                  all-unvisited empty-state ("size by content" CTA)
+     │                  all-unvisited empty-state ("size by content" CTA)
      ├─ FolderNode      click → drill into subtree (root-relative segments)
      ├─ CollapsedFolderNode  dense folder as ONE tile: name + "N files",
      │                  most-recent-file color, dashed border; click → drill in

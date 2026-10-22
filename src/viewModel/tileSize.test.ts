@@ -136,6 +136,10 @@ describe('tileSize', () => {
       expect(isHiddenBySizing(leaf('a.md', { totalFocusMs: undefined }), 'visitTime')).toBe(true);
     });
 
+    it.each([Number.NaN, -5])('should hide a note with invalid focus time %s in visit-time mode', ms => {
+      expect(isHiddenBySizing(leaf('a.md', { totalFocusMs: ms }), 'visitTime')).toBe(true);
+    });
+
     it('should keep a visited note in visit-time mode', () => {
       expect(isHiddenBySizing(leaf('a.md', { totalFocusMs: 1 }), 'visitTime')).toBe(false);
     });
