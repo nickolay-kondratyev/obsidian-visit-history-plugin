@@ -1,11 +1,12 @@
 ---
 id: nid_g093hvhy7cn5bfyigkjhdp9w7_e
 title: "Inline note: edge-case fixes found in review (unindexed files, self-links, embed in heading, CRLF)"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-10-22T21:14:32Z
-status_updated_iso: 2026-10-22T21:14:32Z
+status_updated_iso: 2026-10-22T21:14:42Z
+pwd: /home/nickolaykondratyev/git_repos/nickolay-kondratyev_obsidian-visit-history-plugin/.worktree/t-g093hvhy
 type: bug
 priority: 3
 assignee: CC_WITH-nickolaykondratyev
