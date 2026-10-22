@@ -108,7 +108,9 @@ App                     state owner: HeatmapConfig (color mode, gradient,
  └─ TreemapViz          d3 treemap layout (useMemo), @visx/zoom pan/zoom,
      │                  hover + edge-flipping tooltip, filter empty-state
      ├─ FolderNode      click → drill into subtree (root-relative segments)
-     ├─ LeafNode        click → IFileOpener.openFile(path)
+     ├─ LeafNode        click → IFileOpener.openFile(path); title top-left,
+     │                  last-visit age ("3d ago") bottom-right when the tile
+     │                  fits title + blank line + label (cornerLabelFits)
      └─ Tooltip
 ```
 

@@ -6,6 +6,8 @@ import type { VaultNode } from '../core/data/VaultNode';
 
 // ── Color helpers ──────────────────────────────────────────────────────────
 
+const MS_PER_MINUTE = 60000;
+const MS_PER_HOUR = 3600000;
 const MS_PER_DAY = 86400000;
 
 /**
@@ -85,6 +87,41 @@ export function fmtDate(ts: number | null | undefined): string | null {
   else if (d === 1) rel = 'yesterday';
   else rel = `${d}d ago`;
   return `${new Date(ts).toISOString().slice(0, 10)} (${rel})`;
+}
+
+/**
+ * Compact age of `ts` relative to `nowMs` for the in-tile last-visit label:
+ * `<1m ago` / `33m ago` / `12h ago` / `3d ago` (floored to the largest whole
+ * unit; days never roll up further). Future stamps (clock skew between synced
+ * devices) clamp to `<1m ago`.
+ */
+export function fmtAgo(ts: number, nowMs: number): string {
+  const ageMs = Math.max(0, nowMs - ts);
+  if (ageMs >= MS_PER_DAY) return `${Math.floor(ageMs / MS_PER_DAY)}d ago`;
+  if (ageMs >= MS_PER_HOUR) return `${Math.floor(ageMs / MS_PER_HOUR)}h ago`;
+  if (ageMs >= MS_PER_MINUTE) return `${Math.floor(ageMs / MS_PER_MINUTE)}m ago`;
+  return '<1m ago';
+}
+
+// ── Leaf label layout ──────────────────────────────────────────────────────
+// Tile-local geometry (pre-zoom units) for the 9px monospace leaf labels
+// (`.leaf-node__label` in styles.css). Char width is an ESTIMATE (monospace
+// ≈ 0.6em) — no DOM text measurement, so a theme with a wider mono font may
+// clip the last char; upgrade path: measure via getComputedTextLength.
+export const LEAF_LABEL_PAD_PX = 3;
+const LEAF_LABEL_LINE_HEIGHT_PX = 12;
+const LEAF_LABEL_CHAR_WIDTH_PX = 5.5;
+/** Title line + empty spacer line + bottom line — keeps both labels unsquished. */
+const CORNER_LABEL_MIN_LINES = 3;
+
+/**
+ * Whether a tile of `width`×`height` has room for `text` in its bottom-right
+ * corner below the title, with a blank line in between.
+ */
+export function cornerLabelFits(width: number, height: number, text: string): boolean {
+  const neededWidth = text.length * LEAF_LABEL_CHAR_WIDTH_PX + 2 * LEAF_LABEL_PAD_PX;
+  const neededHeight = CORNER_LABEL_MIN_LINES * LEAF_LABEL_LINE_HEIGHT_PX;
+  return width >= neededWidth && height >= neededHeight;
 }
 
 /**

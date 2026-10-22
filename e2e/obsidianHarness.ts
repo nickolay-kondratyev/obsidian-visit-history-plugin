@@ -67,13 +67,22 @@ export interface LaunchOptions {
 }
 
 export class ObsidianHarness {
-  private constructor(
-    readonly page: Page,
-    readonly vaultDir: string,
-    private readonly browser: Browser,
-    private readonly child: ChildProcess,
-    private readonly runDir: string,
-  ) {}
+  // WHY-NOT parameter properties: Node's native type stripping (default since Node 23.6,
+  // which loads these specs) rejects them — only erasable TS syntax is allowed here
+  // (enforced by `erasableSyntaxOnly` in e2e/tsconfig.json).
+  readonly page: Page;
+  readonly vaultDir: string;
+  private readonly browser: Browser;
+  private readonly child: ChildProcess;
+  private readonly runDir: string;
+
+  private constructor(page: Page, vaultDir: string, browser: Browser, child: ChildProcess, runDir: string) {
+    this.page = page;
+    this.vaultDir = vaultDir;
+    this.browser = browser;
+    this.child = child;
+    this.runDir = runDir;
+  }
 
   static async launch(opts: LaunchOptions): Promise<ObsidianHarness> {
     const obsidianPath = process.env.OBSIDIAN_PATH;

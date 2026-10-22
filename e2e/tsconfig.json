@@ -10,7 +10,9 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "types": ["node"],
-    "noEmit": true
+    "noEmit": true,
+    "erasableSyntaxOnly": true,
+    "verbatimModuleSyntax": true
   },
   "include": ["**/*.ts"]
 }

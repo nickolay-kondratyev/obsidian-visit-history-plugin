@@ -16,7 +16,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
 import { VH_LEGACY_INTERIM_TOP_DIR, VH_README_FILENAME, VH_TOP_DIR } from './constants';
-import { ObsidianHarness, SeedFile } from './obsidianHarness';
+import { ObsidianHarness, type SeedFile } from './obsidianHarness';
 import { pollUntil } from './vhAssert';
 
 const MIGRATED_USER = 'migrateduser';
