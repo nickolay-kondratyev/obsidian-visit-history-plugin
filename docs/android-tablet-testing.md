@@ -21,6 +21,9 @@ npm run android:push-plugin  # rebuild, push the plugin, restart Obsidian
 - `android:push-plugin` pushes only `main.js`, `manifest.json` and `styles.css`.
   `data.json` is not pushed, so the plugin settings on the tablet are kept. It
   needs the emulator running and the vault on the tablet (run `android:setup` first).
+  The restart reopens the vault Obsidian had open last. If that is another vault
+  on the tablet (it has its own copy of the plugin), the pushed build is not what
+  runs: switch to `visit-history-dev-vault` in Obsidian's vault switcher once.
 
 Pinned versions (cmdline-tools build, Obsidian APK version, AVD profile) are
 constants at the top of the scripts in `scripts/android/`.
@@ -37,6 +40,17 @@ ANDROID_HOME=~/android-sdk npm run android:setup
 
 Your user also needs read/write access to `/dev/kvm` (the `kvm` group), and
 `curl`, `unzip` and GNU `tar` on the host.
+
+## Emulator crashed (setup stops with exit 255, `adb: device ... not found`)
+
+The emulator process died, usually in its GPU renderer right after a quick-boot
+snapshot restore (seen once with emulator 37.2.12; `coredumpctl list` shows a
+`qemu-system-x86_64` SIGSEGV). Start it cold, without the snapshot, then re-run setup:
+
+```bash
+"${ANDROID_HOME}/cmdline-tools/latest/bin/android" --sdk="${ANDROID_HOME}" emulator start --cold medium_tablet
+npm run android:setup
+```
 
 ## One-time manual steps on a fresh emulator
 
@@ -66,7 +80,10 @@ curl -s http://127.0.0.1:9333/json   # page entry with webSocketDebuggerUrl
 ```
 
 Connect a CDP client to `webSocketDebuggerUrl`; `Runtime.evaluate` works (e.g.
-read `app.plugins.plugins['visit-history']`). Remove the forward when done:
+read `app.plugins.plugins['visit-history']`) and so does `Page.captureScreenshot`.
+Playwright's `chromium.connectOverCDP` does NOT work here (fails with
+`Browser context management is not supported`), so talk raw CDP to the page
+websocket (Node's built-in `WebSocket` is enough). Remove the forward when done:
 
 ```bash
 adb forward --remove tcp:9333
