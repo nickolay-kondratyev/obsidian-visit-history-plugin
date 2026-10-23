@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, MockInstance, vi } from 'vitest';
 import { VhV3FocusDurationListener } from './VhV3FocusDurationListener';
 import { FocusEvent } from '../FocusTracker';
 import {
@@ -19,14 +19,18 @@ function makeFocusEvent(path: string): FocusEvent {
 
 class RecordingSink implements FocusDurationSink {
   readonly docIds: string[] = [];
+  /** `${docId}:${durationMs}` per record — for tests where the close moment matters. */
+  readonly sessions: string[] = [];
 
-  recordFocusDuration(docId: string, _focusStartEpochMs: number, _durationMs: number): void {
+  recordFocusDuration(docId: string, _focusStartEpochMs: number, durationMs: number): void {
     this.docIds.push(docId);
+    this.sessions.push(`${docId}:${durationMs}`);
   }
 }
 
 interface Setup {
   listener: VhV3FocusDurationListener;
+  tracker: FocusDurationTracker;
   docIdService: FakeDocIdService;
   sink: RecordingSink;
 }
@@ -40,7 +44,7 @@ function setup(): Setup {
   // Mirrors WindowActivityMonitor's hasFocus() seeding at plugin load.
   tracker.onWindowFocused(OWNER_DOC);
   const listener = new VhV3FocusDurationListener(docIdService, tracker);
-  return { listener, docIdService, sink };
+  return { listener, tracker, docIdService, sink };
 }
 
 describe('VhV3FocusDurationListener', () => {
@@ -70,8 +74,9 @@ describe('VhV3FocusDurationListener', () => {
       const { listener, sink } = setup();
       await listener.onFocus(makeFocusEvent('draw.excalidraw'));
       vi.advanceTimersByTime(5000);
-      // WHEN it is unfocused
+      // WHEN it is unfocused and the unfocus grace resolves
       await listener.onUnfocus(makeFocusEvent('draw.excalidraw'));
+      vi.advanceTimersByTime(UNFOCUS_GRACE_MS);
       // THEN no session was recorded
       expect(sink.docIds).toEqual([]);
     });
@@ -89,17 +94,36 @@ describe('VhV3FocusDurationListener', () => {
       expect(sink.docIds).toEqual(['docid-for-notes_a.md']);
     });
 
-    it('should skip (with console.error) a doc whose existing id is not filename-safe', async () => {
-      // GIVEN a note carrying a pre-existing unsafe id
-      const { listener, docIdService, sink } = setup();
-      docIdService.seedId('notes/a.md', 'un/safe');
-      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-      // WHEN focused and unfocused
-      await listener.onFocus(makeFocusEvent('notes/a.md'));
-      await listener.onUnfocus(makeFocusEvent('notes/a.md'));
-      // THEN nothing was recorded
-      expect(sink.docIds).toEqual([]);
-      errorSpy.mockRestore();
+    describe('when the existing id is not filename-safe', () => {
+      let errorSpy: MockInstance<typeof console.error>;
+      let sink: RecordingSink;
+
+      beforeEach(async () => {
+        // GIVEN a note carrying a pre-existing unsafe id
+        const rig = setup();
+        sink = rig.sink;
+        rig.docIdService.seedId('notes/a.md', 'un/safe');
+        errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+        // WHEN focused for 5s, unfocused, and the unfocus grace resolves
+        await rig.listener.onFocus(makeFocusEvent('notes/a.md'));
+        vi.advanceTimersByTime(5000);
+        await rig.listener.onUnfocus(makeFocusEvent('notes/a.md'));
+        vi.advanceTimersByTime(UNFOCUS_GRACE_MS);
+      });
+
+      afterEach(() => {
+        errorSpy.mockRestore();
+      });
+
+      it('should skip (with console.error) a doc whose existing id is not filename-safe', () => {
+        // THEN nothing was recorded
+        expect(sink.docIds).toEqual([]);
+      });
+
+      it('should report the unsafe id via console.error', () => {
+        // THEN the skip is reported
+        expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('not filename-safe'));
+      });
     });
 
     it('should close the running session when id resolution THROWS for the newly focused doc', async () => {
@@ -114,18 +138,20 @@ describe('VhV3FocusDurationListener', () => {
       vi.advanceTimersByTime(60_000);
       // THEN the note's session was closed at the focus switch — the failure
       // must not leave it accruing time while the user views the other doc
-      expect(sink.docIds).toEqual(['docid-for-notes_a.md']);
+      expect(sink.sessions).toEqual(['docid-for-notes_a.md:5000']);
       errorSpy.mockRestore();
     });
 
     it('should ignore focus events without a file path', async () => {
       // GIVEN an event with no file
-      const { listener, sink } = setup();
+      const { listener, tracker, sink } = setup();
       const event = {
         type: 'markdown', title: '?', file: undefined, ownerDocument: OWNER_DOC,
       } as unknown as FocusEvent;
-      // WHEN focused
+      // WHEN focused, and the plugin later unloads (flushing any opened session)
       await listener.onFocus(event);
+      vi.advanceTimersByTime(5000);
+      tracker.dispose();
       // THEN nothing happened
       expect(sink.docIds).toEqual([]);
     });

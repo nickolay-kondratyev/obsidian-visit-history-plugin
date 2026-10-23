@@ -171,10 +171,12 @@ describe('FocusDurationTracker', () => {
     it('should not open a session while the window is blurred even if a doc gains focus', () => {
       // GIVEN a blurred window
       tracker.onWindowBlurred(MAIN_WIN);
-      // WHEN a doc gains focus and is unfocused while still blurred
+      // WHEN a doc gains focus and is unfocused while still blurred, and the
+      // unfocus grace resolves (would close a wrongly-opened session)
       tracker.onDocFocused('A', MAIN_WIN);
       advanceMs(1000);
       tracker.onDocUnfocused();
+      expireGrace();
       // THEN nothing is recorded
       expect(sink.records).toEqual([]);
     });
@@ -287,10 +289,12 @@ describe('FocusDurationTracker', () => {
       tracker.onWindowBlurred(POPOUT_1);
       tracker.onWindowFocused(POPOUT_2);
       sink.records.length = 0;
-      // WHEN the user is active in popout 2 (no leaf change yet) and time passes
+      // WHEN the user is active in popout 2 (no leaf change yet), time passes,
+      // and the plugin unloads (flushing any revived session)
       tracker.onUserActivity();
       advanceMs(1000);
       tracker.onUserActivity();
+      tracker.dispose();
       // THEN no session was revived for X
       expect(sink.records).toEqual([]);
     });
@@ -348,8 +352,10 @@ describe('FocusDurationTracker', () => {
       // GIVEN doc A auto-closed by idle
       tracker.onDocFocused('A', MAIN_WIN);
       advanceMs(IDLE_MS);
-      // WHEN an unfocus arrives later without any interaction in between
+      // WHEN an unfocus arrives later without any interaction in between and
+      // the unfocus grace resolves
       tracker.onDocUnfocused();
+      expireGrace();
       // THEN only the idle close was recorded
       expect(sink.records).toHaveLength(1);
     });
@@ -555,9 +561,12 @@ describe('FocusDurationTracker', () => {
       advanceMs(5000);
       tracker.onDocUnfocused();
       expireGrace();
-      // WHEN the window blurs and refocuses afterwards
+      // WHEN the window blurs and refocuses afterwards, and the plugin later
+      // unloads (flushing any revived session)
       tracker.onWindowBlurred(MAIN_WIN);
       tracker.onWindowFocused(MAIN_WIN);
+      advanceMs(1000);
+      tracker.dispose();
       // THEN still exactly one record — the doc is gone after the finalize
       expect(sink.records).toEqual([{ docId: 'A', focusStartEpochMs: T0, durationMs: 5000 }]);
     });
@@ -702,8 +711,11 @@ describe('FocusDurationTracker', () => {
       advanceMs(5000);
       tracker.onDocUnfocused();
       sleepMs(8 * 60 * 60_000);
-      // WHEN the first post-wake event is a user interaction
+      // WHEN the first post-wake event is a user interaction, and the plugin
+      // later unloads (flushing any reopened session)
       tracker.onUserActivity();
+      advanceMs(1000);
+      tracker.dispose();
       // THEN the session closed at its unfocus time and did NOT reopen
       expect(sink.records).toEqual([{ docId: 'A', focusStartEpochMs: T0, durationMs: 5000 }]);
     });
@@ -767,11 +779,23 @@ describe('FocusDurationTracker', () => {
       // THEN nothing is recorded for B yet
       expect(sink.records).toEqual([]);
     });
+
+    it('should still record the other doc full session when it closes later', () => {
+      // GIVEN doc B focused, and an unrelated doc A released 1000ms in
+      tracker.onDocFocused('B', MAIN_WIN);
+      advanceMs(1000);
+      tracker.releaseDoc('A');
+      // WHEN B runs 500ms more and the plugin unloads
+      advanceMs(500);
+      tracker.dispose();
+      // THEN B's session is recorded uncut
+      expect(sink.records).toEqual([{ docId: 'B', focusStartEpochMs: T0, durationMs: 1500 }]);
+    });
   });
 
   describe('dispose', () => {
     it('should flush the open session on dispose', () => {
-      // GIVEN doc A focused for 42s
+      // GIVEN doc A focused for 4200ms
       tracker.onDocFocused('A', MAIN_WIN);
       advanceMs(4200);
       // WHEN the plugin unloads
