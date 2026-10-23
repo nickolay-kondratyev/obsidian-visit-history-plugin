@@ -22,7 +22,9 @@ npm test           # vitest unit tests
 npm run test:e2e   # real-Obsidian Playwright e2e (auto-downloads pinned Obsidian,
                    # headless; asserts on-disk .vh_v3 — see docs/e2e-testing.md)
 npm run version    # bump version + update manifest/versions
-npm run android:setup  # tablet emulator + dev vault; then android:push-plugin (docs/android-tablet-testing.md)
+npm run android:setup        # manual Android tablet testing: emulator + Obsidian + dev vault
+npm run android:push-plugin  # rebuild + push plugin to the tablet, restart Obsidian
+                             # (both: scripts/android/, docs/android-tablet-testing.md)
 ```
 
 - Node 18+, npm, esbuild bundler
@@ -33,7 +35,7 @@ npm run android:setup  # tablet emulator + dev vault; then android:push-plugin (
 - Dependencies: React 18, d3-hierarchy, d3-color, d3-interpolate, visx/zoom, stable-ids-for-obsidian (published npm package — its own repo at github.com/nickolay-kondratyev/obsidian-id-lib; bundle changes there, publish, then bump the version here)
 
 High-level docs live in [`docs/`](docs/README.md): architecture, VH on-disk
-format, heatmap view.
+format, heatmap view, e2e testing, Android tablet testing.
 
 ## Architecture
 

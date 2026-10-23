@@ -35,7 +35,7 @@ The plugin claims mobile support (`manifest.json`: `"isDesktopOnly": false`), bu
 - Verified 2026-10-23: Obsidian Android's WebView exposes Chrome DevTools at the abstract socket `webview_devtools_remote_<obsidian pid>`.
   - After `adb forward tcp:<port> localabstract:webview_devtools_remote_<pid>`, `http://127.0.0.1:<port>/json` lists the page.
   - CDP `Runtime.evaluate` works there (that is how the tablet CSS bug was diagnosed).
-  - So Playwright `chromium.connectOverCDP` is a likely driver, consistent with the desktop suite in `e2e/`, which also uses Playwright.
+  - Verified 2026-10-23: Playwright `chromium.connectOverCDP` does NOT work against this WebView (`Browser.setDownloadBehavior: Browser context management is not supported`). Raw CDP over the page's `webSocketDebuggerUrl` works (`Runtime.evaluate`, `Page.captureScreenshot`), using Node's built-in `WebSocket`. So drive it with a small raw-CDP client, not Playwright's browser API.
 - The desktop e2e harness is `e2e/obsidianHarness.ts` and `e2e/harnessFixture.ts`, with the seed vault `.dev-vault/` and `e2e/setupDevVault.mjs`. Reuse its patterns, but do not merge the two harnesses (different launch model).
 - Related: ticket `nid_u48zcq4xb5jni7w3jrwqdc405_E` (desktop e2e in CI). Running the emulator in CI is out of scope here.
 
