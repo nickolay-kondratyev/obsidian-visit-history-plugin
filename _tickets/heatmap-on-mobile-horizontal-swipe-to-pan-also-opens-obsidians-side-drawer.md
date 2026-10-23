@@ -1,14 +1,15 @@
 ---
 id: nid_0x7jjcfyr7xs5t02sv6x90rti_e
 title: "Heatmap on mobile: horizontal swipe to pan also opens Obsidian's side drawer"
-status: open
+status: in_progress
 deps: []
 links: [nid_fx5flv7humtg2d6xamfwprvm5_e]
 created_iso: 2026-10-23T23:56:10Z
-status_updated_iso: 2026-10-23T23:56:10Z
+status_updated_iso: 2026-10-23T23:59:35Z
 type: bug
 priority: 2
 assignee: CC_WITH-nickolaykondratyev
+pwd: /home/nickolaykondratyev/git_repos/nickolay-kondratyev_obsidian-visit-history-plugin/.worktree/t-0x7jjcfy
 tags: [heatmap, obsidian-mobile]
 ---
 
