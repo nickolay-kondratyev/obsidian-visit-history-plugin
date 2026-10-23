@@ -5,6 +5,8 @@ import { FocusDurationSink, FocusDurationTracker, UNFOCUS_GRACE_MS, WindowTimers
 
 const IDLE_MS = 180_000;
 const DWELL_MS = 5000;
+/** Margin for input fired just before the idle deadline, then checked just after it. */
+const BEFORE_IDLE_MS = 1000;
 const DOC_ID = 'X';
 
 // Built at CALL time (inside a test, after vi.useFakeTimers) so the shorthand
@@ -429,7 +431,6 @@ describe('WindowActivityMonitor', () => {
   describe('user input events', () => {
     // Mirrors the monitor's ACTIVITY_EVENT_TYPES (module-private).
     const INPUT_EVENT_TYPES = ['keydown', 'mousedown', 'mousemove', 'wheel', 'touchstart', 'touchmove'];
-    const BEFORE_IDLE_MS = 1000;
 
     it.each(INPUT_EVENT_TYPES)('should keep the session alive past the idle timeout when %s fires on the document', (eventType) => {
       // GIVEN a focused main window with doc X focused
@@ -484,12 +485,12 @@ describe('WindowActivityMonitor', () => {
       rig.tracker.onDocFocused(DOC_ID, popout.doc);
       // WHEN a keydown fires in the popout just before the idle timeout, and
       // the popout blurs after the original idle deadline
-      vi.advanceTimersByTime(IDLE_MS - DWELL_MS);
+      vi.advanceTimersByTime(IDLE_MS - BEFORE_IDLE_MS);
       rig.stub.fire(popout.doc, 'keydown');
-      vi.advanceTimersByTime(2 * DWELL_MS);
+      vi.advanceTimersByTime(2 * BEFORE_IDLE_MS);
       rig.stub.fire(popout.win, 'blur');
       // THEN the popout keydown kept the session alive past the deadline
-      expect(rig.sink.records).toEqual([`${DOC_ID}:${IDLE_MS + DWELL_MS}`]);
+      expect(rig.sink.records).toEqual([`${DOC_ID}:${IDLE_MS + BEFORE_IDLE_MS}`]);
     });
   });
 
