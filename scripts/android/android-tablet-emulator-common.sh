@@ -25,7 +25,9 @@ readonly DEVICE_VAULT_NAME="visit-history-dev-vault"
 # Plugin files Obsidian loads. data.json (settings) is deliberately not listed:
 # a plugin push must keep the tablet's settings.
 readonly PLUGIN_CODE_FILES=(main.js manifest.json styles.css)
-readonly PLUGIN_DIR_IN_VAULT=".obsidian/plugins/visit-history"
+# Must match "id" in manifest.json (Obsidian loads plugins/<id>/).
+readonly PLUGIN_ID="visit-history"
+readonly PLUGIN_DIR_IN_VAULT=".obsidian/plugins/${PLUGIN_ID}"
 
 # ==============================================================================
 # DERIVED PATHS

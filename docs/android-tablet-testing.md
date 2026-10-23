@@ -2,8 +2,8 @@
 
 Manual testing of the plugin in Obsidian for Android, on a local tablet emulator
 (Linux x86_64 with KVM). The tablet gets a one-way copy of the committed seed vault
-`.dev-vault/` (A.md, B.md, C.canvas + the plugin build), named
-`visit-history-dev-vault` on the device. Your own vaults are never touched.
+`.dev-vault/` (A.md, B.md, C.canvas + the plugin build, enabled in the tablet copy),
+named `visit-history-dev-vault` on the device. Your own vaults are never touched.
 
 ## Commands
 
@@ -35,7 +35,8 @@ same value for both commands:
 ANDROID_HOME=~/tools/android-sdk npm run android:setup
 ```
 
-Your user also needs read/write access to `/dev/kvm` (the `kvm` group).
+Your user also needs read/write access to `/dev/kvm` (the `kvm` group), and
+`curl`, `unzip` and GNU `tar` on the host.
 
 ## One-time manual steps on a fresh emulator
 

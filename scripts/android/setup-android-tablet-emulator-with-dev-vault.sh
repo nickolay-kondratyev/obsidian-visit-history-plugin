@@ -9,6 +9,7 @@
 #   5. Installs the pinned Obsidian APK when the installed version differs
 #   6. Copies .dev-vault ONE-WAY to the tablet as DEVICE_VAULT_NAME (re-run =
 #      refresh; the previous tablet copy is moved to a backup dir, never deleted)
+#      and enables the plugin in that copy
 #   7. Grants Obsidian "All files access" so it can open a shared-storage vault
 #
 # MANUAL, once per fresh emulator (printed at the end): open the vault in Obsidian.
@@ -82,6 +83,10 @@ install_cmdline_tools_if_missing() {
     log "Android command-line tools already installed. sdk_dir=[${SDK_DIR}]"
     return 0
   fi
+  # Common when ANDROID_HOME points at an existing SDK with older cmdline-tools: 'mv' below
+  # would nest the new tools inside the old dir instead of replacing it.
+  [[ ! -e "${SDK_DIR}/cmdline-tools/latest" ]] \
+    || die "SDK has cmdline-tools/latest but no 'android' CLI in it. Update it (sdkmanager 'cmdline-tools;latest') or set ANDROID_HOME to another dir. android_cli=[${ANDROID_CLI}]"
   require_writable_sdk_dir
 
   log "Installing Android command-line tools. url=[${CMDLINE_TOOLS_URL}]"
@@ -188,9 +193,19 @@ copy_dev_vault_to_device() {
   host_file_count="$(find "${host_vault_dir}" -type f | wc -l)"
   device_file_count="$(count_device_files "${serial}")"
   if [[ "${device_file_count}" != "${host_file_count}" ]]; then
-    die "Vault copy is incomplete. host_file_count=[${host_file_count}] device_file_count=[${device_file_count}] device_vault_dir=[${DEVICE_VAULT_DIR}]"
+    die "Vault copy is incomplete; re-run npm run android:setup. host_file_count=[${host_file_count}] device_file_count=[${device_file_count}] device_vault_dir=[${DEVICE_VAULT_DIR}]"
   fi
   log "Vault copied. file_count=[${device_file_count}] device_vault_dir=[${DEVICE_VAULT_DIR}]"
+}
+
+# WHY: the seed vault ships community-plugins.json=[] on purpose (the desktop e2e enables the
+# plugin only after pinning a user name). On the tablet the plugin should be on, so opening the
+# vault shows Obsidian's "Trust author and enable plugins" prompt and then loads the plugin.
+enable_plugin_in_device_vault() {
+  local serial="${1:?serial}"
+  local enabled_plugins_json="[\"${PLUGIN_ID}\"]"
+  "${ADB}" -s "${serial}" shell "printf '%s' $(device_shell_quote "${enabled_plugins_json}") > $(device_shell_quote "${DEVICE_VAULT_DIR}/.obsidian/community-plugins.json")"
+  log "Enabled the plugin in the tablet copy. plugin_id=[${PLUGIN_ID}]"
 }
 
 grant_obsidian_all_files_access() {
@@ -237,6 +252,7 @@ main() {
 
   install_obsidian_if_needed "${serial}"
   copy_dev_vault_to_device "${serial}"
+  enable_plugin_in_device_vault "${serial}"
   grant_obsidian_all_files_access "${serial}"
 
   print_manual_open_vault_steps
