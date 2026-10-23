@@ -1,14 +1,15 @@
 ---
 id: nid_fx5flv7humtg2d6xamfwprvm5_e
 title: "Heatmap touch: tap file = details card with Open, tap folder = drill in"
-status: open
+status: in_progress
 deps: [nid_qv6dvik5peosopm9ewks3rkm8_e]
 links: [nid_qv6dvik5peosopm9ewks3rkm8_e]
 created_iso: 2026-10-23T23:17:24Z
-status_updated_iso: 2026-10-23T23:17:24Z
+status_updated_iso: 2026-10-23T23:38:15Z
 type: feature
 priority: 2
 assignee: CC_WITH-nickolaykondratyev
+pwd: /home/nickolaykondratyev/git_repos/nickolay-kondratyev_obsidian-visit-history-plugin/.worktree/t-fx5flv7h
 tags: [heatmap-readability]
 ---
 
