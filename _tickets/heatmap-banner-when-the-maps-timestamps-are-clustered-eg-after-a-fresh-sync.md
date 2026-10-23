@@ -1,14 +1,14 @@
 ---
+closed_iso: 2026-10-23T23:47:13Z
 id: nid_zm4hogy3zq89xfxyiv5wdncyj_e
 title: "Heatmap: banner when the map's timestamps are clustered (e.g. after a fresh sync)"
-status: in_progress
+status: closed
 deps: []
 links: [nid_z3ifk9vxm295cpu4tqu99gj7m_e, nid_7n2lvhgesln25nxooiauewd8c_e]
 created_iso: 2026-10-23T23:21:04Z
-status_updated_iso: 2026-10-23T23:36:29Z
+status_updated_iso: 2026-10-23T23:47:13Z
 type: feature
 priority: 2
-pwd: /home/nickolaykondratyev/git_repos/nickolay-kondratyev_obsidian-visit-history-plugin/.worktree/t-zm4hogy3
 tags: [heatmap, obsidian-mobile]
 ---
 
@@ -60,3 +60,8 @@ Outcome: when the timestamps of the color-by field are clustered, the header sho
 - Restoring timestamps, and any git awareness or call to action. That's `nid_z3ifk9vxm295cpu4tqu99gj7m_e`, which adds the "Restore from git" button to this banner.
 - Changing the default thresholds, adding percentile or auto-range color scales. When most timestamps are identical, rescaling the colors shows nothing new.
 - Dismiss or "don't show again" behavior. The banner disappears once the data stops being clustered.
+
+## Verification
+
+- Desktop e2e `e2e/heatmapClusteredTimestamps.e2e.ts`: banner shown on a clustered vault, absent on a spread vault.
+- Android tablet emulator (medium_tablet, headless swangle_indirect), checked by the implementer: landscape 1280px renders the banner on one line; portrait 800px wraps to two lines within the 42px header; header buttons stay inside.
