@@ -79,7 +79,8 @@ test.describe('S15 user-name modal on an unpinned device', () => {
     // AC15.2 — A's session (opened by the activation replay) lands under the new user.
     const result = await pollForSessionLine(vhFilePath(h.vaultDir, DOC_ID_A, NEW_USER_NAME), POLL);
     expect(result.lines).toHaveLength(1);
-    // Started at confirm (replay), not at the pre-confirm focus: ~the post-confirm dwell.
+    // Lower bound only: the replay starts the session at confirm, so it spans ~the
+    // post-confirm dwell (the pre-confirm focus time is not counted).
     expect(parseDurationMs(result.firstLine)).toBeGreaterThanOrEqual(DWELL_MS / 2);
   });
 });

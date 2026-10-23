@@ -7,7 +7,8 @@ Settings (ends the session; re-opens on close), opening the heatmap
 (`switchToHeatmap.e2e.ts`; grace expiry) and refocusing the doc within the grace
 (`heatmapRefocusWithinGrace.e2e.ts`; one continued session), Obsidian window blur/refocus
 (`windowBlur.e2e.ts`), a doc in a popout window (`popoutWindowBlur.e2e.ts`), canvas focus,
-idle timeout, a sub-floor idle timeout via a dev overrides file, real input resuming after
+idle timeout, a sub-floor idle timeout via a dev overrides file, the minimum focus time
+(`minFocusToRecord.e2e.ts`), real input resuming after
 an idle close (`idleResumeOnInput.e2e.ts`), a doc already open when the plugin is enabled
 (`docOpenAtPluginEnable.e2e.ts`), first focus of an id-less note
 (`firstFocusAssignsDocId.e2e.ts`), the first-run user-name modal — cancel records nothing,

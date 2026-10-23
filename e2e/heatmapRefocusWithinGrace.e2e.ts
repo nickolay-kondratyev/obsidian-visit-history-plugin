@@ -11,7 +11,7 @@ import { parseDurationMs, pollForSessionLine, sessionLines, sleep, vhFilePath } 
 
 const DWELL_MS = 1000;
 // Time spent on the heatmap — well within the grace, so the refocus must cancel the close.
-const HEATMAP_GAP_MS = 2000; // must stay well below UNFOCUS_GRACE_MS
+const HEATMAP_GAP_MS = UNFOCUS_GRACE_MS / 5;
 // Lower bound for a session covering dwell + heatmap gap + dwell; the margin absorbs
 // timing jitter yet stays far above any single split piece (~DWELL_MS each).
 const MIN_CONTINUED_SESSION_MS = DWELL_MS + HEATMAP_GAP_MS + DWELL_MS / 2;
