@@ -50,6 +50,14 @@ Options:
 
 Recommendation: C first (cheapest, no brittle UI driving), with B as the fallback if snapshots prove flaky. Spike briefly before committing.
 
+Spike result for A (2026-10-23, done by hand-run commands, nothing committed): the whole open-vault flow was driven with no human taps.
+- CDP `Runtime.evaluate`: `app.openVaultChooser()`, then a DOM click on "Open folder as vault".
+- Android folder picker: `adb shell uiautomator dump` finds the nodes by text (the vault folder, "USE THIS FOLDER", "ALLOW"), and `adb shell input tap` taps their centers. `uiautomator` sees nothing inside the WebView, so Obsidian's own UI must go through CDP.
+- CDP click on "Trust author and enable plugins". Obsidian then opens Settings > Community plugins; `app.setting.close()` dismisses it.
+- A device that already pinned a user name gets no name prompt (the pin is device-scoped localStorage `obsidian-vh-user-name`).
+- After that, `npm run android:push-plugin` reopened the dev vault, and a focus session on A.md was written to `.vh_v3`.
+- C (snapshot) caveat: quick-boot snapshot restore once crashed the emulator (gfxstream SIGSEGV, emulator 37.2.12); see the doc's "Emulator crashed" section.
+
 ## Non-goals
 
 - Running Android tests in CI.
