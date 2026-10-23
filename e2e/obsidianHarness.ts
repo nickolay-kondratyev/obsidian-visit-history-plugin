@@ -447,6 +447,7 @@ async function firstPage(browser: Browser): Promise<Page> {
 declare global {
   interface ObsidianLeaf {
     openFile(file: unknown, openState?: { active: boolean }): Promise<void>;
+    setViewState(viewState: { type: string; active?: boolean; state?: Record<string, unknown> }): Promise<void>;
     view: {
       getViewType(): string;
       file?: { path: string } | null;
@@ -462,6 +463,8 @@ declare global {
         getLeavesOfType(viewType: string): ObsidianLeaf[];
         setActiveLeaf(leaf: ObsidianLeaf, params: { focus: boolean }): void;
         openPopoutLeaf(): ObsidianLeaf;
+        leftSplit: { collapse(): void };
+        rightSplit: { collapse(): void };
       };
       vault: { getAbstractFileByPath(path: string): unknown; getMarkdownFiles(): unknown[] };
       metadataCache: {

@@ -236,3 +236,12 @@ Button rules are written as `.vault-heatmap-view button.<class>`, not
 0,2,1), which beats a 0,2,0 class rule and squeezed the 28px icon buttons'
 SVGs to 0 width. A new `<button>` class in the view must follow the same
 pattern. Check on the tablet emulator (`docs/android-tablet-testing.md`).
+The same applies to text inputs: Obsidian mobile's `.is-mobile input[type="text"]
+{ width: 100% }` (0,2,1) widened the slider bound inputs and squeezed the range
+tracks to 0px, so their rule carries an extra class (0,3,0).
+
+Narrow panes (phone, tablet split view): the breadcrumb shrinks first and
+ellipsizes (full path in its title), and below a 480px pane width (a container
+query on `.vault-heatmap-view`) the header tightens its gaps and hides the
+`field:` button — the config panel's timestamp-field radios do the same job.
+Covered by `e2e/heatmapMobileLayout.e2e.ts`.
