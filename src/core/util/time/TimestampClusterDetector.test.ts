@@ -116,6 +116,24 @@ describe('TimestampClusterDetector', () => {
       expect(detect(items)?.members).toHaveLength(20);
     });
 
+    it('should return the largest window WHEN several windows hold a cluster', () => {
+      const items = [
+        ...sameTime('small', 8, BASE_MS),
+        ...sameTime('large', 14, BASE_MS + 50 * DAY_MS),
+      ];
+
+      expect(memberIds(items)).toEqual(sameTime('large', 14, 0).map(s => s.id).sort());
+    });
+
+    it('should return the earliest window WHEN two equally large windows tie', () => {
+      const items = [
+        ...sameTime('late', 10, BASE_MS + 50 * DAY_MS),
+        ...sameTime('early', 10, BASE_MS),
+      ];
+
+      expect(memberIds(items)).toEqual(sameTime('early', 10, 0).map(s => s.id).sort());
+    });
+
     describe('GIVEN some items have no usable timestamp', () => {
       const items: Stamped[] = [
         ...sameTime('c', MIN_ITEMS_TO_JUDGE, BASE_MS),
