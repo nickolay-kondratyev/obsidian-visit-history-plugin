@@ -23,7 +23,8 @@ npm run android:push-plugin  # rebuild, push the plugin, restart Obsidian
   needs the emulator running and the vault on the tablet (run `android:setup` first).
   The restart reopens the vault Obsidian had open last. If that is another vault
   on the tablet (it has its own copy of the plugin), the pushed build is not what
-  runs: switch to `visit-history-dev-vault` in Obsidian's vault switcher once.
+  runs: open `visit-history-dev-vault` once (next section) and later restarts
+  reopen it.
 
 Pinned versions (cmdline-tools build, Obsidian APK version, AVD profile) are
 constants at the top of the scripts in `scripts/android/`.
@@ -52,17 +53,20 @@ snapshot restore (seen once with emulator 37.2.12; `coredumpctl list` shows a
 npm run android:setup
 ```
 
-## One-time manual steps on a fresh emulator
+## One-time manual steps: open the dev vault in Obsidian
 
-Opening the vault cannot be scripted: Obsidian keeps its vault list in private app
-storage, which adb cannot write without root. Once per fresh emulator, tap:
+The scripts cannot add the vault to Obsidian's vault list: Obsidian keeps it in
+private app storage, which adb cannot write without root. Once per fresh emulator
+(or when Obsidian shows another vault), tap:
 
-1. Obsidian -> "Use my existing vault" -> "On this device" -> "Choose folder"
+1. Fresh install: Obsidian -> "Use my existing vault" -> "On this device" ->
+   "Choose folder". Another vault already open: vault switcher -> "Open folder as vault".
 2. Documents/visit-history-dev-vault -> "Use this folder" -> "Allow"
 3. "Trust author and enable plugins" (Obsidian asks because the vault has a
    community plugin enabled).
 4. The plugin's "Choose your visit history user name" prompt: pick a name.
-   Until a name is confirmed, no visit history is recorded.
+   Until a name is confirmed, no visit history is recorded. No prompt when this
+   device already pinned a name (the pin is per device, not per vault).
 
 ## Inspecting the running plugin (Chrome DevTools)
 
