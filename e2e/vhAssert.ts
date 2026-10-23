@@ -3,17 +3,23 @@
 // All assertions in the suite read the real files the plugin writes — never plugin
 // internals. Polling is BOUNDED and throws with the last-seen content on timeout, so
 // a slow/absent write fails loudly instead of silently passing.
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { DEVICE_NAME, SESSION_LINE_RE, USER_NAME, VH_TOP_DIR } from './constants';
 
-/** Full path of the per-doc session log inside a vault copy. */
-export function vhFilePath(vaultDir: string, docId: string): string {
+/** The `user/` dir holding every user's VH tree inside a vault copy. */
+export function vhUsersDir(vaultDir: string): string {
+  return join(vaultDir, VH_TOP_DIR, 'user');
+}
+
+/**
+ * Full path of the per-doc session log inside a vault copy. `userName` defaults to the
+ * harness-pinned USER_NAME; pass it only for a name chosen in the user-name modal.
+ */
+export function vhFilePath(vaultDir: string, docId: string, userName: string = USER_NAME): string {
   return join(
-    vaultDir,
-    VH_TOP_DIR,
-    'user',
-    USER_NAME,
+    vhUsersDir(vaultDir),
+    userName,
     'v3',
     'focus_duration_per_device',
     DEVICE_NAME,
@@ -97,6 +103,32 @@ export async function assertNoSessionLineWithin(file: string, opts: PollOptions)
     if (Date.now() >= deadline) return;
     await sleep(interval);
   }
+}
+
+/**
+ * Directory-level variant of assertNoSessionLineWithin: fail the moment ANY `.vh_v3`
+ * file anywhere under `dir` (absent dir = none) holds a session line during the window.
+ * Used when the would-be file path is unknown (e.g. no user name pinned).
+ */
+export async function assertNoSessionLineUnderDirWithin(dir: string, opts: PollOptions): Promise<void> {
+  const interval = opts.intervalMs ?? 250;
+  const deadline = Date.now() + opts.timeoutMs;
+  for (;;) {
+    const withLines = vhFilesUnder(dir).filter((file) => sessionLines(file).length > 0);
+    if (withLines.length > 0) {
+      throw new Error(`expected no session line under ${dir}, but found some in: ${JSON.stringify(withLines)}`);
+    }
+    if (Date.now() >= deadline) return;
+    await sleep(interval);
+  }
+}
+
+/** Every `.vh_v3` file under `dir`, recursively (empty if the dir is absent). */
+function vhFilesUnder(dir: string): string[] {
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir, { recursive: true, encoding: 'utf8' })
+    .filter((rel) => rel.endsWith('.vh_v3'))
+    .map((rel) => join(dir, rel));
 }
 
 /**

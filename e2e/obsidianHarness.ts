@@ -64,6 +64,13 @@ export interface LaunchOptions {
    * committed seed vault.
    */
   readonly seedFiles?: readonly SeedFile[];
+  /**
+   * When true, the user name is NOT pinned in localStorage (the device name still
+   * is), so the plugin's first-run user-name modal opens on enable and NO VH is
+   * recorded until a name is confirmed in it. Absent/false → the user name is
+   * pinned and the modal is bypassed.
+   */
+  readonly leaveUserNameUnpinned?: boolean;
 }
 
 export class ObsidianHarness {
@@ -164,11 +171,11 @@ export class ObsidianHarness {
       // Pin identity BEFORE enabling: the user-name pin runs inside the plugin's
       // onLayoutReady callback, which fires immediately on enable (layout already ready).
       await page.evaluate(
-        ([userKey, userVal, devKey, devVal]) => {
-          window.localStorage.setItem(userKey, userVal);
+        ([userKey, userVal, devKey, devVal, pinUserName]) => {
+          if (pinUserName) window.localStorage.setItem(userKey, userVal);
           window.localStorage.setItem(devKey, devVal);
         },
-        [LS_KEY_USER_NAME, USER_NAME, LS_KEY_DEVICE_NAME, DEVICE_NAME] as const,
+        [LS_KEY_USER_NAME, USER_NAME, LS_KEY_DEVICE_NAME, DEVICE_NAME, !opts.leaveUserNameUnpinned] as const,
       );
 
       await page.evaluate(async (pluginId) => {
@@ -199,6 +206,58 @@ export class ObsidianHarness {
       const file = window.app.vault.getAbstractFileByPath(p);
       if (!file) throw new Error(`file not found in vault: ${p}`);
       await window.app.workspace.getLeaf(false).openFile(file);
+    }, path);
+  }
+
+  /**
+   * Re-activates (and focuses) the EXISTING leaf showing `path` — a refocus of the same
+   * leaf/doc, unlike openFile which loads the file into whatever leaf is active. Throws
+   * when no leaf shows that file.
+   */
+  async activateLeafOf(path: string): Promise<void> {
+    await this.page.evaluate((p) => {
+      // WHY inline (also in blurWindowHosting): page.evaluate callbacks are serialized
+      // into the renderer — they cannot call node-side helpers.
+      const leaf = window.app.workspace.getLeavesOfType('markdown').find((l) => l.view.file?.path === p);
+      if (!leaf) throw new Error(`no leaf shows path=[${p}]`);
+      window.app.workspace.setActiveLeaf(leaf, { focus: true });
+    }, path);
+  }
+
+  /** Waits (bounded) until the active leaf's view has type `viewType`. */
+  async waitForActiveViewType(viewType: string): Promise<void> {
+    await this.page.waitForFunction(
+      (type) => window.app.workspace.activeLeaf?.view.getViewType() === type,
+      viewType,
+      { timeout: 15_000 },
+    );
+  }
+
+  /**
+   * Opens `path` in a NEW popout window and makes that leaf active + focused (as the
+   * "Open in new window" UI does). Headless popouts are real Electron windows sharing
+   * the main renderer, so the plugin sees their `window-open` and own `Document`.
+   */
+  async openFileInPopout(path: string): Promise<void> {
+    await this.page.evaluate(async (p) => {
+      const file = window.app.vault.getAbstractFileByPath(p);
+      if (!file) throw new Error(`file not found in vault: ${p}`);
+      const leaf = window.app.workspace.openPopoutLeaf();
+      await leaf.openFile(file, { active: true });
+      window.app.workspace.setActiveLeaf(leaf, { focus: true });
+    }, path);
+  }
+
+  /**
+   * SYNTHETIC `blur` on the OS window (main or popout) hosting the leaf that shows
+   * `path` — same caveat as blurWindow. Throws when no leaf shows that file.
+   */
+  async blurWindowHosting(path: string): Promise<void> {
+    await this.page.evaluate((p) => {
+      const leaf = window.app.workspace.getLeavesOfType('markdown').find((l) => l.view.file?.path === p);
+      const win = leaf?.view.containerEl.ownerDocument.defaultView;
+      if (!win) throw new Error(`no window hosts a leaf showing path=[${p}]`);
+      win.dispatchEvent(new Event('blur'));
     }, path);
   }
 
@@ -367,11 +426,23 @@ async function firstPage(browser: Browser): Promise<Page> {
 // Minimal ambient typing for the renderer globals reached inside page.evaluate.
 // NOT an `import "obsidian"` — the harness never loads the types-only package at runtime.
 declare global {
+  interface ObsidianLeaf {
+    openFile(file: unknown, openState?: { active: boolean }): Promise<void>;
+    view: {
+      getViewType(): string;
+      file?: { path: string } | null;
+      containerEl: HTMLElement;
+    };
+  }
   interface Window {
     app: {
       workspace: {
         layoutReady: boolean;
-        getLeaf(newLeaf: boolean): { openFile(file: unknown): Promise<void> };
+        activeLeaf: ObsidianLeaf | null;
+        getLeaf(newLeaf: boolean): ObsidianLeaf;
+        getLeavesOfType(viewType: string): ObsidianLeaf[];
+        setActiveLeaf(leaf: ObsidianLeaf, params: { focus: boolean }): void;
+        openPopoutLeaf(): ObsidianLeaf;
       };
       vault: { getAbstractFileByPath(path: string): unknown; getMarkdownFiles(): unknown[] };
       metadataCache: {

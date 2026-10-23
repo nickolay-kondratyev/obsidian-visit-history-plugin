@@ -11,6 +11,8 @@
 //   - SESSION_LINE_RE          → VhV3SessionLineParser.ts
 //   - DEV_OVERRIDES_* env var  → src/core/config/DevOverridesFileSource.ts
 //   - UNFOCUS_GRACE_MS         → src/core/focusDuration/FocusDurationTracker.ts
+//   - VIEW_TYPE_HEATMAP        → VIEW_TYPE_TREEMAP in src/view/VaultTreemapView.tsx
+//   - FRONTMATTER_DOC_ID_LINE_RE → the doc-id format of the stable-ids-for-obsidian package
 
 export const PLUGIN_ID = 'visit-history';
 
@@ -44,10 +46,18 @@ export const DOC_ID_A = 'docid_aaaaaaaaaaaaaaaaaaaaaaaa_e';
 export const DOC_ID_B = 'docid_bbbbbbbbbbbbbbbbbbbbbbbb_e';
 export const DOC_ID_C = 'docid_cccccccccccccccccccccccc_e';
 
+// A freshly GENERATED doc id as the plugin writes it into a note's frontmatter
+// (`id: docid_<24 base36 lowercase>_e`); group 1 = the id. `m`: matched against the
+// whole file content, one line of it.
+export const FRONTMATTER_DOC_ID_LINE_RE = /^id: (docid_[0-9a-z]{24}_e)$/m;
+
 // Fixed grace before navigating away (to another doc/untracked view) closes a
 // session; the close is stamped at the ORIGINAL unfocus moment. Keep in sync
 // with UNFOCUS_GRACE_MS in FocusDurationTracker.ts.
 export const UNFOCUS_GRACE_MS = 10_000;
+
+// View type of the vault heatmap (an UNTRACKED view — focusing it unfocuses the doc).
+export const VIEW_TYPE_HEATMAP = 'vault-heatmap';
 
 // Full command id (`<plugin-id>:<command-id>`) that opens the vault heatmap.
 export const CMD_OPEN_VAULT_HEATMAP = `${PLUGIN_ID}:open-vault-heatmap`;
