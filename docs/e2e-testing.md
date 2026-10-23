@@ -4,7 +4,13 @@ The `e2e/` suite drives a **real headless Obsidian (Electron)** and asserts on t
 on-disk `.vh_v3` files the plugin actually writes — never on plugin internals. It proves
 Visit-History V3 recording across several scenarios: focus switch, unload flush, opening
 Settings (ends the session; re-opens on close), opening the heatmap
-(`switchToHeatmap.e2e.ts`), Obsidian window blur/refocus (`windowBlur.e2e.ts`), canvas focus, idle timeout, a sub-floor idle timeout via a dev overrides file,
+(`switchToHeatmap.e2e.ts`; grace expiry) and refocusing the doc within the grace
+(`heatmapRefocusWithinGrace.e2e.ts`; one continued session), Obsidian window blur/refocus
+(`windowBlur.e2e.ts`), a doc in a popout window (`popoutWindowBlur.e2e.ts`), canvas focus,
+idle timeout, a sub-floor idle timeout via a dev overrides file, real input resuming after
+an idle close (`idleResumeOnInput.e2e.ts`), first focus of an id-less note
+(`firstFocusAssignsDocId.e2e.ts`), the first-run user-name modal — cancel records nothing,
+confirm records under the new name (`userNameModal.e2e.ts`),
 the interim-top-dir → `.plugin_data/visit_history` migration (`pluginDataMoveMigration.e2e.ts`),
 the inline-note key journey (`inlineNote.e2e.ts`: content moved, note2 trashed, history merged in),
 and inlining via the embed icon in live preview (`inlineNoteEmbedIcon.e2e.ts`).
@@ -53,6 +59,20 @@ Most specs drive Obsidian via `window.app` only. A spec that CLICKS in the works
 300×200 — with `page.setViewportSize`, and call `harness.trustVaultAuthor()`: Obsidian's
 first-open "Do you trust the author of this vault?" modal stays up (the plugin is enabled
 programmatically) and intercepts every pointer event.
+
+## First-run user-name modal
+
+`launch({ ..., leaveUserNameUnpinned: true })` skips the user-name localStorage pin (the
+device name is still pinned), so the plugin's user-name modal opens on enable and nothing
+is recorded until a name is confirmed. That modal stacks ABOVE the trust modal, so a spec
+can click it without `trustVaultAuthor()` (still needs `setViewportSize`).
+`vhFilePath(vaultDir, docId, userName)` targets a name chosen in the modal.
+
+## Popout windows
+
+`openFileInPopout(path)` opens a real popout (works headless on 1.12.7) and activates its
+leaf; `blurWindowHosting(path)` dispatches a synthetic `blur` on whichever window shows
+`path` (same caveat as `blurWindow` below).
 
 ## Seeding legacy layouts (migration specs)
 

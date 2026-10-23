@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-10-23T15:32:19Z
 id: nid_hswj7g18v1h9h5hez790da7z3_E
 title: "e2e: dedicated 10s grace-timer-expiry spec (uncovered path)"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-07-21T16:30:00Z
-status_updated_iso: 2026-07-21T16:30:00Z
+status_updated_iso: 2026-10-23T15:32:19Z
 type: test
 priority: 3
 assignee: CC_WITH-nickolaykondratyev
@@ -24,3 +25,10 @@ same-doc refocus WITHIN the grace cancels the close and continues the session. L
 priority; the 5 required scenarios stand as-is.
 
 I am thinking for this one we will want to have an override of settings, like test-override.json file that contains the override, and we can pass this file through an environment variable. If this environment variable is set the plugin will read the overrides and use those overrides. With that said we will want to well abstract this interaction so its focused and usages of this file are not spread out. The usage of this override should be in one place. Behind something like `SettingReader`. 
+
+## Resolution
+
+Covered by real-Obsidian e2e: (a) grace-expiry close stamped at the original unfocus —
+S11 `e2e/switchToHeatmap.e2e.ts`; (b) same-doc refocus within grace continues one session —
+S16 `e2e/heatmapRefocusWithinGrace.e2e.ts`. The dev overrides idea above shipped separately
+(`docs/e2e-testing.md` → Dev config overrides).
