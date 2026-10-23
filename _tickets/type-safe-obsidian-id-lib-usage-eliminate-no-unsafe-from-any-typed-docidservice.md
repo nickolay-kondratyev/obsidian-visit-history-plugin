@@ -1,11 +1,11 @@
 ---
 id: nid_g5c1rafp9gkv2ege8bmnjcxgq_E
 title: "Type-safe obsidian-id-lib usage (eliminate no-unsafe-* from any-typed DocIdService)"
-status: open
+status: old
 deps: []
 links: []
 created_iso: 2026-07-21T01:05:14Z
-status_updated_iso: 2026-07-21T01:05:14Z
+status_updated_iso: 2026-10-23T15:56:57Z
 type: task
 priority: 1
 assignee: CC_WITH-nickolaykondratyev
@@ -28,3 +28,9 @@ FIX DIRECTION (pick the robust, maintainable one; keep submodule as source of tr
 
 npm run lint reports zero @typescript-eslint/no-unsafe-* in the 5 listed source files; consumers stay free of per-call as/eslint-disable; npm run build + npm test green; npm run test:lib green if the submodule changed.
 
+
+## Notes
+
+**2026-10-23T15:56:57Z**
+
+Marked old (2026-10-23 ticket triage): root cause removed — id lib is now the npm dep stable-ids-for-obsidian with real types; npm run lint after fresh npm ci reports 0 no-unsafe-* errors.

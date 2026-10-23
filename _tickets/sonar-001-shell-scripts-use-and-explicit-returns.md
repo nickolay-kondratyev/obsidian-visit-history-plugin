@@ -1,11 +1,11 @@
 ---
 id: nid_f6rm1i0yvyk0fxqxd5b7zivki_E
 title: "sonar-001: Shell scripts — use [[ ]] and explicit returns"
-status: open
+status: old
 deps: []
 links: []
 created_iso: 2026-07-20T23:33:36Z
-status_updated_iso: 2026-07-20T23:33:36Z
+status_updated_iso: 2026-10-23T15:56:57Z
 type: chore
 priority: 2
 assignee: CC_WITH-nickolaykondratyev
@@ -26,3 +26,9 @@ Acceptance: swap `[ ... ]` for `[[ ... ]]` at listed lines (verify quoting/globb
 
 Sonar keys: AZ-A6ZFDvHH-bhIdtzMm/n/o/p/q, AZ-A6ZHJvHH-bhIdtzMr/s, AZ-BwPhgGGwPEcqwBqgh, AZ6O-yM_1xdYyyVCMYFA
 
+
+## Notes
+
+**2026-10-23T15:56:57Z**
+
+Marked old (2026-10-23 ticket triage): already done — scripts/release.sh and scripts/verify-release.sh use [[ ]]; build.sh and external_release_with_patch_version.sh main() end with explicit return.
