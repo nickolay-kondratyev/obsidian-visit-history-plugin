@@ -22,6 +22,7 @@ npm test           # vitest unit tests
 npm run test:e2e   # real-Obsidian Playwright e2e (auto-downloads pinned Obsidian,
                    # headless; asserts on-disk .vh_v3 — see docs/e2e-testing.md)
 npm run version    # bump version + update manifest/versions
+npm run android:setup  # tablet emulator + dev vault; then android:push-plugin (docs/android-tablet-testing.md)
 ```
 
 - Node 18+, npm, esbuild bundler
