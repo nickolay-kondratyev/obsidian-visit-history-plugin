@@ -1,13 +1,14 @@
 ---
 id: nid_z3ifk9vxm295cpu4tqu99gj7m_e
 title: "Heatmap: restore modified times from git history (isomorphic-git, desktop + mobile)"
-status: open
+status: in_progress
 deps: [nid_zm4hogy3zq89xfxyiv5wdncyj_e]
 links: [nid_zm4hogy3zq89xfxyiv5wdncyj_e, nid_2sx3if2tus8bc7j3i4oio11b7_e]
 created_iso: 2026-10-23T23:21:04Z
-status_updated_iso: 2026-10-23T23:21:04Z
+status_updated_iso: 2026-10-23T23:50:00Z
 type: feature
 priority: 2
+pwd: /home/nickolaykondratyev/git_repos/nickolay-kondratyev_obsidian-visit-history-plugin/.worktree/t-z3ifk9vx
 tags: [heatmap, git, obsidian-mobile]
 ---
 
