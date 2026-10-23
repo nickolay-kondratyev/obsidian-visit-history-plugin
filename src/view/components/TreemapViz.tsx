@@ -392,11 +392,17 @@ export function TreemapViz({
   );
 
   // Derived, not stored: a refresh/filter that removes the selected file
-  // simply hides the card.
+  // hides the card at once.
   const selectedLeaf = useMemo(
     () => (selectedPath === undefined ? undefined : leaves.find(l => l.data.path === selectedPath)),
     [leaves, selectedPath],
   );
+
+  // ...and drops the selection, so the card does not pop back up when the file
+  // is laid out again later (e.g. a filter is removed).
+  useEffect(() => {
+    if (selectedPath !== undefined && selectedLeaf === undefined) setSelectedPath(undefined);
+  }, [selectedPath, selectedLeaf]);
 
   // ── Render ────────────────────────────────────────────────────────────
 
