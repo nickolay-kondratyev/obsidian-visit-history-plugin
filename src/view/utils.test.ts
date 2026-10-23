@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  cornerLabelFits,
   fmtAgo,
   fmtBytes,
   fmtDate,
@@ -172,24 +171,6 @@ describe('view utils', () => {
     });
   });
 
-  describe('cornerLabelFits', () => {
-    // '33m ago' = 7 chars → needs 7 * 5.5 + 2 * 3 = 44.5 wide; 3 lines * 12 = 36 tall.
-    it('should fit when the tile has room for title, blank line and label', () => {
-      expect(cornerLabelFits(45, 36, '33m ago')).toBe(true);
-    });
-
-    it('should not fit when the tile is one px short of three lines', () => {
-      expect(cornerLabelFits(200, 35, '33m ago')).toBe(false);
-    });
-
-    it('should not fit when the tile is narrower than the label', () => {
-      expect(cornerLabelFits(44, 200, '33m ago')).toBe(false);
-    });
-
-    it('should require more width for a longer label', () => {
-      expect(cornerLabelFits(45, 36, '400d ago')).toBe(false);
-    });
-  });
   describe('leafFieldAgo', () => {
     // GIVEN a leaf whose three stamps are each a distinct age.
     const leaf: VaultNode = {

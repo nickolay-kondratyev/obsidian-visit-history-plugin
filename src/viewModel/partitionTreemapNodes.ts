@@ -1,15 +1,16 @@
 import type { HierarchyRectangularNode } from 'd3-hierarchy';
 import type { HeatField } from '../view/constants';
-import { TILE_TITLE_MIN_WIDTH_PX } from '../view/utils';
 import type { VaultNode } from '../core/data/VaultNode';
 
 type RectNode = HierarchyRectangularNode<VaultNode>;
 
 /**
- * Smallest average file-tile side worth rendering — tied to the leaf-title
- * label threshold: below it a tile can show no name and is hard to hit.
+ * Smallest average file-tile side worth rendering — below it a tile is hard
+ * to hit and (at zoom 1) too narrow for a name. Fixed on purpose: the collapse
+ * rule must not shift when the label font changes (ticket
+ * nid_zxh1nwsmchemmzg2fdwu98y22_e owns this bound).
  */
-export const MIN_FILE_TILE_SIDE_PX = TILE_TITLE_MIN_WIDTH_PX;
+export const MIN_FILE_TILE_SIDE_PX = 32;
 
 /**
  * A folder whose rect gives each of its files less than this area (on

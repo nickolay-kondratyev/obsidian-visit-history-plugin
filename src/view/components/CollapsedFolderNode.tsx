@@ -1,19 +1,11 @@
+import { useMemo } from 'react';
 import type { HierarchyRectangularNode } from 'd3-hierarchy';
-import {
-  cornerLabelFits,
-  fmtFileCount,
-  LEAF_LABEL_PAD_PX,
-  leafFill,
-  leafOpacity,
-  TILE_TITLE_MIN_HEIGHT_PX,
-  TILE_TITLE_MIN_WIDTH_PX,
-} from '../utils';
+import { fmtFileCount, leafFill, leafOpacity } from '../utils';
+import { TileLabelText } from './TileLabelText';
+import type { TileLabelLayout } from '../../viewModel/label/TileLabelLayout';
 import type { ColorMode, GradientKey, HeatField } from '../constants';
 import type { VaultNode } from '../../core/data/VaultNode';
 import type { CollapsedFolder } from '../../viewModel/partitionTreemapNodes';
-
-/** Title baseline — same as LeafNode's title. */
-const TITLE_BASELINE_Y_PX = 11;
 
 interface CollapsedFolderNodeProps {
   folder: CollapsedFolder;
@@ -22,6 +14,10 @@ interface CollapsedFolderNodeProps {
   field: HeatField;
   hotDays: number;
   coldDays: number;
+  /** Current zoom scale — labels fit the tile's ON-SCREEN size. */
+  zoomScale: number;
+  /** `undefined` until the label fonts are measured (first layout pass). */
+  labelLayout: TileLabelLayout | undefined;
   /** Same drill-in handler as FolderNode (receives the folder's hierarchy node). */
   onClick: (d: HierarchyRectangularNode<VaultNode>) => void;
 }
@@ -39,6 +35,8 @@ export function CollapsedFolderNode({
   field,
   hotDays,
   coldDays,
+  zoomScale,
+  labelLayout,
   onClick,
 }: CollapsedFolderNodeProps) {
   const { node: d, fileCount, representative } = folder;
@@ -47,6 +45,11 @@ export function CollapsedFolderNode({
   const fill = leafFill(representative, false, colorMode, gradKey, field, hotDays, coldDays);
   const opacity = leafOpacity(representative, colorMode, field);
   const countLabel = fmtFileCount(fileCount);
+  const title = d.data.name.toUpperCase();
+  const labels = useMemo(
+    () => labelLayout?.collapsedFolderLabels({ width: w, height: h }, zoomScale, title, countLabel),
+    [labelLayout, w, h, zoomScale, title, countLabel],
+  );
 
   return (
     <svg
@@ -68,20 +71,8 @@ export function CollapsedFolderNode({
         fillOpacity={opacity}
         className="collapsed-folder-node__bg"
       />
-      {w > TILE_TITLE_MIN_WIDTH_PX && h > TILE_TITLE_MIN_HEIGHT_PX && (
-        <text x={LEAF_LABEL_PAD_PX} y={TITLE_BASELINE_Y_PX} className="leaf-node__label">
-          {d.data.name.toUpperCase()}
-        </text>
-      )}
-      {cornerLabelFits(w, h, countLabel) && (
-        <text
-          x={w - LEAF_LABEL_PAD_PX}
-          y={h - LEAF_LABEL_PAD_PX}
-          textAnchor="end"
-          className="leaf-node__label collapsed-folder-node__count"
-        >
-          {countLabel}
-        </text>
+      {labels && (
+        <TileLabelText labels={labels} zoomScale={zoomScale} cornerClassName="collapsed-folder-node__count" />
       )}
     </svg>
   );

@@ -114,10 +114,10 @@ App                     state owner: HeatmapConfig (color mode, gradient,
      ├─ FolderNode      click → drill into subtree (root-relative segments)
      ├─ CollapsedFolderNode  dense folder as ONE tile: name + "N files",
      │                  most-recent-file color, dashed border; click → drill in
-     ├─ LeafNode        click → IFileOpener.openFile(path); title top-left,
-     │                  active-field age ("3d ago" — created/modified/visited
-     │                  per the timestamp field) bottom-right when the tile
-     │                  fits title + blank line + label (cornerLabelFits)
+     ├─ LeafNode        click → IFileOpener.openFile(path); wrapped title
+     │                  top-left, active-field age ("3d ago" — created/modified/
+     │                  visited per the timestamp field) bottom-right when the
+     │                  tile fits title + blank line + label (TileLabelLayout)
      └─ Tooltip
 ```
 
@@ -164,7 +164,7 @@ so it sticks across restarts:
 `viewModel/partitionTreemapNodes.ts` splits the laid-out treemap (top-down)
 into rendered folders, collapsed folders and leaves. A folder below the view
 root whose rect gives each of its files (all depths) less than
-`MIN_AREA_PER_FILE_PX2` (32×32 px — the leaf-title threshold) on average
+`MIN_AREA_PER_FILE_PX2` (32×32 px — fixed, independent of the label font) on average
 collapses into ONE `CollapsedFolderNode` tile; its subtree is not rendered.
 The tile is colored like its most recent file (max of the active heat field;
 all-null → first file) in both color modes. This bounds rendered file tiles
@@ -176,6 +176,27 @@ files' tile values, so it follows the active sizing mode, curve and scales.
 Ceiling: decided on the UNZOOMED layout — zooming in does not expand
 collapsed folders (upgrade path: re-partition per zoom scale); the view
 root's own direct files never collapse.
+
+## Tile labels
+
+Pure rules in `viewModel/label/` (DOM-free; unit-tested with a fake measurer):
+
+- `LabelLineFitter` breaks a name into lines by MEASURED char widths — at
+  whitespace, after `-` `_` `.`, or next to any CJK char (a token with no break
+  point breaks anywhere); the last allowed line ends in "…" when cut.
+- `TileLabelLayout` decides show/hide + placement from the tile's ON-SCREEN
+  (zoomed) size: file titles wrap over as many lines as fit; collapsed-folder
+  titles and folder headers are one line; a shown corner label reserves its own
+  bottom line (the title never overlaps it). So zooming in reveals names.
+- Labels render inside a `scale(1 / zoom)` group (`TileLabelText`, one
+  `<tspan>` per line) → constant on-screen font size at every zoom.
+  NOT `<foreignObject>`: iOS WebKit misplaces it under transformed parents.
+- Font size lives only in `styles.css` (`.leaf-node__label`, 11 px);
+  `view/label/CanvasLabelFontProbe` reads the rendered fonts once per mount and
+  measures chars with canvas `measureText`, cached per char. Line height
+  (1.2 em) and show thresholds derive from that size.
+- Perf: fitting is memoized per node on (size, zoom scale, text), so pan and
+  hover never re-fit; layout is untouched by zoom.
 
 ## Heatmap coloring
 

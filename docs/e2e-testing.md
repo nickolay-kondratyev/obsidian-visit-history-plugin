@@ -15,7 +15,10 @@ an idle close (`idleResumeOnInput.e2e.ts`), a doc already open when the plugin i
 confirm records under the new name (`userNameModal.e2e.ts`),
 the interim-top-dir → `.plugin_data/visit_history` migration (`pluginDataMoveMigration.e2e.ts`),
 the inline-note key journey (`inlineNote.e2e.ts`: content moved, note2 trashed, history merged in),
-inlining via the embed icon in live preview (`inlineNoteEmbedIcon.e2e.ts`), and the heatmap's
+inlining via the embed icon in live preview (`inlineNoteEmbedIcon.e2e.ts`),
+heatmap tile labels for many long Chinese + Latin names
+(`heatmapLabelsScreenshot.e2e.ts` — journey assert only; writes fitted + zoomed
+screenshots to the git-ignored `.out/` for human review), and the heatmap's
 clustered-timestamps banner — shown on a vault whose notes share one modified time, absent
 when the times are spread (`heatmapClusteredTimestamps.e2e.ts`).
 

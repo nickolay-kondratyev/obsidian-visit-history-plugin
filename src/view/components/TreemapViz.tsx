@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from 'react';
 import type { MouseEvent, RefObject } from 'react';
 import { hierarchy, treemap, treemapSquarify } from 'd3-hierarchy';
 import type { HierarchyRectangularNode } from 'd3-hierarchy';
 import { Zoom } from '@visx/zoom';
-import type { ProvidedZoom } from '@visx/zoom/lib/types';
+import type { ProvidedZoom, TransformMatrix } from '@visx/zoom/lib/types';
 import { FolderNode } from './FolderNode';
 import { LeafNode } from './LeafNode';
 import { CollapsedFolderNode } from './CollapsedFolderNode';
@@ -17,6 +17,8 @@ import { filterVaultTree, isFilterActive, type HeatmapTreeFilter } from '../../v
 import { partitionTreemapNodes, type TreemapPartition } from '../../viewModel/partitionTreemapNodes';
 import { hideUnvisitedFiles, tileValue, type TileSizing } from '../../viewModel/tileSize';
 import { ClusteredTimestampsRule, type ClusteredTimestamps } from '../../viewModel/ClusteredTimestampsRule';
+import { TileLabelLayout } from '../../viewModel/label/TileLabelLayout';
+import { CanvasLabelFontProbe } from '../label/CanvasLabelFontProbe';
 
 // ── Props ───────────────────────────────────────────────────────────────────
 
@@ -164,6 +166,18 @@ export function TreemapViz({
   const [dims, setDims] = useState({ w: 800, h: 600 });
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
+  const [labelLayout, setLabelLayout] = useState<TileLabelLayout | undefined>(undefined);
+
+  // ── Label fonts — measured once from the rendered CSS ──────────────────
+
+  // Layout effect: fonts are read before first paint, so labels appear
+  // without a flash of label-less tiles.
+  useLayoutEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const fonts = CanvasLabelFontProbe.readLabelFonts(svg);
+    if (fonts) setLabelLayout(new TileLabelLayout(fonts));
+  }, []);
 
   // ── Expose zoom reset to the host (header button lives outside #viz) ────
 
@@ -364,9 +378,11 @@ export function TreemapViz({
         scaleYMin={ZOOM_SCALE_MIN}
         scaleYMax={ZOOM_SCALE_MAX}
       >
-        {(zoom: ProvidedZoom<SVGSVGElement> & { isDragging: boolean }) => {
+        {(zoom: ProvidedZoom<SVGSVGElement> & { isDragging: boolean; transformMatrix: TransformMatrix }) => {
           // Capture zoom instance for the reset button (outside render prop).
           zoomRef.current = zoom;
+          // Uniform zoom (scaleX/Y share limits and wheel steps) → scaleX is THE scale.
+          const zoomScale = zoom.transformMatrix.scaleX;
 
           return (
           <svg
@@ -380,7 +396,13 @@ export function TreemapViz({
           >
             <g transform={zoom.toString()}>
               {folders.map((d, i) => (
-                <FolderNode key={'f' + i} d={d} onClick={handleFolderNodeClick} />
+                <FolderNode
+                  key={'f' + i}
+                  d={d}
+                  onClick={handleFolderNodeClick}
+                  zoomScale={zoomScale}
+                  labelLayout={labelLayout}
+                />
               ))}
               {collapsedFolders.map((c, i) => (
                 <CollapsedFolderNode
@@ -391,6 +413,8 @@ export function TreemapViz({
                   field={field}
                   hotDays={hotDays}
                   coldDays={coldDays}
+                  zoomScale={zoomScale}
+                  labelLayout={labelLayout}
                   onClick={handleFolderNodeClick}
                 />
               ))}
@@ -406,6 +430,8 @@ export function TreemapViz({
                   coldDays={coldDays}
                   onMouseMove={e => handleLeafMove(e, d, i)}
                   onMouseLeave={handleLeafLeave}
+                  zoomScale={zoomScale}
+                  labelLayout={labelLayout}
                   onClick={
                     d.data.path
                       ? () => fileOpener.openFile(d.data.path!)
