@@ -10,12 +10,28 @@ const USER = 'alice';
 const DEVICE = 'my-host';
 const DOC_FILE = `.plugin_data/visit_history/user/${USER}/v3/focus_duration_per_device/${DEVICE}/docid_A_E.vh_v3`;
 
-function setup(): {
+/**
+ * Mirrors HiddenFileUtilDefault.append's NON-atomic shape: exists-check, a
+ * yield (real adapter IO), then append-or-CREATE. Two unserialized appends
+ * to a new file both see "absent" and the second create overwrites the first.
+ */
+class CheckThenWriteHiddenFileUtil extends FakeHiddenFileUtil {
+  override async append(filePath: string, content: string): Promise<void> {
+    const existed = await this.exists(filePath);
+    await Promise.resolve();
+    if (existed) {
+      await super.append(filePath, content);
+    } else {
+      await this.write(filePath, content);
+    }
+  }
+}
+
+function setup(hidden: FakeHiddenFileUtil = new FakeHiddenFileUtil()): {
   recorder: VhV3DurationRecorder;
   hidden: FakeHiddenFileUtil;
   cache: VisitStatsCache;
 } {
-  const hidden = new FakeHiddenFileUtil();
   const cache = new VisitStatsCache();
   const recorder = new VhV3DurationRecorder(
     new VhV3DurationStore(hidden),
@@ -46,6 +62,19 @@ describe('VhV3DurationRecorder', () => {
       recorder.recordFocusDuration('docid_A_E', Date.parse('2026-07-09T22:02:16.000Z'), 200);
       await recorder.flush();
       // THEN both lines are present in call order
+      expect(hidden.getContent(DOC_FILE)).toBe(
+        '2026-07-09T22:02:15.745Z D:100\n2026-07-09T22:02:16.000Z D:200\n',
+      );
+    });
+
+    it('should land both sessions for the SAME new doc when the append is check-then-write (racy IO)', async () => {
+      // GIVEN a recorder over an append that yields between its exists-check and its write
+      const { recorder, hidden } = setup(new CheckThenWriteHiddenFileUtil());
+      // WHEN two sessions for a doc with no file yet are recorded back-to-back without awaiting
+      recorder.recordFocusDuration('docid_A_E', Date.parse('2026-07-09T22:02:15.745Z'), 100);
+      recorder.recordFocusDuration('docid_A_E', Date.parse('2026-07-09T22:02:16.000Z'), 200);
+      await recorder.flush();
+      // THEN neither create overwrote the other — the write chain serialized them
       expect(hidden.getContent(DOC_FILE)).toBe(
         '2026-07-09T22:02:15.745Z D:100\n2026-07-09T22:02:16.000Z D:200\n',
       );
