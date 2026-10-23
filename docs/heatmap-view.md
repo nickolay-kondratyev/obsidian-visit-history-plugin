@@ -95,7 +95,7 @@ App                     state owner: HeatmapConfig (color mode, gradient,
  │                      openPanel ('filter'|'field'|'info'|'config'|null —
  │                      at most ONE popover/panel open), contentMatchedPaths
  ├─ Header              actions only: breadcrumb + back, FilterGroup,
- │                      hidden-notes banner (visit-time sizing), zoom reset (action lives in TreemapViz — bridged
+ │                      clustered-timestamps + hidden-notes banners, zoom reset (action lives in TreemapViz — bridged
  │                      up through a ref registered via registerResetZoom)
  │   └─ FilterGroup     filter icon trigger + removable term chips
  │                      (kind = glyph + tint + title, never color alone)
@@ -203,6 +203,17 @@ Pure rules in `viewModel/label/` (DOM-free; unit-tested with a fake measurer):
 - `heatColor(ts)`: newer than `hotDays` → hot color; older than `coldDays` →
   cold color; in between → RGB interpolation; `null` timestamp → `nil` color
   at reduced opacity ("no data").
+- **Clustered-timestamps banner**: sync tools stamp every downloaded file
+  with the download time (modified AND created; visit history never syncs),
+  so a freshly synced vault renders in one uniform color. When the laid-out
+  files of the CURRENT view (after prune/filter/visit-time hiding) are
+  clustered on the color field, the header explains it ("N of M notes have
+  the same modified time, probably from a sync…"; wraps to two lines — no
+  hover on touch). Rule: `core/util/time/TimestampClusterDetector` (≥50% of
+  ≥20 files inside one 60 s window; returns the members so a restore can
+  target them); gating: `viewModel/ClusteredTimestampsRule` (heatmap color
+  mode + modified/created only; App drops a finding stale vs. the live
+  field). Stateless — derived per render, no "last sync" state.
 
 ## Tile sizing
 

@@ -128,7 +128,8 @@ src/
                             # file/hidden/ (HiddenFileUtil — DataAdapter I/O for
                             # all VH data paths, incl. legacy dot-dirs the
                             # Vault API can't see),
-                            # time/ (StampLineParser — strict ISO stamp parsing),
+                            # time/ (StampLineParser — strict ISO stamp parsing;
+                            # TimestampClusterDetector — "most stamps in one window"),
                             # async/ (InFlightDropGuard — per-key dedup, DROP semantics),
                             # env/ (DeviceNameProvider, DesktopOsInfo — typed
                             # mobile-safe desktop-only Node 'os' accessor;
@@ -180,6 +181,7 @@ src/
                             # view/label/CanvasLabelFontProbe
     tileSize.ts             # Pure tile sizing (TileSizing: mode + curve + type scales;
                             # tileValue, hideUnvisitedFiles for visit-time mode)
+    ClusteredTimestampsRule.ts # When the header warns of clustered (sync-stamped) times
     heatmapConfig.ts        # HeatmapConfig model (BoundedValue = value + editable slider
                             # min/max; FilterTerm path|content include-terms)
                             # + HeatmapConfigSanitizer (data.json boundary)
@@ -201,6 +203,7 @@ src/
 - **Dense folders collapse** (`partitionTreemapNodes`): a folder below the view root whose unzoomed rect averages < 32×32 px per file renders as ONE tile (name + file count, colored by its most recent file per the active field; click drills in) — bounds SVG node count. Zoom does not expand it (ceiling). Header stats/empty-state still count ALL laid-out files (incl. collapsed; not visit-time-hidden ones).
 - **Heatmap labels** are fitted by MEASURED width (canvas, label font read from `styles.css`) against the tile's ON-SCREEN size, and drawn in a `scale(1/zoom)` group — constant on-screen font, zooming in reveals names; no `<foreignObject>` (iOS WebKit misplaces it under transforms). Details: `docs/heatmap-view.md` "Tile labels".
 - **Heatmap sizing** (`tileSize.ts`): tile value = `curve(raw) × typeScale`, unrounded; raw = bytes (1-byte floor) or focus SECONDS (`VisitStats.totalFocusMs`). `HeatmapConfig.sizeBy` (`contentSize`|`visitTime`) + `sizing[mode]` = curve (`linear`|`sqrt`|`log`, default `sqrt` both — content was linear before) + per-type scales, saved SEPARATELY per mode (sanitizer still reads legacy top-level `scales` as content scales; cleanup after 2027-April). Visit-time mode leaves out never-visited files (after prune+filter; empty folders drop) and the header banner counts them for the current view.
+- **Heatmap clustered-timestamps banner**: when ≥50% of ≥20 laid-out files in the current view share one 60 s window on the color field (modified/created only, heatmap color mode — e.g. a fresh sync stamped them all), the header says recency colors are meaningless. Pure rule `TimestampClusterDetector` (returns cluster members — reused by the restore-from-git follow-up) + gating `ClusteredTimestampsRule`; stateless, per render.
 - **Heatmap filtering** is include-only OR over `HeatmapConfig.filterTerms` (`path` = ci-substring of the FULL vault path; `content` = ci-substring of file content). Pure `filterVaultTree` composes AFTER archive pruning in TreemapViz, so stats/legend reflect the filtered view. Content terms resolve at the Obsidian boundary via `ContentTermMatcher` (PluginFactory → App prop); `App`'s latest-wins effect depends on the content-term set AND `data` (renames re-resolve; file edits accepted-stale). `undefined` matched-set = content filtering inactive; EMPTY set = terms matched nothing/scan pending. Terms persist like all heatmap config (sticky across restarts + drill-down).
 - **Heatmap drill-down nav is PATH-based**: `App` stores only vault-relative `folderSegments`; trail/current root/breadcrumb derive from the canonical tree each render — clicked nodes are never stored (TreemapViz renders pruned/filtered COPIES; storing nodes would pin nav to stale copies). Header popovers (filter/field/info/config) share a single `openPanel` state — at most one open; ALL close on click-outside (pointerdown on the header chrome wrapper's `ownerDocument` — popout-safe); Esc dismissal still ticketed.
 - **VaultTreemapView** is the **only file** in `view/` that imports from `obsidian`. All React components are Obsidian-agnostic and receive data/callbacks as props.

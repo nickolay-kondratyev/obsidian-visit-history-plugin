@@ -15,6 +15,7 @@ import type { HeatmapTreeFilter } from '../../viewModel/filterVaultTree';
 import { findFolderTrail } from '../../viewModel/folderTrail';
 import { isWithinArchive } from '../../viewModel/pruneArchiveFolders';
 import type { TileSizing } from '../../viewModel/tileSize';
+import { ClusteredTimestampsRule } from '../../viewModel/ClusteredTimestampsRule';
 
 interface AppProps {
   data: VaultNode;
@@ -69,7 +70,7 @@ export function App({
   /** The single open header panel — at most one popover/panel at a time. */
   const [openPanel, setOpenPanel] = useState<HeaderPanel | null>(null);
   const [stats, setStats] = useState<TreemapStats>(
-    { files: 0, folders: 0, size: '—', hiddenNoVisitCount: 0 },
+    { files: 0, folders: 0, size: '—', hiddenNoVisitCount: 0, clusteredTimestamps: undefined },
   );
 
   /** Applies a config change AND writes it through to the persistent store. */
@@ -261,6 +262,11 @@ export function App({
           // Stats bubble up one effect late — gate on the LIVE mode so the
           // banner never lingers for a frame after switching to content size.
           hiddenNoVisitCount={config.sizeBy === 'visitTime' ? stats.hiddenNoVisitCount : 0}
+          clusteredTimestamps={ClusteredTimestampsRule.forLiveConfig(
+            stats.clusteredTimestamps,
+            config.field,
+            config.colorMode,
+          )}
         />
         {/* Popovers are SIBLINGS of the header (it clips overflow); at most one
             is open (openPanel), so the shared left/right anchors never collide. */}

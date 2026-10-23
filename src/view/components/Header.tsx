@@ -1,5 +1,6 @@
 import { FIELD_LABELS, type ColorMode, type HeatField } from '../constants';
 import type { FilterTerm } from '../../viewModel/heatmapConfig';
+import type { ClusteredTimestamps } from '../../viewModel/ClusteredTimestampsRule';
 import { FilterGroup } from './header/FilterGroup';
 import { InfoIcon, SettingsIcon, ZoomResetIcon } from './icons';
 
@@ -30,6 +31,8 @@ interface HeaderProps {
    * sizing). 0 = no banner.
    */
   hiddenNoVisitCount: number;
+  /** The current view's color-field timestamps are clustered (e.g. after a sync); undefined = no banner. */
+  clusteredTimestamps: ClusteredTimestamps | undefined;
 }
 
 function hiddenNotesLabel(count: number): string {
@@ -42,9 +45,18 @@ function hiddenNotesTitle(count: number): string {
 }
 
 /**
+ * Plural "notes" is safe: a cluster needs at least
+ * `TimestampClusterDetector.MIN_ITEMS_TO_JUDGE` (20) files, half of them shared.
+ */
+function clusteredTimestampsText({ field, sharedCount, totalCount }: ClusteredTimestamps): string {
+  return `${sharedCount} of ${totalCount} notes have the same ${FIELD_LABELS[field]} time, probably from a sync. ` +
+    "Recency colors don't mean anything here.";
+}
+
+/**
  * Top bar — actions only (info lives in the info popover):
  * breadcrumb · filter group (icon + term chips) · field selector ·
- * hidden-notes banner (visit-time sizing) · zoom reset · info · config.
+ * clustered-timestamps banner · hidden-notes banner (visit-time sizing) · zoom reset · info · config.
  * Pure presentational — no state; popovers render as App-level siblings.
  */
 export function Header({
@@ -58,6 +70,7 @@ export function Header({
   onBack,
   onResetZoom,
   hiddenNoVisitCount,
+  clusteredTimestamps,
 }: HeaderProps) {
   return (
     <div id="header">
@@ -89,6 +102,11 @@ export function Header({
         </button>
       )}
       <div className="spacer" />
+      {clusteredTimestamps && (
+        <span className="hdr-cluster-banner" role="status" title={clusteredTimestampsText(clusteredTimestamps)}>
+          {clusteredTimestampsText(clusteredTimestamps)}
+        </span>
+      )}
       {hiddenNoVisitCount > 0 && (
         <span
           className="hdr-hidden-banner"
