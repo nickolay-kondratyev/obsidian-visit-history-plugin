@@ -32,6 +32,7 @@ drawings, and visualizes vault activity as a treemap heatmap.
 | [heatmap-view.md](heatmap-view.md) | React treemap view: components, state, config |
 | [how-to-publish.md](how-to-publish.md) | Cutting a release + submitting to the community plugin list |
 | [e2e-testing.md](e2e-testing.md) | Real-Obsidian Playwright e2e: recording scenarios, harness, env vars, CI cache |
+| [android-tablet-testing.md](android-tablet-testing.md) | Manual testing on an Android tablet emulator: setup, plugin push, DevTools inspection |
 
 ## Dev quickstart
 
