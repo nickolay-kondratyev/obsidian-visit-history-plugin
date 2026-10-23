@@ -30,6 +30,10 @@ Found while verifying ticket `nid_8u6pi2do1vss1yt2hfgc6uicc_e` (tablet button pa
 - Also check `.filter-pop-input` (`src/view/components/header/FilterPopover.tsx`) and the radio inputs in `RadioGroup.tsx` for the same problem.
 - The fix for buttons used `.vault-heatmap-view button.<class>` to tie Obsidian's (0,2,1) rule and win on source order. See the Styling section of `docs/heatmap-view.md`.
 
+## Small extra (same tablet CSS pass)
+
+- On tap, Obsidian's `button:not(.clickable-icon).mobile-tap` (specificity 0,2,1) still adds its rectangular input box-shadow to heatmap buttons, including the pill-shaped `.seg-opt` segments. Its background is already overridden by the plugin's class rules. Consider adding `.vault-heatmap-view button.mobile-tap` to the existing `.vault-heatmap-view button:hover` reset selector in `styles.css`, then re-check over CDP. Low priority; drop it if the tap shadow looks fine.
+
 ## Constraints
 
 - CSS only (`styles.css`); no `Platform` branching in TS; no `!important`.
