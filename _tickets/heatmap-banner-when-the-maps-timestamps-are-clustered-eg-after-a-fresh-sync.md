@@ -1,13 +1,14 @@
 ---
 id: nid_zm4hogy3zq89xfxyiv5wdncyj_e
 title: "Heatmap: banner when the map's timestamps are clustered (e.g. after a fresh sync)"
-status: open
+status: in_progress
 deps: []
 links: [nid_z3ifk9vxm295cpu4tqu99gj7m_e, nid_7n2lvhgesln25nxooiauewd8c_e]
 created_iso: 2026-10-23T23:21:04Z
-status_updated_iso: 2026-10-23T23:21:04Z
+status_updated_iso: 2026-10-23T23:36:29Z
 type: feature
 priority: 2
+pwd: /home/nickolaykondratyev/git_repos/nickolay-kondratyev_obsidian-visit-history-plugin/.worktree/t-zm4hogy3
 tags: [heatmap, obsidian-mobile]
 ---
 
