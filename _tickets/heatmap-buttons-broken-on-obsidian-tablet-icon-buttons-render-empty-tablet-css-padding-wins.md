@@ -1,12 +1,12 @@
 ---
+closed_iso: 2026-10-23T17:08:27Z
 id: nid_8u6pi2do1vss1yt2hfgc6uicc_e
 title: "Heatmap buttons broken on Obsidian tablet: icon buttons render empty (tablet CSS padding wins)"
-status: in_progress
+status: closed
 deps: []
 links: [nid_2sx3if2tus8bc7j3i4oio11b7_e]
 created_iso: 2026-10-23T15:56:17Z
-status_updated_iso: 2026-10-23T17:00:01Z
-pwd: /home/nickolaykondratyev/git_repos/nickolay-kondratyev_obsidian-visit-history-plugin/.worktree/t-8u6pi2do
+status_updated_iso: 2026-10-23T17:08:27Z
 type: bug
 priority: 2
 assignee: nickolaykondratyev
