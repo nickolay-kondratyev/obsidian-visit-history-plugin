@@ -1,11 +1,11 @@
 ---
 id: nid_8almx8w2vqgtktv9p1yajmny4_E
 title: "sonar-003: Extract nested ternary operations"
-status: open
+status: old
 deps: []
 links: []
 created_iso: 2026-07-20T23:33:37Z
-status_updated_iso: 2026-07-20T23:33:37Z
+status_updated_iso: 2026-10-23T15:56:57Z
 type: chore
 priority: 3
 assignee: CC_WITH-nickolaykondratyev
@@ -28,3 +28,9 @@ Acceptance: replace each nested ternary with a clear intermediate variable / if-
 
 Sonar keys: AZ9NwQFufbPghhCaeg9t, AZ6VQaSkkQYuylDfZBSE, AZ6VQaPHkQYuylDfZBR3, AZ6VAUFs2Ak3xlgm7zHY, AZ6VAUFs2Ak3xlgm7zHd
 
+
+## Notes
+
+**2026-10-23T15:56:57Z**
+
+Marked old (2026-10-23 ticket triage): TS findings already resolved — AST scan finds no nested ternaries in the 3 listed TS files; only raw_proto/ (throwaway prototype) remains, not worth touching.

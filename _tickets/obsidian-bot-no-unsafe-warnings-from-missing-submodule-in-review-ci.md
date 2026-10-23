@@ -1,11 +1,11 @@
 ---
 id: nid_v61ea73rmsqpcs4k0icrjhq7m_E
 title: "Obsidian bot: no-unsafe-* warnings from missing submodule in review CI"
-status: open
+status: old
 deps: []
 links: []
 created_iso: 2026-07-20T22:34:17Z
-status_updated_iso: 2026-07-20T22:34:17Z
+status_updated_iso: 2026-10-23T15:56:57Z
 type: chore
 priority: 3
 assignee: CC_fable5_WITH-nickolaykondratyev
@@ -31,3 +31,9 @@ ROOT-CAUSE THEORY: obsidian-id-lib is a `file:` dep pointing at the git submodul
 
 Confirm against the bot's actual log whether submodule was checked out. If theory holds: no source change; document/ensure the review submission includes submodule sources (or vendor the lib). Do NOT add defensive casts/guards to the listed lines — they are already maximally type-safe and edits would be noise + risk.
 
+
+## Notes
+
+**2026-10-23T15:56:57Z**
+
+Marked old (2026-10-23 ticket triage): premise gone — obsidian-id-lib is no longer a git submodule; it is the published npm dep stable-ids-for-obsidian, so the bot resolves its types.

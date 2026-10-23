@@ -1,11 +1,11 @@
 ---
 id: nid_lvus8y59cn0vr4vjup6xbm5bq_E
 title: "Clear the 2 pre-existing prefer-active-doc warnings in src/main.ts"
-status: open
+status: old
 deps: []
 links: []
 created_iso: 2026-07-20T22:00:59Z
-status_updated_iso: 2026-07-20T22:00:59Z
+status_updated_iso: 2026-10-23T15:56:56Z
 type: chore
 priority: 3
 assignee: CC_fable5_WITH-nickolaykondratyev
@@ -29,3 +29,9 @@ Replace `document.body` with the MAIN-window document: `this.app.workspace.rootS
 
 `npm run lint` reports 0 errors AND 0 warnings. Status-bar hide/show behavior when entering/leaving the heatmap view is unchanged (verify manually in Obsidian). `npm test` and `npm run build` stay green.
 
+
+## Notes
+
+**2026-10-23T15:56:56Z**
+
+Marked old (2026-10-23 ticket triage): current npm run lint (fresh npm ci) no longer reports obsidianmd/prefer-active-doc on src/main.ts; only remaining warning is setWarning (tracked by nid_rv9wadneva15fs5ob0u3wp0x3_E).

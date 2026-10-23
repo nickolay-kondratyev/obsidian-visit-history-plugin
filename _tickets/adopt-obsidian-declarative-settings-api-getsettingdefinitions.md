@@ -1,11 +1,11 @@
 ---
 id: nid_qgs5j7z3hx07bor1w790xzbjn_E
 title: "Adopt Obsidian declarative settings API (getSettingDefinitions)"
-status: open
+status: old
 deps: []
 links: []
 created_iso: 2026-07-20T22:34:28Z
-status_updated_iso: 2026-07-20T22:34:28Z
+status_updated_iso: 2026-10-23T15:56:56Z
 type: feature
 priority: 3
 assignee: CC_fable5_WITH-nickolaykondratyev
@@ -27,3 +27,9 @@ Keep supporting older Obsidian for now — 1.13.0 is catalyst (insider) only, no
 general release yet. BLOCKED: do not action until 1.13.0 is broadly released and
 minAppVersion is deliberately raised. Current imperative `display()` / `setWarning()`
 are the correct, sanctioned choices meanwhile.
+
+## Notes
+
+**2026-10-23T15:56:56Z**
+
+Marked old (2026-10-23 ticket triage): option (b) already shipped — src/settingsTab/VisitHistorySettingTab.ts implements getSettingDefinitions() alongside the display() fallback.
