@@ -6,7 +6,7 @@
 // device dir is fixed), and a per-test `data.json` idle value written before enable.
 import { type Browser, type Page, chromium } from '@playwright/test';
 import { type ChildProcess, spawn } from 'node:child_process';
-import { cpSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { dirname, join, sep } from 'node:path';
 import {
   DEV_OVERRIDES_FILE_JSON_PATH_ENV_VAR,
@@ -44,6 +44,12 @@ export interface DevConfigOverrides {
 export interface SeedFile {
   readonly path: string;
   readonly content: string;
+  /**
+   * Optional file modified time (epoch ms), set before Obsidian starts so its vault scan
+   * reads it (e.g. heatmap recency specs). Absent → the write time. The created time
+   * cannot be set from Node.
+   */
+  readonly mtimeMs?: number;
 }
 
 export interface LaunchOptions {
@@ -118,6 +124,7 @@ export class ObsidianHarness {
       const dest = join(vaultDir, seed.path);
       mkdirSync(dirname(dest), { recursive: true });
       writeFileSync(dest, seed.content);
+      if (seed.mtimeMs !== undefined) utimesSync(dest, new Date(seed.mtimeMs), new Date(seed.mtimeMs));
     }
 
     // Per-test settings. Overwrites any stray data.json from the copy.
