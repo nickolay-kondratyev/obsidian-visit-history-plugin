@@ -1,15 +1,15 @@
 ---
+closed_iso: 2026-10-23T23:56:34Z
 id: nid_fx5flv7humtg2d6xamfwprvm5_e
 title: "Heatmap touch: tap file = details card with Open, tap folder = drill in"
-status: in_progress
+status: closed
 deps: [nid_qv6dvik5peosopm9ewks3rkm8_e]
 links: [nid_qv6dvik5peosopm9ewks3rkm8_e]
 created_iso: 2026-10-23T23:17:24Z
-status_updated_iso: 2026-10-23T23:38:15Z
+status_updated_iso: 2026-10-23T23:56:34Z
 type: feature
 priority: 2
 assignee: CC_WITH-nickolaykondratyev
-pwd: /home/nickolaykondratyev/git_repos/nickolay-kondratyev_obsidian-visit-history-plugin/.worktree/t-fx5flv7h
 tags: [heatmap-readability]
 ---
 
@@ -80,3 +80,13 @@ Tests:
   separate follow-up, not part of this ticket.
 - Esc-key dismissal of header popovers.
 - Changing desktop mouse behavior.
+
+## Verification
+
+- Desktop e2e `e2e/heatmapTouchTap.e2e.ts` with REAL CDP touch (`Emulation.setTouchEmulationEnabled`
+  + `Input.dispatchTouchEvent`); verified it fails when touch is forced down the mouse path.
+- Android emulator (`medium_tablet`, headless) with real `adb shell input tap/swipe`:
+  tap file → card; tap another file → selection moves; ✕ closes; Open opens; second tap opens;
+  folder tap drills in + closes the card; horizontal/vertical swipes never select/open/drill;
+  vertical pan fixed via `touch-action: none` on the canvas.
+- Known pre-existing issue: a horizontal swipe also opens Obsidian's side drawer (follow-up ticket).
