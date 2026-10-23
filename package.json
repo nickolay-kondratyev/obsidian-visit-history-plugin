@@ -13,6 +13,8 @@
 		"test:watch": "vitest",
 		"setup:obsidian": "bash scripts/setup-obsidian-bin.sh",
 		"setup:dev-vault": "node e2e/setupDevVault.mjs",
+		"android:setup": "bash scripts/android/setup-android-tablet-emulator-with-dev-vault.sh",
+		"android:push-plugin": "bash scripts/android/push-plugin-build-to-android-tablet-emulator.sh",
 		"test:e2e": "bash scripts/run-e2e.sh",
 		"download-sonar-issues": "./scripts/sonarqube/fetch_sonar_findings.py"
 	},
