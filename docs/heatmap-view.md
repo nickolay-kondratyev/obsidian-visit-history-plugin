@@ -229,3 +229,10 @@ shades for chip/badge contrast. Floating surfaces (popovers, config panel,
 tooltip) carry a two-part elevation shadow; all custom controls have an
 accent `:focus-visible` ring (Obsidian's native button chrome is stripped
 within the view).
+
+Button rules are written as `.vault-heatmap-view button.<class>`, not
+`.vault-heatmap-view .<class>`: Obsidian for tablets adds
+`.is-tablet button:not(.clickable-icon) { padding: 4px 20px }` (specificity
+0,2,1), which beats a 0,2,0 class rule and squeezed the 28px icon buttons'
+SVGs to 0 width. A new `<button>` class in the view must follow the same
+pattern. Check on the tablet emulator (`docs/android-tablet-testing.md`).

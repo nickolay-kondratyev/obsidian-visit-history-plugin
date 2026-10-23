@@ -94,7 +94,14 @@ body.vault-heatmap-active .status-bar-mobile {
    component re-fighting it — the seg-toggle switch segments were showing
    Obsidian's rectangular shadowed button through the pill.
    height deliberately NOT reset on :hover — component heights (e.g. the
-   28px .hdr-icon-btn) would lose to the higher-specificity hover rule. */
+   28px .hdr-icon-btn) would lose to the higher-specificity hover rule.
+   Padding is NOT reset here; each button class sets its own, and those
+   rules use `button.<class>` on purpose: Obsidian's tablet rule
+   `.is-tablet button:not(.clickable-icon) { padding: 4px 20px }` is (0,2,1)
+   and beat a plain `.vault-heatmap-view .<class>` (0,2,0), collapsing the
+   28px icon buttons' SVGs to 0 width. `button.<class>` ties at (0,2,1) and
+   wins on source order; no desktop rule sits in between, so desktop is
+   unchanged. */
 .vault-heatmap-view button {
   appearance: none;
   background-color: transparent;
@@ -205,7 +212,7 @@ body.theme-light .vault-heatmap-view {
   color: var(--vt-text-dim);
 }
 
-.vault-heatmap-view .header-btn {
+.vault-heatmap-view button.header-btn {
   font-family: inherit;
   font-size: 10px;
   background: none;
@@ -232,7 +239,7 @@ body.theme-light .vault-heatmap-view {
 
 /* Square icon variant of .header-btn (filter / info / config triggers).
    Fixed 28×28 so every icon trigger reads as one uniform family. */
-.vault-heatmap-view .hdr-icon-btn {
+.vault-heatmap-view button.hdr-icon-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -254,6 +261,8 @@ body.theme-light .vault-heatmap-view {
   display: block;
   width: 15px;
   height: 15px;
+  /* A flex child: never let a tight host button squeeze the icon to 0 width. */
+  flex-shrink: 0;
 }
 
 .vault-heatmap-view .hdr-icon-btn:hover,
@@ -273,7 +282,7 @@ body.theme-light .vault-heatmap-view {
   flex-shrink: 0;
 }
 
-.vault-heatmap-view .breadcrumb-back {
+.vault-heatmap-view button.breadcrumb-back {
   font-family: inherit;
   font-size: 10px;
   background: none;
@@ -377,7 +386,7 @@ body.theme-light .vault-heatmap-view {
   text-overflow: ellipsis;
 }
 
-.vault-heatmap-view .filter-chip-x {
+.vault-heatmap-view button.filter-chip-x {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -564,7 +573,7 @@ body.theme-light .vault-heatmap-view {
   transition: transform 0.18s ease;
 }
 
-.vault-heatmap-view .seg-opt {
+.vault-heatmap-view button.seg-opt {
   flex: 1;
   position: relative; /* sit above the thumb */
   font-family: inherit;
