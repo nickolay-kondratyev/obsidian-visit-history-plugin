@@ -795,6 +795,10 @@ body.theme-light .vault-heatmap-view {
   height: 100%;
   cursor: grab;
   display: block;
+  /* The canvas owns touch pan/pinch (@visx/zoom): with the default `auto` the
+     browser claims a vertical touch drag as a scroll and sends pointercancel,
+     so the treemap never pans (seen on the Android tablet). */
+  touch-action: none;
 }
 
 .vault-heatmap-view #viz svg.drag {

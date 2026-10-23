@@ -182,10 +182,11 @@ Mechanics (`TreemapViz`): the pointer kind comes from the canvas's latest
 its ONE `click`; hover listens to POINTER events only, so the browser's compat
 mouse events after a tap neither flash the tooltip nor act twice. A pan/drag
 never reaches the handlers: @visx/zoom's @use-gesture drag (`filterTaps`)
-swallows the click that ends a drag. Tiles stop click propagation, so a click
+swallows the click that ends a drag; the canvas sets `touch-action: none` so the
+browser never claims a touch pan as a scroll (pointercancel). Tiles stop click propagation, so a click
 reaching the svg means empty space. The selection is a file PATH; the card
-derives from the rendered leaves (a refresh/filter that removes the file just
-hides it). Covered by `e2e/heatmapTouchTap.e2e.ts` (real CDP touch input).
+derives from the rendered leaves (a refresh/filter that removes the file
+closes the card and drops the selection). Covered by `e2e/heatmapTouchTap.e2e.ts` (real CDP touch input).
 
 ## Dense-folder collapse
 
