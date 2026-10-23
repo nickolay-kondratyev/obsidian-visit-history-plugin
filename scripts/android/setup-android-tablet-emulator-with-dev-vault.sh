@@ -75,7 +75,7 @@ require_writable_sdk_dir() {
   if mkdir -p "${SDK_DIR}" 2>/dev/null && [[ -w "${SDK_DIR}" ]]; then
     return 0
   fi
-  die "Cannot write the Android SDK dir. sdk_dir=[${SDK_DIR}] Set ANDROID_HOME to a writable dir (e.g. ANDROID_HOME=\${HOME}/tools/android-sdk) and re-run."
+  die "Cannot write the Android SDK dir. sdk_dir=[${SDK_DIR}] Set ANDROID_HOME to a writable dir (e.g. ANDROID_HOME=\${HOME}/android-sdk) and re-run."
 }
 
 install_cmdline_tools_if_missing() {

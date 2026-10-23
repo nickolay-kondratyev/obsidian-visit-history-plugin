@@ -32,7 +32,7 @@ writable (e.g. created by root), set `ANDROID_HOME` to a writable dir and use th
 same value for both commands:
 
 ```bash
-ANDROID_HOME=~/tools/android-sdk npm run android:setup
+ANDROID_HOME=~/android-sdk npm run android:setup
 ```
 
 Your user also needs read/write access to `/dev/kvm` (the `kvm` group), and
