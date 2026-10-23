@@ -1,15 +1,15 @@
 ---
+closed_iso: 2026-10-23T23:35:27Z
 id: nid_qv6dvik5peosopm9ewks3rkm8_e
 title: "Heatmap labels readable: wrap + ellipsis by measured width, zoom-aware labels"
-status: in_progress
+status: closed
 deps: []
 links: [nid_fx5flv7humtg2d6xamfwprvm5_e]
 created_iso: 2026-10-23T23:17:24Z
-status_updated_iso: 2026-10-23T23:18:22Z
+status_updated_iso: 2026-10-23T23:35:27Z
 type: feature
 priority: 2
 assignee: CC_WITH-nickolaykondratyev
-pwd: /home/nickolaykondratyev/git_repos/nickolay-kondratyev_obsidian-visit-history-plugin/.worktree/t-qv6dvik5
 tags: [heatmap-readability]
 ---
 
