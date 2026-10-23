@@ -1,4 +1,4 @@
-import { useMemo, type MouseEvent } from 'react';
+import { useMemo, type MouseEvent, type PointerEvent } from 'react';
 import type { HierarchyRectangularNode } from 'd3-hierarchy';
 import { leafFieldAgo, leafFill, leafOpacity } from '../utils';
 import { TileLabelText } from './TileLabelText';
@@ -9,19 +9,27 @@ import type { VaultNode } from '../../core/data/VaultNode';
 interface LeafNodeProps {
   d: HierarchyRectangularNode<VaultNode>;
   hovered: boolean;
+  /** Selected by a touch tap (its details card is open). */
+  selected: boolean;
   colorMode: ColorMode;
   gradKey: GradientKey;
   field: HeatField;
   hotDays: number;
   coldDays: number;
-  onMouseMove: (e: MouseEvent) => void;
-  onMouseLeave: () => void;
+  /** Pointer (not mouse) events: touch taps must not trigger the hover path via compat mouse events. */
+  onPointerMove: (e: PointerEvent) => void;
+  onPointerLeave: () => void;
   /** Current zoom scale — labels fit the tile's ON-SCREEN size. */
   zoomScale: number;
   /** `undefined` until the label fonts are measured (first layout pass). */
   labelLayout: TileLabelLayout | undefined;
-  /** Pre-wired by TreemapViz to open the file via IFileOpener. */
+  /** Pre-wired by TreemapViz to apply the tap rules (open / select) for this file. */
   onClick?: () => void;
+}
+
+function leafBgClassName(hovered: boolean, selected: boolean): string | undefined {
+  const classes = [hovered && 'leaf-node__bg--hovered', selected && 'leaf-node__bg--selected'].filter(Boolean);
+  return classes.length > 0 ? classes.join(' ') : undefined;
 }
 
 /**
@@ -32,13 +40,14 @@ interface LeafNodeProps {
 export function LeafNode({
   d,
   hovered,
+  selected,
   colorMode,
   gradKey,
   field,
   hotDays,
   coldDays,
-  onMouseMove,
-  onMouseLeave,
+  onPointerMove,
+  onPointerLeave,
   zoomScale,
   labelLayout,
   onClick,
@@ -65,9 +74,13 @@ export function LeafNode({
       width={lw}
       height={lh}
       overflow="hidden"
-      onMouseMove={onMouseMove}
-      onMouseLeave={onMouseLeave}
-      onClick={onClick}
+      onPointerMove={onPointerMove}
+      onPointerLeave={onPointerLeave}
+      onClick={onClick ? (e: MouseEvent) => {
+        // Handled here — the canvas-level click means "empty space".
+        e.stopPropagation();
+        onClick();
+      } : undefined}
       style={{ cursor: 'pointer' }}
     >
       {/* Hover stroke + label styling live in styles.css (theme-aware);
@@ -78,7 +91,7 @@ export function LeafNode({
         rx={2}
         fill={fill}
         fillOpacity={opacity}
-        className={hovered ? 'leaf-node__bg--hovered' : undefined}
+        className={leafBgClassName(hovered, selected)}
       />
       {labels && (
         <TileLabelText labels={labels} zoomScale={zoomScale} cornerClassName="leaf-node__field-ago" />

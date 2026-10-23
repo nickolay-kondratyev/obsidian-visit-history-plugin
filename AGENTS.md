@@ -167,7 +167,8 @@ src/
                             # RangeSlider w/ editable bounds), icons.tsx (one
                             # lucide-style stroked-SVG family, currentColor),
                             # FolderNode, LeafNode, CollapsedFolderNode, TileLabelText
-                            # (scale(1/zoom) tile labels), Tooltip, Legend
+                            # (scale(1/zoom) tile labels), Tooltip + FileDetailsCard
+                            # (touch; both render FileDetails), Legend
     constants.ts, utils.ts  # Palettes + ColorMode/HeatField/GradientKey unions; pure helpers
 
   viewModel/
@@ -179,6 +180,8 @@ src/
                             # wrap + "…"), TileLabelLayout (zoom-aware show/place),
                             # CharWidthMeasurer (+ per-char cache); DOM font read in
                             # view/label/CanvasLabelFontProbe
+    TileTapRules.ts         # Pure tap rules: touch select/open/dismiss, folder drill-in,
+                            # mouse unchanged (per-event pointer kind)
     tileSize.ts             # Pure tile sizing (TileSizing: mode + curve + type scales;
                             # tileValue, hideUnvisitedFiles for visit-time mode)
     ClusteredTimestampsRule.ts # When the header warns of clustered (sync-stamped) times
@@ -202,6 +205,7 @@ src/
 - **`_archive` folders are hidden in the heatmap** below the current view root: `pruneArchiveFolders` (applied in `TreemapViz` before layout) drops them plus folders they leave empty. Viewing an archive = scoping into it (folder context menu → "Open heatmap for folder"); backing out hides it again. When the view root is at/under an `_archive` (`isWithinArchive` on the derived trail), pruning is skipped — nested archives stay visible (an archive moved under another archive must not lose visibility — owner decision).
 - **Dense folders collapse** (`partitionTreemapNodes`): a folder below the view root whose unzoomed rect averages < 32×32 px per file renders as ONE tile (name + file count, colored by its most recent file per the active field; click drills in) — bounds SVG node count. Zoom does not expand it (ceiling). Header stats/empty-state still count ALL laid-out files (incl. collapsed; not visit-time-hidden ones).
 - **Heatmap labels** are fitted by MEASURED width (canvas, label font read from `styles.css`) against the tile's ON-SCREEN size, and drawn in a `scale(1/zoom)` group — constant on-screen font, zooming in reveals names; no `<foreignObject>` (iOS WebKit misplaces it under transforms). Details: `docs/heatmap-view.md` "Tile labels".
+- **Heatmap touch** (`TileTapRules`, per-event `pointerType`): touch tap on a file = select + docked details card with Open (second tap also opens); folder tap drills in; empty space closes; mouse/pen unchanged. Hover uses pointer events only (no compat-mouse tooltip flash); drags never click (@use-gesture `filterTaps`); long-press unused (owner decision). Details: `docs/heatmap-view.md` "Touch input".
 - **Heatmap sizing** (`tileSize.ts`): tile value = `curve(raw) × typeScale`, unrounded; raw = bytes (1-byte floor) or focus SECONDS (`VisitStats.totalFocusMs`). `HeatmapConfig.sizeBy` (`contentSize`|`visitTime`) + `sizing[mode]` = curve (`linear`|`sqrt`|`log`, default `sqrt` both — content was linear before) + per-type scales, saved SEPARATELY per mode (sanitizer still reads legacy top-level `scales` as content scales; cleanup after 2027-April). Visit-time mode leaves out never-visited files (after prune+filter; empty folders drop) and the header banner counts them for the current view.
 - **Heatmap clustered-timestamps banner**: when ≥50% of ≥20 laid-out files in the current view share one 60 s window on the color field (modified/created only, heatmap color mode — e.g. a fresh sync stamped them all), the header says recency colors are meaningless. Pure rule `TimestampClusterDetector` (returns cluster members — reused by the restore-from-git follow-up) + gating `ClusteredTimestampsRule`; stateless, per render.
 - **Heatmap filtering** is include-only OR over `HeatmapConfig.filterTerms` (`path` = ci-substring of the FULL vault path; `content` = ci-substring of file content). Pure `filterVaultTree` composes AFTER archive pruning in TreemapViz, so stats/legend reflect the filtered view. Content terms resolve at the Obsidian boundary via `ContentTermMatcher` (PluginFactory → App prop); `App`'s latest-wins effect depends on the content-term set AND `data` (renames re-resolve; file edits accepted-stale). `undefined` matched-set = content filtering inactive; EMPTY set = terms matched nothing/scan pending. Terms persist like all heatmap config (sticky across restarts + drill-down).

@@ -16,6 +16,8 @@ confirm records under the new name (`userNameModal.e2e.ts`),
 the interim-top-dir → `.plugin_data/visit_history` migration (`pluginDataMoveMigration.e2e.ts`),
 the inline-note key journey (`inlineNote.e2e.ts`: content moved, note2 trashed, history merged in),
 inlining via the embed icon in live preview (`inlineNoteEmbedIcon.e2e.ts`),
+heatmap touch taps with REAL touch input (`heatmapTouchTap.e2e.ts`: tap a file → details
+card, tap Open → file active; writes a card screenshot to `.out/`),
 heatmap tile labels for many long Chinese + Latin names
 (`heatmapLabelsScreenshot.e2e.ts` — journey assert only; writes fitted + zoomed
 screenshots to the git-ignored `.out/` for human review), and the heatmap's
@@ -66,6 +68,14 @@ Most specs drive Obsidian via `window.app` only. A spec that CLICKS in the works
 300×200 — with `page.setViewportSize`, and call `harness.trustVaultAuthor()`: Obsidian's
 first-open "Do you trust the author of this vault?" modal stays up (the plugin is enabled
 programmatically) and intercepts every pointer event.
+
+## Real touch input
+
+Playwright's `hasTouch` cannot be set after `connectOverCDP`, so a touch spec opens its own
+CDP session: `Emulation.setTouchEmulationEnabled({ enabled: true })` once, then
+`Input.dispatchTouchEvent` `touchStart` + `touchEnd` per tap — Chromium turns these into
+real `pointerType: 'touch'` pointer events + the tap's click (see `heatmapTouchTap.e2e.ts`).
+Never substitute mouse events: they take the mouse path.
 
 ## First-run user-name modal
 
