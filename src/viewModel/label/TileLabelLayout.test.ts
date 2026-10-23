@@ -92,6 +92,13 @@ describe('TileLabelLayout', () => {
         expect(labels.corner).toBeUndefined();
       });
 
+      it('should require more width for a longer label', () => {
+        // '400d ago' = 8 chars → needs 8 × 6 + 2 × 3 = 54 px, more than '33m ago' fits in
+        const labels = layout.leafLabels({ width: AGO_MIN_WIDTH, height: 200 }, ZOOM_1, 'a', '400d ago');
+
+        expect(labels.corner).toBeUndefined();
+      });
+
       it('should sit in the bottom-right corner', () => {
         const labels = layout.leafLabels({ width: 100, height: 50 }, ZOOM_1, 'a', AGO);
 

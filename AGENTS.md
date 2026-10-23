@@ -165,7 +165,8 @@ src/
                             # ConfigPanel/ (SegmentedToggle switch, RadioGroup,
                             # RangeSlider w/ editable bounds), icons.tsx (one
                             # lucide-style stroked-SVG family, currentColor),
-                            # FolderNode, LeafNode, CollapsedFolderNode, Tooltip, Legend
+                            # FolderNode, LeafNode, CollapsedFolderNode, TileLabelText
+                            # (scale(1/zoom) tile labels), Tooltip, Legend
     constants.ts, utils.ts  # Palettes + ColorMode/HeatField/GradientKey unions; pure helpers
 
   viewModel/

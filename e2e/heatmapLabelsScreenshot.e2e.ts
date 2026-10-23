@@ -1,7 +1,8 @@
 // Heatmap tile labels with many long (Chinese + Latin) note names. The journey assertion is
 // only "the heatmap renders the seeded notes"; the real output is a pair of screenshots in
 // the git-ignored .out/ (fitted + zoomed in) for HUMAN review of label wrapping/ellipsis —
-// pixel/CSS details are deliberately not asserted (they are unit-tested in TileLabelFitter).
+// pixel/CSS details are deliberately not asserted (unit-tested in
+// LabelLineFitter / TileLabelLayout).
 import { expect, test, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
