@@ -71,6 +71,12 @@ export interface LaunchOptions {
    * pinned and the modal is bypassed.
    */
   readonly leaveUserNameUnpinned?: boolean;
+  /**
+   * Vault-relative file opened in the active leaf BEFORE the plugin is enabled — models
+   * enabling (or updating / hot-reloading) the plugin while a doc is already open, so no
+   * active-leaf-change ever reaches the plugin for it. Absent → nothing is opened.
+   */
+  readonly openFileBeforeEnable?: string;
 }
 
 export class ObsidianHarness {
@@ -177,6 +183,19 @@ export class ObsidianHarness {
         },
         [LS_KEY_USER_NAME, USER_NAME, LS_KEY_DEVICE_NAME, DEVICE_NAME, !opts.leaveUserNameUnpinned] as const,
       );
+
+      if (opts.openFileBeforeEnable !== undefined) {
+        await page.evaluate(async (p) => {
+          const file = window.app.vault.getAbstractFileByPath(p);
+          if (!file) throw new Error(`file not found in vault: ${p}`);
+          await window.app.workspace.getLeaf(false).openFile(file);
+        }, opts.openFileBeforeEnable);
+        await page.waitForFunction(
+          (p) => window.app.workspace.activeLeaf?.view.file?.path === p,
+          opts.openFileBeforeEnable,
+          { timeout: 15_000 },
+        );
+      }
 
       await page.evaluate(async (pluginId) => {
         await window.app.plugins.setEnable(true);

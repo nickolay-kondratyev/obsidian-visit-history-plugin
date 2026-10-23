@@ -8,7 +8,8 @@ Settings (ends the session; re-opens on close), opening the heatmap
 (`heatmapRefocusWithinGrace.e2e.ts`; one continued session), Obsidian window blur/refocus
 (`windowBlur.e2e.ts`), a doc in a popout window (`popoutWindowBlur.e2e.ts`), canvas focus,
 idle timeout, a sub-floor idle timeout via a dev overrides file, real input resuming after
-an idle close (`idleResumeOnInput.e2e.ts`), first focus of an id-less note
+an idle close (`idleResumeOnInput.e2e.ts`), a doc already open when the plugin is enabled
+(`docOpenAtPluginEnable.e2e.ts`), first focus of an id-less note
 (`firstFocusAssignsDocId.e2e.ts`), the first-run user-name modal — cancel records nothing,
 confirm records under the new name (`userNameModal.e2e.ts`),
 the interim-top-dir → `.plugin_data/visit_history` migration (`pluginDataMoveMigration.e2e.ts`),
@@ -67,6 +68,13 @@ device name is still pinned), so the plugin's user-name modal opens on enable an
 is recorded until a name is confirmed. That modal stacks ABOVE the trust modal, so a spec
 can click it without `trustVaultAuthor()` (still needs `setViewportSize`).
 `vhFilePath(vaultDir, docId, userName)` targets a name chosen in the modal.
+
+## Doc open before the plugin is enabled
+
+`launch({ ..., openFileBeforeEnable: FILE_A })` opens that file in the active leaf (and
+waits until it is active) BEFORE enabling the plugin — models a fresh enable / update
+reload / hot-reload with a doc already open, where no `active-leaf-change` reaches the
+plugin for it. Absent → nothing is opened.
 
 ## Popout windows
 

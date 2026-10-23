@@ -17,7 +17,10 @@ core/init/PluginFactory ──── DI container: constructs & wires everything
    │      │                  in order even when handlers await file IO;
    │      │                  tracks the focused FILE, not the leaf: unfocus is
    │      │                  dispatched whenever the file changes — incl.
-   │      │                  same-leaf navigation to an untracked view)
+   │      │                  same-leaf navigation to an untracked view;
+   │      │                  syncs once with the already-active leaf on
+   │      │                  layout ready, so a doc open at plugin enable
+   │      │                  is tracked)
    │      └── listener/ ──── DocIdFocusListener → ensures doc id (runs first)
    │                         VhV3FocusDurationListener → V3 duration sessions
    │
