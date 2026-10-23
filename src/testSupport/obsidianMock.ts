@@ -79,3 +79,10 @@ export class Modal {
   constructor(readonly app: unknown) {
   }
 }
+
+/**
+ * Minimal stand-in for Obsidian's `View` — exists so production code can pass
+ * the class as a value (e.g. `workspace.getActiveViewOfType(View)`).
+ */
+export class View {
+}

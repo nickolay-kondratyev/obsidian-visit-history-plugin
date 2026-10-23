@@ -6,9 +6,20 @@ import { makeTFile } from '../../testSupport/fileFactory';
 
 type LeafChangeCallback = (leaf: WorkspaceLeaf | null) => void;
 
-/** Captures the active-leaf-change callback so tests can fire events directly. */
-function makeStubPlugin(): { plugin: Plugin; fireLeafChange: LeafChangeCallback } {
+interface StubPlugin {
+  plugin: Plugin;
+  fireLeafChange: LeafChangeCallback;
+  /** Sets what `workspace.getActiveViewOfType(View)` returns (the active leaf's view). */
+  setActiveView: (view: View | null) => void;
+}
+
+/**
+ * Captures the active-leaf-change callback so tests can fire events directly,
+ * and models the workspace's CURRENT active view (read by syncWithActiveLeaf).
+ */
+function makeStubPlugin(): StubPlugin {
   let captured: LeafChangeCallback | null = null;
+  let activeView: View | null = null;
   const stub = {
     registerEvent: () => undefined,
     app: {
@@ -17,16 +28,21 @@ function makeStubPlugin(): { plugin: Plugin; fireLeafChange: LeafChangeCallback 
           captured = callback;
           return {};
         },
+        getActiveViewOfType: () => activeView,
       },
     },
   };
-  // System boundary: FocusTracker only touches registerEvent + workspace.on.
+  // System boundary: FocusTracker only touches registerEvent, workspace.on
+  // and workspace.getActiveViewOfType.
   const plugin = stub as unknown as Plugin;
   return {
     plugin,
     fireLeafChange: (leaf) => {
       if (captured === null) throw new Error('leaf-change callback was not registered');
       captured(leaf);
+    },
+    setActiveView: (view) => {
+      activeView = view;
     },
   };
 }
@@ -369,6 +385,106 @@ describe('FocusTracker', () => {
       await tracker.whenIdle();
       // THEN it got the focus current AFTER the queue — never stale note A
       expect(lateListener.calls).toEqual(['focus:b.md']);
+    });
+  });
+  describe('syncWithActiveLeaf', () => {
+    it('should dispatch focus for a tracked view that was already active before any leaf-change', async () => {
+      // GIVEN note A already active when the tracker starts (plugin enabled with A open)
+      const { plugin, setActiveView } = makeStubPlugin();
+      setActiveView(makeView(makeTFile({ path: 'a.md' })));
+      const tracker = new FocusTracker(plugin, trackAllProvider);
+      const listener = new RecordingListener();
+      tracker.registerListener(listener);
+      // WHEN the tracker syncs with the active leaf
+      tracker.syncWithActiveLeaf();
+      await tracker.whenIdle();
+      // THEN listeners learned about A
+      expect(listener.calls).toEqual(['focus:a.md']);
+    });
+
+    it('should dispatch unfocus of the synced doc when the user later switches to another doc', async () => {
+      // GIVEN note A already active and synced
+      const { plugin, fireLeafChange, setActiveView } = makeStubPlugin();
+      setActiveView(makeView(makeTFile({ path: 'a.md' })));
+      const tracker = new FocusTracker(plugin, trackAllProvider);
+      const listener = new RecordingListener();
+      tracker.registerListener(listener);
+      tracker.syncWithActiveLeaf();
+      await tracker.whenIdle();
+      // WHEN the user switches to note B
+      fireLeafChange(makeLeaf(makeTFile({ path: 'b.md' })));
+      await tracker.whenIdle();
+      // THEN A's visit is closed before B opens
+      expect(listener.calls).toEqual(['focus:a.md', 'unfocus:a.md', 'focus:b.md']);
+    });
+
+    it('should make the synced doc available to replayLastFocusTo', async () => {
+      // GIVEN note A already active and synced, no leaf-change ever fired
+      const { plugin, setActiveView } = makeStubPlugin();
+      setActiveView(makeView(makeTFile({ path: 'a.md' })));
+      const tracker = new FocusTracker(plugin, trackAllProvider);
+      tracker.syncWithActiveLeaf();
+      await tracker.whenIdle();
+      // WHEN a late listener registers and requests a replay
+      const lateListener = new RecordingListener();
+      tracker.registerListener(lateListener);
+      tracker.replayLastFocusTo(lateListener);
+      await tracker.whenIdle();
+      // THEN it received A's focus exactly once
+      expect(lateListener.calls).toEqual(['focus:a.md']);
+    });
+
+    it('should dispatch nothing when no view is active', async () => {
+      // GIVEN no active view
+      const { plugin } = makeStubPlugin();
+      const tracker = new FocusTracker(plugin, trackAllProvider);
+      const listener = new RecordingListener();
+      tracker.registerListener(listener);
+      // WHEN the tracker syncs
+      tracker.syncWithActiveLeaf();
+      await tracker.whenIdle();
+      // THEN no event was dispatched
+      expect(listener.calls).toEqual([]);
+    });
+
+    it('should NOT dispatch unfocus when the sync repeats a file a leaf-change already delivered', async () => {
+      // GIVEN layout restore already fired active-leaf-change for note A
+      const { plugin, fireLeafChange, setActiveView } = makeStubPlugin();
+      const file = makeTFile({ path: 'a.md' });
+      const leaf = makeMutableLeaf(makeView(file));
+      setActiveView(leaf.view);
+      const tracker = new FocusTracker(plugin, trackAllProvider);
+      const listener = new RecordingListener();
+      tracker.registerListener(listener);
+      fireLeafChange(leaf);
+      // WHEN the layout-ready sync reads the same active view
+      tracker.syncWithActiveLeaf();
+      await tracker.whenIdle();
+      // THEN the duplicate is a harmless repeat focus (a V3 session must not fragment)
+      expect(listener.calls).toEqual(['focus:a.md', 'focus:a.md']);
+    });
+
+    it('should read the active view when the sync RUNS, after pending leaf-changes settle', async () => {
+      // GIVEN a listener blocking note A's focus while the user already moved to B
+      const { plugin, fireLeafChange, setActiveView } = makeStubPlugin();
+      const tracker = new FocusTracker(plugin, trackAllProvider);
+      const listener = new RecordingListener();
+      let releaseGate!: () => void;
+      listener.gate = {
+        path: 'a.md',
+        promise: new Promise((resolve) => {
+          releaseGate = resolve;
+        }),
+      };
+      tracker.registerListener(listener);
+      fireLeafChange(makeLeaf(makeTFile({ path: 'a.md' })));
+      tracker.syncWithActiveLeaf();
+      // WHEN the active view changes to B before the queued sync runs
+      setActiveView(makeView(makeTFile({ path: 'b.md' })));
+      releaseGate();
+      await tracker.whenIdle();
+      // THEN the sync used the CURRENT view (B), never a stale snapshot
+      expect(listener.calls).toEqual(['focus:a.md', 'unfocus:a.md', 'focus:b.md']);
     });
   });
 });

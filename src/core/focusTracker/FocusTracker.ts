@@ -1,4 +1,4 @@
-import { Plugin, TFile, View, WorkspaceLeaf } from 'obsidian';
+import { Plugin, TFile, View } from 'obsidian';
 import { IsTrackedProvider } from "../util/vault/IsTrackedProvider";
 
 
@@ -55,7 +55,7 @@ export class FocusTracker {
   // chaining, a second rapid leaf-change could interleave at those awaits and
   // deliver focus/unfocus to listeners OUT OF ORDER (breaking stateful
   // listeners such as duration tracking). The chain never stays rejected —
-  // handleLeafChange isolates listener errors and the .catch below is a
+  // handleActiveViewChange isolates listener errors and the .catch below is a
   // safety net for unexpected throws.
   private dispatchChain: Promise<void> = Promise.resolve();
 
@@ -65,13 +65,29 @@ export class FocusTracker {
   ) {
     this.plugin.registerEvent(
       this.plugin.app.workspace.on('active-leaf-change', (leaf) => {
-        this.dispatchChain = this.dispatchChain
-          .then(() => this.handleLeafChange(leaf ?? null))
-          .catch((error) => {
-            console.error('[VHP][FocusTracker] leaf-change handling failed', error);
-          });
+        // leaf.view is read INSIDE the chain (when handled), as before.
+        this.enqueueActiveViewChange(() => leaf?.view ?? null);
       })
     );
+  }
+
+  /**
+   * Dispatches the CURRENTLY active leaf's view as if `active-leaf-change`
+   * had fired for it. Call ONCE when the layout is ready: when the plugin is
+   * enabled while a doc is already open (fresh enable, update reload, hot
+   * reload) no leaf-change ever fires for that doc, so without this sync its
+   * visit is never recorded. Enqueued on the serialized dispatch chain (and
+   * the view read when it RUNS), so ordering with live events holds and a
+   * later replayLastFocusTo sees it. Repeating a file a startup leaf-change
+   * already delivered is a harmless duplicate focus (no unfocus dispatched).
+   */
+  syncWithActiveLeaf(): void {
+    // WHY getActiveViewOfType(View): it is exactly the active leaf's view —
+    // the same leaf `active-leaf-change` delivers (incl. sidebar leaves).
+    // WHY-NOT workspace.activeLeaf: deprecated. WHY-NOT getMostRecentLeaf():
+    // skips sidebars, so with e.g. the search pane active it would report the
+    // editor doc as focused — diverging from the live-event semantics.
+    this.enqueueActiveViewChange(() => this.plugin.app.workspace.getActiveViewOfType(View));
   }
 
   registerListener(listener: FocusListener): void {
@@ -110,8 +126,16 @@ export class FocusTracker {
 
   // ── private ───────────────────────────────────────────────────────────────
 
-  private async handleLeafChange(leaf: WorkspaceLeaf | null): Promise<void> {
-    const view = leaf === null ? null : leaf.view;
+  /** The view is read when the queued change RUNS — never a stale snapshot. */
+  private enqueueActiveViewChange(readView: () => View | null): void {
+    this.dispatchChain = this.dispatchChain
+      .then(() => this.handleActiveViewChange(readView()))
+      .catch((error) => {
+        console.error('[VHP][FocusTracker] leaf-change handling failed', error);
+      });
+  }
+
+  private async handleActiveViewChange(view: View | null): Promise<void> {
     const nextEvent = view !== null && this.isTrackedProvider.isTrackedView(view)
       ? viewToFocusEvent(view)
       : null;
@@ -135,7 +159,7 @@ export class FocusTracker {
   /**
    * Dispatches to all listeners, isolating failures: one throwing listener
    * must not block the others nor surface as an unhandled promise rejection
-   * (handleLeafChange is fired-and-forgotten from the workspace event).
+   * (handleActiveViewChange is fired-and-forgotten from the workspace event).
    */
   private async dispatch(event: FocusEvent, method: 'onFocus' | 'onUnfocus'): Promise<void> {
     for (const listener of this.listeners) {

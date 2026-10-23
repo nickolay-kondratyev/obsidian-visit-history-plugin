@@ -73,6 +73,9 @@ export default class VisitHistoryPlugin extends Plugin {
     // writes user-scoped VH data — onLayoutReady keeps UI and file IO off
     // the load path.
     this.app.workspace.onLayoutReady(() => {
+      // FIRST: a doc already open at plugin enable got no leaf-change — sync
+      // it onto the dispatch chain BEFORE activation enqueues its replay.
+      factory.focusTracker.syncWithActiveLeaf();
       void this.pinUserNameAndStartRecording(factory, hiddenFileUtil);
     });
   }
