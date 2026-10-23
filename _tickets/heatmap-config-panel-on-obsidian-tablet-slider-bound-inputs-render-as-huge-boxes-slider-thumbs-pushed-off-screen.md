@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-10-23T22:23:05Z
 id: nid_7n2lvhgesln25nxooiauewd8c_e
 title: "Heatmap config panel on Obsidian tablet: slider bound inputs render as huge boxes, slider thumbs pushed off-screen"
-status: open
+status: closed
 deps: []
 links: [nid_8u6pi2do1vss1yt2hfgc6uicc_e]
 created_iso: 2026-10-23T17:06:04Z
-status_updated_iso: 2026-10-23T17:06:04Z
+status_updated_iso: 2026-10-23T22:23:05Z
 type: bug
 priority: 2
 assignee: nickolaykondratyev
@@ -43,3 +44,10 @@ Found while verifying ticket `nid_8u6pi2do1vss1yt2hfgc6uicc_e` (tablet button pa
 - Redesigning the config panel for small screens.
 - Automated Android tests (ticket `nid_2sx3if2tus8bc7j3i4oio11b7_e`).
 
+
+## Resolution (2026-10-23, commit e125cec)
+
+- Root cause confirmed over CDP: `.is-mobile input[type="text"] { width: 100% }` (0,2,1) beat `.vault-heatmap-view .bound-input` (0,2,0); range track computed to 0px. Fixed with `.vault-heatmap-view .slider-track-row .bound-input` (0,3,0). Regression: `e2e/heatmapMobileLayout.e2e.ts` (adds `body.is-mobile`, asserts slider width ≥ 40px).
+- Bound inputs keep Obsidian mobile's `--input-height` (44px) — the plugin never set a height; kept as a reasonable touch target.
+- `.filter-pop-input` and the radios checked on the emulator: render fine, no change.
+- Tap box-shadow extra: not done (low priority, optional per this ticket).
