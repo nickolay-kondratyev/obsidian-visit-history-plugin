@@ -53,6 +53,46 @@ snapshot restore (seen once with emulator 37.2.12; `coredumpctl list` shows a
 npm run android:setup
 ```
 
+## Headless host (no display, e.g. the podman sandbox)
+
+Verified 2026-10-23 with emulator 37.2.12. Without a display, `android:setup`
+fails in three places. Work around them in this order:
+
+1. **Emulator exits at start.** The log shows `could not connect to display`, or
+   the process segfaults (exit 139) right after `Emulator is performing a full
+   startup`. Only the `swangle_indirect` renderer stays up; `auto`, `swiftshader_indirect`,
+   `guest` and `-feature -Vulkan` all crashed. Start the emulator yourself, from a
+   shell that stays alive (a process started with `&` from a short-lived shell
+   dies with it). `android:setup` then sees it running and skips its own start:
+
+   ```bash
+   "${ANDROID_HOME}/emulator/emulator" @medium_tablet \
+     -no-window -no-audio -no-boot-anim -no-snapshot -gpu swangle_indirect
+   ```
+
+2. **`adb devices` shows `unauthorized`.** The tablet shows an "Allow USB
+   debugging?" dialog that nobody can see. Tap it through the emulator console
+   (port 5554; the auth token is in `~/.emulator_console_auth_token`).
+   `screenrecord screenshot <dir>` saves a PNG of the screen. Touch coordinates
+   are scaled to 0..32767 on both axes, not pixels (`event mouse` does not tap):
+
+   ```text
+   auth <token>
+   event send EV_ABS:ABS_MT_TRACKING_ID:7 EV_ABS:ABS_MT_POSITION_X:<x> EV_ABS:ABS_MT_POSITION_Y:<y> EV_ABS:ABS_MT_PRESSURE:50 EV_KEY:BTN_TOUCH:1 EV_SYN:0:0
+   event send EV_ABS:ABS_MT_TRACKING_ID:-1 EV_KEY:BTN_TOUCH:0 EV_SYN:0:0
+   ```
+
+   Here `x = px * 32767 / 2560` and `y = py * 32767 / 1600` (landscape). Tick
+   "Always allow from this computer" first, then tap "Allow".
+
+3. **`curl: (23) Failure writing output`.** The SDK dir is read-only, so the
+   Obsidian APK can't be cached there. Download it to the repo's `.tmp/`, then
+   `adb install -r` it. `android:setup` skips the download when the installed
+   version already matches.
+
+Once adb works, do the one-time steps below with `adb shell input tap <px> <py>`
+(real pixels) and look at the screen with `adb exec-out screencap -p > shot.png`.
+
 ## One-time manual steps: open the dev vault in Obsidian
 
 The scripts cannot add the vault to Obsidian's vault list: Obsidian keeps it in
