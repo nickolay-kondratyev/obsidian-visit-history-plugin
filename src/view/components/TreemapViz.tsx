@@ -16,6 +16,7 @@ import { pruneArchiveFolders } from '../../viewModel/pruneArchiveFolders';
 import { filterVaultTree, isFilterActive, type HeatmapTreeFilter } from '../../viewModel/filterVaultTree';
 import { partitionTreemapNodes, type TreemapPartition } from '../../viewModel/partitionTreemapNodes';
 import { hideUnvisitedFiles, tileValue, type TileSizing } from '../../viewModel/tileSize';
+import { ClusteredTimestampsRule, type ClusteredTimestamps } from '../../viewModel/ClusteredTimestampsRule';
 
 // ── Props ───────────────────────────────────────────────────────────────────
 
@@ -28,6 +29,8 @@ export interface TreemapStats {
   size: string;
   /** Files left out because they have no visit time (visit-time sizing only; else 0). */
   hiddenNoVisitCount: number;
+  /** Laid-out files share (nearly) one time on the color field; undefined = no warning. */
+  clusteredTimestamps: ClusteredTimestamps | undefined;
 }
 
 interface TreemapVizProps {
@@ -107,6 +110,11 @@ function computeTotals(root: HierarchyRectangularNode<VaultNode>): TreemapTotals
     }
   });
   return totals;
+}
+
+/** File (leaf) nodes of the laid-out hierarchy — an EMPTY folder is a d3 leaf too, so filtered out. */
+function laidOutFiles(root: HierarchyRectangularNode<VaultNode>): VaultNode[] {
+  return root.leaves().filter(d => !d.data.children).map(d => d.data);
 }
 
 // ── Tooltip state ───────────────────────────────────────────────────────────
@@ -246,6 +254,13 @@ export function TreemapViz({
     [layout, field],
   );
 
+  // Laid-out files = what the user sees (after prune/filter/visit-time hiding),
+  // incl. those inside collapsed folders. O(n log n) — fine per field change.
+  const clusteredTimestamps = useMemo(
+    () => (layout ? ClusteredTimestampsRule.evaluate(laidOutFiles(layout.root), field, colorMode) : undefined),
+    [layout, field, colorMode],
+  );
+
   // ── Bubble stats up to Header ─────────────────────────────────────────
 
   // From totals, NOT the rendered partition — files inside collapsed folders
@@ -256,8 +271,9 @@ export function TreemapViz({
       folders: totals.folders,
       size: fmtBytes(totals.bytes),
       hiddenNoVisitCount,
+      clusteredTimestamps,
     });
-  }, [totals, hiddenNoVisitCount, onStatsChange]);
+  }, [totals, hiddenNoVisitCount, clusteredTimestamps, onStatsChange]);
 
   // Mutually exclusive empty states: "nothing visited" wins — clearing filters
   // would not help when the remaining files simply have no visit time.

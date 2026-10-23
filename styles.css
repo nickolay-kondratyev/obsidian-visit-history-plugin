@@ -63,6 +63,7 @@ body.vault-heatmap-active .status-bar-mobile {
   --vt-text-mut: var(--text-faint);
   --vt-accent:    var(--interactive-accent);
   --vt-on-accent: var(--text-on-accent);
+  --vt-warning:   var(--text-warning);
 
   /* File-type colors — no Obsidian equivalent, keep as plugin-specific */
   --vt-md:       #4a5ed4;
@@ -193,6 +194,23 @@ body.theme-light .vault-heatmap-view {
   text-overflow: ellipsis;
   min-width: 0;
   flex-shrink: 1;
+}
+
+/* Clustered-timestamps warning: a full sentence, so it WRAPS to at most two lines
+   (fits the 42px header) instead of a one-line ellipsis — on touch there is no
+   title tooltip to read the rest. Basis = its text width, so it gives up width
+   before shorter siblings when the row is tight. */
+.vault-heatmap-view .hdr-cluster-banner {
+  font-size: 11px;
+  line-height: 1.25;
+  color: var(--vt-warning);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  min-width: 0;
+  flex: 0 1 auto;
 }
 
 .vault-heatmap-view .legend {
@@ -341,7 +359,7 @@ body.theme-light .vault-heatmap-view {
   gap: 8px;
   border-left: 1px solid var(--vt-border);
   padding-left: 14px;
-  /* Shrinks (with .hdr-hidden-banner, the only other) — chips scroll, header stays 42px. */
+  /* Shrinks (with the header banners, the only others) — chips scroll, header stays 42px. */
   min-width: 0;
   flex-shrink: 1;
 }
