@@ -880,10 +880,12 @@ body.theme-light .vault-heatmap-view {
 }
 
 /* Leaf label: white with a dark halo (paint-order) — readable over ANY cell
-   color (type palette or heat gradient) in both themes. */
+   color (type palette or heat gradient) in both themes. Font size here is the
+   single source of truth: label fitting reads it at runtime
+   (CanvasLabelFontProbe) and derives line height + show thresholds from it. */
 .vault-heatmap-view .leaf-node__label {
   font-family: var(--font-monospace);
-  font-size: 9px;
+  font-size: 11px;
   fill: rgba(255, 255, 255, 0.78);
   paint-order: stroke;
   stroke: rgba(0, 0, 0, 0.4);

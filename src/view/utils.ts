@@ -151,30 +151,6 @@ export function fmtFileCount(n: number): string {
   return n === 1 ? '1 file' : `${n} files`;
 }
 
-// ── Leaf label layout ──────────────────────────────────────────────────────
-// Tile-local geometry (pre-zoom units) for the 9px monospace leaf labels
-// (`.leaf-node__label` in styles.css). Char width is an ESTIMATE (monospace
-// ≈ 0.6em) — no DOM text measurement, so a theme with a wider mono font may
-// clip the last char; upgrade path: measure via getComputedTextLength.
-export const LEAF_LABEL_PAD_PX = 3;
-/** A tile shows its title only when STRICTLY larger than these. */
-export const TILE_TITLE_MIN_WIDTH_PX = 32;
-export const TILE_TITLE_MIN_HEIGHT_PX = 14;
-const LEAF_LABEL_LINE_HEIGHT_PX = 12;
-const LEAF_LABEL_CHAR_WIDTH_PX = 5.5;
-/** Title line + empty spacer line + bottom line — keeps both labels unsquished. */
-const CORNER_LABEL_MIN_LINES = 3;
-
-/**
- * Whether a tile of `width`×`height` has room for `text` in its bottom-right
- * corner below the title, with a blank line in between.
- */
-export function cornerLabelFits(width: number, height: number, text: string): boolean {
-  const neededWidth = text.length * LEAF_LABEL_CHAR_WIDTH_PX + 2 * LEAF_LABEL_PAD_PX;
-  const neededHeight = CORNER_LABEL_MIN_LINES * LEAF_LABEL_LINE_HEIGHT_PX;
-  return width >= neededWidth && height >= neededHeight;
-}
-
 /**
  * Builds the display path string from a D3 hierarchy node's ancestors.
  */

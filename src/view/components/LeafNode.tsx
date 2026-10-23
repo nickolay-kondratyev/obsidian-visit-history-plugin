@@ -1,14 +1,8 @@
-import type { MouseEvent } from 'react';
+import { useMemo, type MouseEvent } from 'react';
 import type { HierarchyRectangularNode } from 'd3-hierarchy';
-import {
-  cornerLabelFits,
-  LEAF_LABEL_PAD_PX,
-  leafFieldAgo,
-  leafFill,
-  leafOpacity,
-  TILE_TITLE_MIN_HEIGHT_PX,
-  TILE_TITLE_MIN_WIDTH_PX,
-} from '../utils';
+import { leafFieldAgo, leafFill, leafOpacity } from '../utils';
+import { TileLabelText } from './TileLabelText';
+import type { TileLabelLayout } from '../../viewModel/label/TileLabelLayout';
 import type { ColorMode, GradientKey, HeatField } from '../constants';
 import type { VaultNode } from '../../core/data/VaultNode';
 
@@ -22,6 +16,10 @@ interface LeafNodeProps {
   coldDays: number;
   onMouseMove: (e: MouseEvent) => void;
   onMouseLeave: () => void;
+  /** Current zoom scale — labels fit the tile's ON-SCREEN size. */
+  zoomScale: number;
+  /** `undefined` until the label fonts are measured (first layout pass). */
+  labelLayout: TileLabelLayout | undefined;
   /** Pre-wired by TreemapViz to open the file via IFileOpener. */
   onClick?: () => void;
 }
@@ -41,6 +39,8 @@ export function LeafNode({
   coldDays,
   onMouseMove,
   onMouseLeave,
+  zoomScale,
+  labelLayout,
   onClick,
 }: LeafNodeProps) {
   const lw = Math.max(0, d.x1 - d.x0);
@@ -50,6 +50,13 @@ export function LeafNode({
   // Follows the active heat field even in type color mode — the field setting
   // stays meaningful there; the tooltip still shows all three stamps.
   const fieldAgo = leafFieldAgo(d.data, field, Date.now());
+  const name = d.data.name;
+  // Memoized so pan frames and hover re-renders skip re-fitting; only a zoom
+  // change (new on-screen size) re-fits.
+  const labels = useMemo(
+    () => labelLayout?.leafLabels({ width: lw, height: lh }, zoomScale, name, fieldAgo),
+    [labelLayout, lw, lh, zoomScale, name, fieldAgo],
+  );
 
   return (
     <svg
@@ -73,20 +80,8 @@ export function LeafNode({
         fillOpacity={opacity}
         className={hovered ? 'leaf-node__bg--hovered' : undefined}
       />
-      {lw > TILE_TITLE_MIN_WIDTH_PX && lh > TILE_TITLE_MIN_HEIGHT_PX && (
-        <text x={LEAF_LABEL_PAD_PX} y={11} className="leaf-node__label">
-          {d.data.name}
-        </text>
-      )}
-      {fieldAgo !== undefined && cornerLabelFits(lw, lh, fieldAgo) && (
-        <text
-          x={lw - LEAF_LABEL_PAD_PX}
-          y={lh - LEAF_LABEL_PAD_PX}
-          textAnchor="end"
-          className="leaf-node__label leaf-node__field-ago"
-        >
-          {fieldAgo}
-        </text>
+      {labels && (
+        <TileLabelText labels={labels} zoomScale={zoomScale} cornerClassName="leaf-node__field-ago" />
       )}
     </svg>
   );
