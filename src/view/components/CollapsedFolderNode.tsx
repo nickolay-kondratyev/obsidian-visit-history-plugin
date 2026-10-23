@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, type MouseEvent } from 'react';
 import type { HierarchyRectangularNode } from 'd3-hierarchy';
 import { fmtFileCount, leafFill, leafOpacity } from '../utils';
 import { TileLabelText } from './TileLabelText';
@@ -60,7 +60,11 @@ export function CollapsedFolderNode({
       overflow="hidden"
       className="collapsed-folder-node"
       style={{ cursor: 'pointer' }}
-      onClick={() => onClick(d)}
+      onClick={(e: MouseEvent) => {
+        // Handled here — the canvas-level click means "empty space".
+        e.stopPropagation();
+        onClick(d);
+      }}
     >
       <title>{`${d.data.name} — ${countLabel}, click to drill in`}</title>
       <rect

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, type MouseEvent } from 'react';
 import type { HierarchyRectangularNode } from 'd3-hierarchy';
 import type { VaultNode } from '../../core/data/VaultNode';
 import type { TileLabelLayout } from '../../viewModel/label/TileLabelLayout';
@@ -51,7 +51,11 @@ export function FolderNode({ d, onClick, zoomScale, labelLayout }: FolderNodePro
       overflow="hidden"
       className={interactive ? 'folder-node--interactive' : undefined}
       style={interactive ? { cursor: 'pointer' } : undefined}
-      onClick={interactive ? () => onClick(d) : undefined}
+      onClick={interactive ? (e: MouseEvent) => {
+        // Handled here — the canvas-level click means "empty space".
+        e.stopPropagation();
+        onClick(d);
+      } : undefined}
     >
       {/* SVG-native hover tooltip — the leaf tooltip does not cover folders. */}
       {interactive && <title>{`${d.data.name} — click to drill in`}</title>}

@@ -1,5 +1,5 @@
 import { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from 'react';
-import type { MouseEvent, RefObject } from 'react';
+import type { PointerEvent, RefObject } from 'react';
 import { hierarchy, treemap, treemapSquarify } from 'd3-hierarchy';
 import type { HierarchyRectangularNode } from 'd3-hierarchy';
 import { Zoom } from '@visx/zoom';
@@ -8,6 +8,7 @@ import { FolderNode } from './FolderNode';
 import { LeafNode } from './LeafNode';
 import { CollapsedFolderNode } from './CollapsedFolderNode';
 import { Tooltip } from './Tooltip';
+import { FileDetailsCard } from './FileDetailsCard';
 import { fmtBytes } from '../utils';
 import type { ColorMode, GradientKey, HeatField } from '../constants';
 import type { VaultNode } from '../../core/data/VaultNode';
@@ -18,6 +19,7 @@ import { partitionTreemapNodes, type TreemapPartition } from '../../viewModel/pa
 import { hideUnvisitedFiles, tileValue, type TileSizing } from '../../viewModel/tileSize';
 import { TileLabelLayout } from '../../viewModel/label/TileLabelLayout';
 import { CanvasLabelFontProbe } from '../label/CanvasLabelFontProbe';
+import { TileTapRules, type PointerKind, type TileTapOutcome } from '../../viewModel/TileTapRules';
 
 // ── Props ───────────────────────────────────────────────────────────────────
 
@@ -159,6 +161,12 @@ export function TreemapViz({
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
   const [labelLayout, setLabelLayout] = useState<TileLabelLayout | undefined>(undefined);
+  /** File selected by a TOUCH tap — its details card is open (TileTapRules). */
+  const [selectedPath, setSelectedPath] = useState<string | undefined>(undefined);
+  // Pointer kind of the latest pointerdown on the canvas. A `click` event does
+  // not reliably carry pointerType across engines (iOS WebKit), but every
+  // click is preceded by its own pointerdown — so this classifies THAT click.
+  const lastPointerKindRef = useRef<PointerKind>('mouseLike');
 
   // ── Label fonts — measured once from the rendered CSS ──────────────────
 
@@ -295,7 +303,8 @@ export function TreemapViz({
   const TOOLTIP_GAP = 8;
 
   const handleLeafMove = useCallback(
-    (e: MouseEvent, d: HierarchyRectangularNode<VaultNode>, i: number) => {
+    (e: PointerEvent, d: HierarchyRectangularNode<VaultNode>, i: number) => {
+      if (!TileTapRules.showsHoverTooltip(TileTapRules.pointerKind(e.pointerType))) return;
       if (hoveredIdx !== i) setHoveredIdx(i);
       const vizRect = containerRef.current?.getBoundingClientRect();
       if (!vizRect) {
@@ -340,14 +349,53 @@ export function TreemapViz({
     setTooltip(null);
   }, []);
 
+  // ── Tap / click handlers (TileTapRules) ───────────────────────────────
+  //
+  // A pan/drag never reaches these: @visx/zoom's drag runs @use-gesture with
+  // `filterTaps`, which swallows the click that ends a drag (capture phase on
+  // the svg). A touch tap is handled on its ONE `click`; hover listens to
+  // pointer events only, so the browser's compat mouse events after a tap
+  // neither flash the tooltip nor act twice.
+
+  const applyTapOutcome = useCallback(
+    (outcome: TileTapOutcome) => {
+      setSelectedPath(outcome.selectedPath);
+      if (outcome.effect.kind === 'openFile') fileOpener.openFile(outcome.effect.path);
+    },
+    [fileOpener],
+  );
+
+  const handleCanvasPointerDown = useCallback((e: PointerEvent) => {
+    lastPointerKindRef.current = TileTapRules.pointerKind(e.pointerType);
+  }, []);
+
+  const handleLeafClick = useCallback(
+    (path: string) => applyTapOutcome(TileTapRules.fileTile(selectedPath, path, lastPointerKindRef.current)),
+    [applyTapOutcome, selectedPath],
+  );
+
+  /** A click that no tile handled (they stop propagation) landed on empty canvas. */
+  const handleEmptySpaceClick = useCallback(
+    () => applyTapOutcome(TileTapRules.emptySpace(selectedPath, lastPointerKindRef.current)),
+    [applyTapOutcome, selectedPath],
+  );
+
   const handleFolderNodeClick = useCallback(
     (d: HierarchyRectangularNode<VaultNode>) => {
+      applyTapOutcome(TileTapRules.folder());
       // ancestors() walks up to the hierarchy root — which is the RENDERED
       // root — so slice(1) yields root-RELATIVE segments (folder names never
       // contain '/', they come from splitting vault paths on '/').
       onFolderClick(d.ancestors().reverse().slice(1).map(a => a.data.name));
     },
-    [onFolderClick],
+    [applyTapOutcome, onFolderClick],
+  );
+
+  // Derived, not stored: a refresh/filter that removes the selected file
+  // simply hides the card.
+  const selectedLeaf = useMemo(
+    () => (selectedPath === undefined ? undefined : leaves.find(l => l.data.path === selectedPath)),
+    [leaves, selectedPath],
   );
 
   // ── Render ────────────────────────────────────────────────────────────
@@ -377,6 +425,8 @@ export function TreemapViz({
             width={dims.w}
             height={dims.h}
             className={zoom.isDragging ? 'drag' : ''}
+            onPointerDownCapture={handleCanvasPointerDown}
+            onClick={handleEmptySpaceClick}
           >
             <g transform={zoom.toString()}>
               {folders.map((d, i) => (
@@ -407,18 +457,19 @@ export function TreemapViz({
                   key={'l' + i}
                   d={d}
                   hovered={hoveredIdx === i}
+                  selected={d.data.path !== undefined && d.data.path === selectedPath}
                   colorMode={colorMode}
                   gradKey={gradKey}
                   field={field}
                   hotDays={hotDays}
                   coldDays={coldDays}
-                  onMouseMove={e => handleLeafMove(e, d, i)}
-                  onMouseLeave={handleLeafLeave}
+                  onPointerMove={e => handleLeafMove(e, d, i)}
+                  onPointerLeave={handleLeafLeave}
                   zoomScale={zoomScale}
                   labelLayout={labelLayout}
                   onClick={
                     d.data.path
-                      ? () => fileOpener.openFile(d.data.path!)
+                      ? () => handleLeafClick(d.data.path!)
                       : undefined
                   }
                 />
@@ -430,6 +481,14 @@ export function TreemapViz({
       </Zoom>
       {tooltip && (
         <Tooltip x={tooltip.x} y={tooltip.y} node={tooltip.node} sizing={sizing} />
+      )}
+      {selectedLeaf && selectedPath !== undefined && (
+        <FileDetailsCard
+          node={selectedLeaf}
+          sizing={sizing}
+          onOpen={() => applyTapOutcome(TileTapRules.openButton(selectedPath))}
+          onClose={() => setSelectedPath(undefined)}
+        />
       )}
       {allHiddenByVisitTime && (
         <div className="viz-empty">

@@ -1006,6 +1006,97 @@ body.theme-light .vault-heatmap-view {
   font-style: italic;
 }
 
+/* ── Leaf selection (touch tap) ─────────────────────────── */
+/* Thicker accent ring than hover: the selected tile must stay findable while
+   its details card is open. Painted inside the tile (it clips overflow). */
+.vault-heatmap-view .leaf-node__bg--selected {
+  stroke: var(--vt-accent);
+  stroke-opacity: 1;
+  stroke-width: 3;
+}
+
+/* ── File details card (touch) ──────────────────────────── */
+/* Docked bottom-center of #viz — a fixed spot, never under the finger.
+   Only touch taps open it, so its touch-sized controls never affect desktop.
+   --vt-touch-target: 44px = Obsidian mobile's --input-height (a comfortable
+   finger target). */
+.vault-heatmap-view .vt-file-card {
+  --vt-touch-target: 44px;
+  position: absolute;
+  left: 50%;
+  bottom: 8px;
+  transform: translateX(-50%);
+  width: min(420px, calc(100% - 16px));
+  max-height: 60%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-sizing: border-box;
+  padding: 10px 13px;
+  background: var(--vt-surface);
+  border: 1px solid var(--vt-border2);
+  border-radius: 6px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28), 0 2px 6px rgba(0, 0, 0, 0.2);
+  /* Above the tooltip (200) and the bottom-left #hint. */
+  z-index: 210;
+}
+
+/* Long paths/names scroll inside the card instead of pushing Open off-screen. */
+.vault-heatmap-view .vt-file-card__details {
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.vault-heatmap-view .vt-file-card__actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* `button.<class>` (0,2,1) on purpose — see the button-chrome note at the top:
+   Obsidian tablet's `.is-tablet button:not(.clickable-icon)` padding must lose. */
+.vault-heatmap-view button.vt-file-card__open {
+  flex: 1;
+  min-height: var(--vt-touch-target);
+  padding: 0 16px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  border-radius: 4px;
+  background-color: var(--vt-accent);
+  color: var(--text-on-accent);
+  cursor: pointer;
+}
+
+/* Re-asserted: the generic `.vault-heatmap-view button:hover` strips backgrounds. */
+.vault-heatmap-view button.vt-file-card__open:hover {
+  background-color: var(--interactive-accent-hover, var(--vt-accent));
+}
+
+.vault-heatmap-view button.vt-file-card__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--vt-touch-target);
+  min-height: var(--vt-touch-target);
+  padding: 0;
+  border: 1px solid var(--vt-border);
+  border-radius: 4px;
+  background: none;
+  color: var(--vt-text-dim);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* #viz-qualified: the card lives inside #viz, whose canvas rule `#viz svg`
+   (100% size, grab cursor) would otherwise blow the icon up to the button. */
+.vault-heatmap-view #viz .vt-file-card__close .vt-icon {
+  width: 18px;
+  height: 18px;
+  cursor: inherit;
+}
+
 /* ── User-name prompt modal ─────────────────────────────────────────────── */
 
 .vh-user-name-prompt-error {
