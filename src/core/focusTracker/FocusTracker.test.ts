@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { Plugin, TFile, View, WorkspaceLeaf } from 'obsidian';
 import { FocusEvent, FocusListener, FocusTracker } from './FocusTracker';
 import { IsTrackedProvider } from '../util/vault/IsTrackedProvider';
@@ -43,15 +43,16 @@ const markdownOnlyProvider: IsTrackedProvider = {
   isTrackedView: (view) => view !== null && view.getViewType() === 'markdown',
 };
 
-// Stand-in for the hosting window's document (node tests have no DOM).
+// Stand-ins for the hosting windows' documents (node tests have no DOM).
 const OWNER_DOC = { name: 'main-window-doc' };
+const POPOUT_DOC = { name: 'popout-window-doc' };
 
-function makeView(file: TFile, viewType = 'markdown'): View {
+function makeView(file: TFile, viewType = 'markdown', ownerDocument: object = OWNER_DOC): View {
   const view = {
     getViewType: () => viewType,
     getDisplayText: () => file.basename,
     file,
-    containerEl: { ownerDocument: OWNER_DOC },
+    containerEl: { ownerDocument },
   };
   return view as unknown as View;
 }
@@ -239,6 +240,26 @@ describe('FocusTracker', () => {
     });
   });
 
+  describe('window identity', () => {
+    it('should carry the leaf container ownerDocument (popout window) in the focus event', async () => {
+      // GIVEN a listener capturing focus events
+      const { plugin, fireLeafChange } = makeStubPlugin();
+      const tracker = new FocusTracker(plugin, trackAllProvider);
+      const seen: FocusEvent[] = [];
+      tracker.registerListener({
+        onFocus: async (event) => {
+          seen.push(event);
+        },
+        onUnfocus: async () => undefined,
+      });
+      // WHEN a leaf hosted in a POPOUT window becomes active
+      fireLeafChange(makeMutableLeaf(makeView(makeTFile({ path: 'a.md' }), 'markdown', POPOUT_DOC)));
+      await tracker.whenIdle();
+      // THEN the event's ownerDocument is that popout's document (by reference)
+      expect(seen[0]?.ownerDocument).toBe(POPOUT_DOC);
+    });
+  });
+
   describe('replayLastFocusTo', () => {
     it('should deliver the last dispatched focus to a late-registered listener', async () => {
       // GIVEN note A focused before the late listener exists
@@ -299,6 +320,30 @@ describe('FocusTracker', () => {
       await tracker.whenIdle();
       // THEN the early listener saw the focus exactly once
       expect(earlyListener.calls).toEqual(['focus:a.md']);
+    });
+
+    it('should keep dispatching later leaf changes after the replayed listener throws', async () => {
+      // GIVEN note A focused, a recording listener, and a late listener whose focus throws
+      const { plugin, fireLeafChange } = makeStubPlugin();
+      const tracker = new FocusTracker(plugin, trackAllProvider);
+      const listener = new RecordingListener();
+      tracker.registerListener(listener);
+      fireLeafChange(makeLeaf(makeTFile({ path: 'a.md' })));
+      await tracker.whenIdle();
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      const throwing: FocusListener = {
+        onFocus: async () => {
+          throw new Error('boom');
+        },
+        onUnfocus: async () => undefined,
+      };
+      // WHEN the throwing listener is replayed to, then the user navigates to note B
+      tracker.replayLastFocusTo(throwing);
+      fireLeafChange(makeLeaf(makeTFile({ path: 'b.md' })));
+      await tracker.whenIdle();
+      // THEN the dispatch chain survived — B's navigation was still delivered
+      expect(listener.calls).toEqual(['focus:a.md', 'unfocus:a.md', 'focus:b.md']);
+      errorSpy.mockRestore();
     });
 
     it('should replay the focus CURRENT after pending leaf-changes settle (serialized with dispatch)', async () => {

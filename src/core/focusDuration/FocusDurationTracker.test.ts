@@ -282,6 +282,18 @@ describe('FocusDurationTracker', () => {
       expect(sink.records).toEqual([{ docId: 'X', focusStartEpochMs: T0, durationMs: 7000 }]);
     });
 
+    it('should close the session when the LAST focused window blurs even though it is not the doc window (drift safety)', () => {
+      // GIVEN doc A's session moved to popout 1 without popout 1 ever reporting focus (event drift)
+      tracker.onDocFocused('A', MAIN_WIN);
+      advanceMs(1000);
+      tracker.onDocFocused('A', POPOUT_1);
+      advanceMs(1000);
+      // WHEN the main window — the only focused one — blurs
+      tracker.onWindowBlurred(MAIN_WIN);
+      // THEN the session closed: no Obsidian window is focused at all
+      expect(sink.records).toEqual([{ docId: 'A', focusStartEpochMs: T0, durationMs: 2000 }]);
+    });
+
     it('should not reopen on user activity while the doc\'s window is unfocused', () => {
       // GIVEN doc X's popout-1 session closed by switching to popout 2
       tracker.onWindowFocused(POPOUT_1);
@@ -368,6 +380,21 @@ describe('FocusDurationTracker', () => {
       advanceMs(10_000);
       // THEN the session was auto-closed already
       expect(sink.records).toEqual([{ docId: 'A', focusStartEpochMs: T0, durationMs: 0 }]);
+    });
+
+    it('should re-arm to the RAISED timeout when the setting grows mid-session', () => {
+      // GIVEN a session started under the default timeout, last interaction 60s in
+      tracker.onDocFocused('A', MAIN_WIN);
+      advanceMs(60_000);
+      tracker.onUserActivity();
+      // WHEN the user raises the timeout to 10min, interacts again AFTER the
+      // old deadline would have closed the session, then goes idle for 10min
+      idleTimeoutMs = 600_000;
+      advanceMs(240_000);
+      tracker.onUserActivity();
+      advanceMs(600_000);
+      // THEN ONE session ran to the later interaction (old deadline did not close it)
+      expect(sink.records).toEqual([{ docId: 'A', focusStartEpochMs: T0, durationMs: 300_000 }]);
     });
 
     it('should apply a settings change to an ALREADY-RUNNING session (live read)', () => {
@@ -770,6 +797,20 @@ describe('FocusDurationTracker', () => {
       expect(sink.records).toEqual([{ docId: 'A', focusStartEpochMs: T0, durationMs: 3000 }]);
     });
 
+    it('should not revive the released doc on window refocus', () => {
+      // GIVEN doc A focused, then released
+      tracker.onDocFocused('A', MAIN_WIN);
+      advanceMs(4000);
+      tracker.releaseDoc('A');
+      // WHEN the window blurs and refocuses, and the plugin later unloads
+      tracker.onWindowBlurred(MAIN_WIN);
+      tracker.onWindowFocused(MAIN_WIN);
+      advanceMs(1000);
+      tracker.dispose();
+      // THEN only the released session exists
+      expect(sink.records).toHaveLength(1);
+    });
+
     it('should leave another doc open session running', () => {
       // GIVEN doc B focused
       tracker.onDocFocused('B', MAIN_WIN);
@@ -802,6 +843,16 @@ describe('FocusDurationTracker', () => {
       tracker.dispose();
       // THEN the session was flushed
       expect(sink.records).toEqual([{ docId: 'A', focusStartEpochMs: T0, durationMs: 4200 }]);
+    });
+
+    it('should clamp the duration to zero when the clock goes backwards', () => {
+      // GIVEN doc A focused, then the system clock is set back 5s
+      tracker.onDocFocused('A', MAIN_WIN);
+      vi.setSystemTime(T0 - 5000);
+      // WHEN the plugin unloads
+      tracker.dispose();
+      // THEN no negative duration is emitted
+      expect(sink.records).toEqual([{ docId: 'A', focusStartEpochMs: T0, durationMs: 0 }]);
     });
 
     it('should record nothing on dispose when no session is open', () => {

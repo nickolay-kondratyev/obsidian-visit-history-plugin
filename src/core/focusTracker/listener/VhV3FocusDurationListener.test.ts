@@ -11,10 +11,11 @@ import { makeTFile } from '../../../testSupport/fileFactory';
 
 // Window identity is by reference — one shared "main window" document.
 const OWNER_DOC = { name: 'main-window-doc' } as unknown as Document;
+const POPOUT_DOC = { name: 'popout-window-doc' } as unknown as Document;
 
-function makeFocusEvent(path: string): FocusEvent {
+function makeFocusEvent(path: string, ownerDocument: Document = OWNER_DOC): FocusEvent {
   const file = makeTFile({ path });
-  return { type: 'markdown', title: file.basename, file, ownerDocument: OWNER_DOC };
+  return { type: 'markdown', title: file.basename, file, ownerDocument };
 }
 
 class RecordingSink implements FocusDurationSink {
@@ -140,6 +141,18 @@ describe('VhV3FocusDurationListener', () => {
       // must not leave it accruing time while the user views the other doc
       expect(sink.sessions).toEqual(['docid-for-notes_a.md:5000']);
       errorSpy.mockRestore();
+    });
+
+    it('should key the session to the event ownerDocument window (popout)', async () => {
+      // GIVEN a focused popout window alongside the focused main window
+      const { listener, tracker, sink } = setup();
+      tracker.onWindowFocused(POPOUT_DOC);
+      // WHEN a note hosted in the popout is focused for 5s and the POPOUT blurs
+      await listener.onFocus(makeFocusEvent('notes/a.md', POPOUT_DOC));
+      vi.advanceTimersByTime(5000);
+      tracker.onWindowBlurred(POPOUT_DOC);
+      // THEN the session closed at the popout's blur — the tracker got the popout as the hosting window
+      expect(sink.sessions).toEqual(['docid-for-notes_a.md:5000']);
     });
 
     it('should ignore focus events without a file path', async () => {

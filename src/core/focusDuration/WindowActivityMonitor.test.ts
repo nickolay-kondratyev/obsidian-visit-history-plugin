@@ -170,6 +170,22 @@ class MainWindowRig {
     this.stub.fire(this.main.win, type);
   }
 
+  /** Simulates Obsidian opening a popout AFTER construction ('window-open'). */
+  openPopout(popout: FakeWindow): void {
+    this.workspaceWindowEvent('window-open', popout);
+  }
+
+  /** Simulates Obsidian closing a popout ('window-close'). */
+  closePopout(popout: FakeWindow): void {
+    this.workspaceWindowEvent('window-close', popout);
+  }
+
+  private workspaceWindowEvent(name: 'window-open' | 'window-close', popout: FakeWindow): void {
+    const handler = this.stub.workspaceHandlers.get(name);
+    if (handler === undefined) throw new Error(`no ${name} handler registered`);
+    handler({ win: popout.win, doc: popout.doc });
+  }
+
   fireVisibility(hidden: boolean): void {
     this.main.hidden = hidden;
     this.stub.fire(this.main.doc, 'visibilitychange');
@@ -410,7 +426,142 @@ describe('WindowActivityMonitor', () => {
     });
   });
 
+  describe('user input events', () => {
+    // Mirrors the monitor's ACTIVITY_EVENT_TYPES (module-private).
+    const INPUT_EVENT_TYPES = ['keydown', 'mousedown', 'mousemove', 'wheel', 'touchstart', 'touchmove'];
+    const BEFORE_IDLE_MS = 1000;
+
+    it.each(INPUT_EVENT_TYPES)('should keep the session alive past the idle timeout when %s fires on the document', (eventType) => {
+      // GIVEN a focused main window with doc X focused
+      const rig = new MainWindowRig();
+      rig.tracker.onDocFocused(DOC_ID, rig.main.doc);
+      // WHEN the input event fires just before the idle timeout, and the
+      // window blurs after the original idle deadline has passed
+      vi.advanceTimersByTime(IDLE_MS - BEFORE_IDLE_MS);
+      rig.stub.fire(rig.main.doc, eventType);
+      vi.advanceTimersByTime(2 * BEFORE_IDLE_MS);
+      rig.fire('blur');
+      // THEN one session spans past the original deadline (no idle close at IDLE_MS)
+      expect(rig.sink.records).toEqual([`${DOC_ID}:${IDLE_MS + BEFORE_IDLE_MS}`]);
+    });
+  });
+
+  describe('popout window-open (popout opened after construction)', () => {
+    it('should open a session for a doc in a popout that is focused at registration', () => {
+      // GIVEN a monitor and an OS-focused popout opened after construction
+      const rig = new MainWindowRig({ focused: false });
+      const popout = new FakeWindow('popout', true);
+      rig.openPopout(popout);
+      // WHEN a doc hosted in the popout is focused for a dwell and the plugin unloads
+      rig.tracker.onDocFocused(DOC_ID, popout.doc);
+      vi.advanceTimersByTime(DWELL_MS);
+      rig.tracker.dispose();
+      // THEN the dwell was recorded — the registration-time focus check counted the popout as focused
+      expect(rig.sink.records).toEqual([`${DOC_ID}:${DWELL_MS}`]);
+    });
+
+    it('should wire the popout window focus/blur events to the tracker', () => {
+      // GIVEN a monitor and an UNfocused popout opened after construction, hosting doc X
+      const rig = new MainWindowRig({ focused: false });
+      const popout = new FakeWindow('popout', false);
+      rig.openPopout(popout);
+      rig.tracker.onDocFocused(DOC_ID, popout.doc);
+      // WHEN the popout gains OS focus, the doc dwells, and the popout blurs
+      popout.focused = true;
+      rig.stub.fire(popout.win, 'focus');
+      vi.advanceTimersByTime(DWELL_MS);
+      popout.focused = false;
+      rig.stub.fire(popout.win, 'blur');
+      // THEN the dwell between the popout's focus and blur was recorded
+      expect(rig.sink.records).toEqual([`${DOC_ID}:${DWELL_MS}`]);
+    });
+
+    it('should wire the popout document input events to the tracker', () => {
+      // GIVEN an OS-focused popout opened after construction, hosting doc X
+      const rig = new MainWindowRig({ focused: false });
+      const popout = new FakeWindow('popout', true);
+      rig.openPopout(popout);
+      rig.tracker.onDocFocused(DOC_ID, popout.doc);
+      // WHEN a keydown fires in the popout just before the idle timeout, and
+      // the popout blurs after the original idle deadline
+      vi.advanceTimersByTime(IDLE_MS - DWELL_MS);
+      rig.stub.fire(popout.doc, 'keydown');
+      vi.advanceTimersByTime(2 * DWELL_MS);
+      rig.stub.fire(popout.win, 'blur');
+      // THEN the popout keydown kept the session alive past the deadline
+      expect(rig.sink.records).toEqual([`${DOC_ID}:${IDLE_MS + DWELL_MS}`]);
+    });
+  });
+
+  describe('Settings modal in a popout window', () => {
+    let rig: MainWindowRig;
+    let popout: FakeWindow;
+
+    function setPopoutSettingsOpen(open: boolean): void {
+      popout.settingsOpen = open;
+      const observer = FakeMutationObserver.instances.find(o => o.observedTarget === popout.body);
+      if (observer === undefined) throw new Error('no observer on popout body');
+      observer.trigger();
+    }
+
+    beforeEach(() => {
+      // GIVEN an OS-focused popout opened after construction (main window not focused)
+      rig = new MainWindowRig({ focused: false });
+      popout = new FakeWindow('popout', true);
+      rig.openPopout(popout);
+    });
+
+    it('should close the popout-hosted doc session when Settings opens in that popout', () => {
+      // GIVEN doc X hosted in the popout, dwelling
+      rig.tracker.onDocFocused(DOC_ID, popout.doc);
+      vi.advanceTimersByTime(DWELL_MS);
+      // WHEN Settings opens in the popout
+      setPopoutSettingsOpen(true);
+      // THEN the session is recorded at once (per-window Settings detection)
+      expect(rig.sink.records).toEqual([`${DOC_ID}:${DWELL_MS}`]);
+    });
+
+    it('should start a NEW session for the popout-hosted doc when Settings closes in that popout', () => {
+      // GIVEN doc X hosted in the popout, its session closed by Settings opening there
+      rig.tracker.onDocFocused(DOC_ID, popout.doc);
+      vi.advanceTimersByTime(DWELL_MS);
+      setPopoutSettingsOpen(true);
+      // WHEN Settings closes in the popout and the doc dwells before a blur
+      setPopoutSettingsOpen(false);
+      vi.advanceTimersByTime(DWELL_MS);
+      rig.stub.fire(popout.win, 'blur');
+      // THEN a second session spans the post-Settings dwell
+      expect(rig.sink.records).toEqual([`${DOC_ID}:${DWELL_MS}`, `${DOC_ID}:${DWELL_MS}`]);
+    });
+
+    it('should NOT cut a main-hosted doc session when Settings opens in a popout while main stays focused', () => {
+      // GIVEN the main window is OS-focused too and hosts doc X, dwelling
+      rig.main.focused = true;
+      rig.fire('focus');
+      rig.tracker.onDocFocused(DOC_ID, rig.main.doc);
+      vi.advanceTimersByTime(DWELL_MS);
+      // WHEN Settings opens in the popout
+      setPopoutSettingsOpen(true);
+      // THEN nothing is recorded — Settings detection is scoped to the window it opened in
+      expect(rig.sink.records).toEqual([]);
+    });
+  });
+
   describe('popout window-close', () => {
+    it('should record the popout-hosted doc session when the popout closes (forwarded as a blur)', () => {
+      // GIVEN an OS-focused popout opened after construction, hosting doc X
+      // (main window also focused, so only the window-identity close path applies)
+      const rig = new MainWindowRig();
+      const popout = new FakeWindow('popout', true);
+      rig.openPopout(popout);
+      rig.tracker.onDocFocused(DOC_ID, popout.doc);
+      vi.advanceTimersByTime(DWELL_MS);
+      // WHEN the popout closes (no DOM blur fires for a closing window)
+      rig.closePopout(popout);
+      // THEN the session is recorded at once
+      expect(rig.sink.records).toEqual([`${DOC_ID}:${DWELL_MS}`]);
+    });
+
     it('should disconnect the closed popout body observer', () => {
       // GIVEN a monitor and a popout opened after construction
       const rig = new MainWindowRig();
