@@ -81,4 +81,14 @@ describe('ClusteredTimestampsRule', () => {
       expect(ClusteredTimestampsRule.forLiveConfig(undefined, 'lastModifiedAt', 'heatmap')).toBeUndefined();
     });
   });
+
+  describe('offersGitRestore', () => {
+    it('should offer the git restore WHEN modified times are clustered', () => {
+      expect(ClusteredTimestampsRule.offersGitRestore({ field: 'lastModifiedAt', sharedCount: 30, totalCount: 40 })).toBe(true);
+    });
+
+    it('should not offer it WHEN created times are clustered (the restore never sets created times)', () => {
+      expect(ClusteredTimestampsRule.offersGitRestore({ field: 'createdAt', sharedCount: 30, totalCount: 40 })).toBe(false);
+    });
+  });
 });

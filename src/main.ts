@@ -14,6 +14,7 @@ import { VisitHistorySettingTab } from './settingsTab/VisitHistorySettingTab';
 import { INLINE_NOTE_ACTION_NAME } from './core/service/inlineNote/impl/ModalInlineNoteDialogs';
 import { ReadingViewEmbedIconProcessor } from './editorChrome/embedInlineIcon/ReadingViewEmbedIconProcessor';
 import { LivePreviewEmbedIconExtension } from './editorChrome/embedInlineIcon/LivePreviewEmbedIconExtension';
+import { GitMtimeRestoreTexts } from './core/service/gitMtimeRestore/GitMtimeRestoreTexts';
 
 // ── VisitHistoryPlugin ────────────────────────────────────────────────────────
 export default class VisitHistoryPlugin extends Plugin {
@@ -61,6 +62,7 @@ export default class VisitHistoryPlugin extends Plugin {
 
     this.initVaultTreeMapView(factory);
     this.initInlineNote(factory);
+    this.initGitMtimeRestore(factory);
 
     this.addSettingTab(new VisitHistorySettingTab(
       this.app,
@@ -182,6 +184,30 @@ export default class VisitHistoryPlugin extends Plugin {
         );
       }),
     );
+  }
+
+  /**
+   * "Restore modified times from git": this command and the heatmap banner's
+   * button both call the same `gitMtimeRestoreAction.run()`.
+   */
+  private initGitMtimeRestore(pluginFactory: PluginFactory) {
+    this.addCommand({
+      id: 'restore-modified-times-from-git',
+      name: GitMtimeRestoreTexts.ACTION_NAME,
+      callback: () => void pluginFactory.gitMtimeRestoreAction.run(),
+    });
+  }
+
+  /**
+   * Re-reads every open heatmap (all windows) — after changes the views
+   * don't listen for, e.g. restored modified times (no create/delete/rename).
+   */
+  refreshOpenHeatmaps(): void {
+    for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_TREEMAP)) {
+      if (leaf.view instanceof VaultTreemapView) {
+        leaf.view.refresh().catch(error => console.error('[VHP][main] heatmap refresh failed', error));
+      }
+    }
   }
 
   /**

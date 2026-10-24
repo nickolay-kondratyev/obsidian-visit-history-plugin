@@ -30,8 +30,11 @@ const context = await esbuild.context({
 		'@lezer/common',
 		'@lezer/highlight',
 		'@lezer/lr',
-		...builtinModules,
+		// 'buffer' is BUNDLED (npm package), not external: isomorphic-git and its
+		// deps need it on mobile, where no Node builtin exists to require.
+		...builtinModules.filter(name => name !== 'buffer'),
 	],
+	inject: ['esbuild.buffer-inject.mjs'],
 	format: 'cjs',
 	target: 'es2021',
 	logLevel: 'info',

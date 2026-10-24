@@ -248,6 +248,26 @@ Pure rules in `viewModel/label/` (DOM-free; unit-tested with a fake measurer):
   target them); gating: `viewModel/ClusteredTimestampsRule` (heatmap color
   mode + modified/created only; App drops a finding stale vs. the live
   field). Stateless — derived per render, no "last sync" state.
+- **Restore from git**: when `.git` is a FOLDER at the vault root, a
+  modified-time banner (not created — the restore never sets created times)
+  carries a "Restore from git" button; the command
+  `restore-modified-times-from-git` runs the same `GitMtimeRestoreAction`.
+  Targets = tracked files in the vault-wide mtime cluster (same detector,
+  all files). After a confirm modal: hash each target (git blob id), walk
+  history from HEAD newest → oldest (`GitCommitTimeResolver`: a file's time
+  = the newest commit whose version is HEAD's and none of its parents'; folders
+  whose tree id equals a parent's are never opened; stops when all are dated,
+  at 20k commits or the shallow boundary — never stamping the boundary), then
+  write: re-read the bytes, and only if still HEAD's version write the SAME
+  bytes back with the commit time (`Vault.modifyBinary` + `{ mtime }`, so
+  `TFile.stat.mtime` updates). Edited/uncommitted/older files keep their mtime
+  (also files whose line endings git converted — skipped, the safe side).
+  Read errors write nothing. Open heatmaps re-read afterwards
+  (`refreshOpenHeatmaps`). Reads `.git` via isomorphic-git (pure JS, local
+  read APIs only — no `http`) over a read-only DataAdapter fs, so it runs on
+  mobile; `Buffer` is bundled via esbuild `inject` (no global assigned).
+  Ceiling: isomorphic-git loads packfiles into memory; ~15 ms per commit on
+  the Android emulator (1.5k commits ≈ 22 s).
 
 ## Tile sizing
 

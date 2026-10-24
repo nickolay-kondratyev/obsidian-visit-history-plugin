@@ -85,3 +85,15 @@ After a sync, most files share one mtime (the download time), so the heatmap's r
 - Repos whose root is above the vault (the vault is a subfolder of a repo), submodules, or `.git` files that point elsewhere (worktrees). Show "not supported" if detected cheaply; otherwise treat as "no `.git`".
 - Spawning the `git` binary on desktop as a faster path. One code path for all platforms, unless the Android timing is unacceptable; then raise it as a `decide` follow-up.
 - Persisting restore results or any history cache.
+
+## Verification
+
+Implementer, 2026-10-24.
+
+- **Bundle** (production `main.js`): 308,046 B before → 483,552 B after (+175.5 KB; the spike estimated ~191 KB).
+- **Network grep** of the production bundle: `fetch(` 0, `XMLHttpRequest` 0, `WebSocket` 0, `GitRemoteHTTP`/`simple-get` 0. The word "fetch" appears 4 times only inside isomorphic-git error-message strings / a `remote.<name>.fetch` config key — no call.
+- **Desktop**: `e2e/heatmapRestoreFromGit.e2e.ts` (real Obsidian 1.12.7): banner button → confirm → notes carry their commit times on disk and in `TFile.stat.mtime`, CRLF note byte-identical, the edited note keeps its mtime, banner gone; no button on a non-git vault.
+- **Android** (medium_tablet emulator, headless swangle_indirect, Obsidian 1.14.4; vault = dev vault + 300 notes in 10 folders, 1,500 commits via `git fast-import` + `git gc` (packed), 50 notes unchanged since the root commit, every note `touch`ed to one time):
+  - (a) `Vault.modifyBinary(file, sameBytes, { mtime })` is honored: `TFile.stat.mtime`, `adapter.stat` and `stat` on the device all show the commit time; md5 of the notes equals the host copy; `.git` md5-identical before/after (26 files).
+  - (b) isomorphic-git runs: `globalThis.Buffer` is `undefined` in the mobile WebView; the injected bundled `buffer` covers it. No console errors.
+  - (c) Deep walk (all 1,500 commits to the root, 300 targets, all clustered): 22.1 s from tapping "Restore" to "Restored 300 files." (22.3 s on a second run via the banner button; banner gone afterwards). ≈15 ms per commit, CPU-bound in isomorphic-git (an `adapter.stat` bridge call costs ~0.7 ms). At the 20k-commit cap the worst case is ≈5 min with a progress notice.

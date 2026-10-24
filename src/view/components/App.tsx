@@ -38,6 +38,11 @@ interface AppProps {
    * folderSegments — an unresolvable path falls back to rendering the root.
    */
   onAtVaultRootChange?: (atRoot: boolean) => void;
+  /**
+   * Restores modified times from git history; undefined when the vault is
+   * not a git repo (no button then).
+   */
+  onRestoreModifiedTimesFromGit?: () => void;
 }
 
 /**
@@ -65,6 +70,7 @@ export function App({
   contentTermMatcher,
   initialFolderPath,
   onAtVaultRootChange,
+  onRestoreModifiedTimesFromGit,
 }: AppProps) {
   const [config, setConfig] = useState<HeatmapConfig>(() => configStore.load());
   /** The single open header panel — at most one popover/panel at a time. */
@@ -239,6 +245,12 @@ export function App({
     onAtVaultRootChange?.(atVaultRoot);
   }, [atVaultRoot, onAtVaultRootChange]);
 
+  const clusteredTimestamps = ClusteredTimestampsRule.forLiveConfig(
+    stats.clusteredTimestamps,
+    config.field,
+    config.colorMode,
+  );
+
   // Within an archive ALL archived content is visible (nested archives
   // included) — TreemapViz skips its _archive pruning then.
   const showArchived = useMemo(() => isWithinArchive(trail), [trail]);
@@ -262,11 +274,12 @@ export function App({
           // Stats bubble up one effect late — gate on the LIVE mode so the
           // banner never lingers for a frame after switching to content size.
           hiddenNoVisitCount={config.sizeBy === 'visitTime' ? stats.hiddenNoVisitCount : 0}
-          clusteredTimestamps={ClusteredTimestampsRule.forLiveConfig(
-            stats.clusteredTimestamps,
-            config.field,
-            config.colorMode,
-          )}
+          clusteredTimestamps={clusteredTimestamps}
+          onRestoreFromGit={
+            clusteredTimestamps && ClusteredTimestampsRule.offersGitRestore(clusteredTimestamps)
+              ? onRestoreModifiedTimesFromGit
+              : undefined
+          }
         />
         {/* Popovers are SIBLINGS of the header (it clips overflow); at most one
             is open (openPanel), so the shared left/right anchors never collide. */}

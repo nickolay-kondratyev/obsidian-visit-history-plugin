@@ -14,6 +14,10 @@ export class FakeNoteFileUtil implements NoteFileUtil {
   cachedReadCallCount = 0;
   /** Paths passed to trashFile(), in call order. */
   readonly trashedPaths: string[] = [];
+  /** Modified times set via setModifiedTimeKeepingContent(), by path. */
+  readonly mtimeByPath = new Map<string, number>();
+  /** Paths whose setModifiedTimeKeepingContent() throws — simulates a failing write. */
+  readonly failingMtimeWrites = new Set<string>();
 
   /** Seeds a note directly, bypassing createNote's duplicate check. */
   seedNote(path: string, content: string): TFile {
@@ -71,10 +75,38 @@ export class FakeNoteFileUtil implements NoteFileUtil {
     this.contentByPath.set(file.path, transform(content));
   }
 
+  /** Replaces a note's content directly (e.g. the user editing it mid-operation). */
+  setContent(path: string, content: string): void {
+    this.contentByPath.set(path, content);
+  }
+
+  async readBinary(file: TFile): Promise<Uint8Array> {
+    return new TextEncoder().encode(this.requireContent(file.path));
+  }
+
+  async setModifiedTimeKeepingContent(
+    file: TFile,
+    mtimeMs: number,
+    shouldWrite: (bytes: Uint8Array) => Promise<boolean>,
+  ): Promise<boolean> {
+    if (!(await shouldWrite(new TextEncoder().encode(this.requireContent(file.path))))) return false;
+    if (this.failingMtimeWrites.has(file.path)) throw new Error(`write failed: ${file.path}`);
+    this.mtimeByPath.set(file.path, mtimeMs);
+    return true;
+  }
+
   async trashFile(file: TFile): Promise<void> {
     if (!this.contentByPath.delete(file.path)) {
       throw new Error(`File not found: ${file.path}`);
     }
     this.trashedPaths.push(file.path);
+  }
+
+  private requireContent(path: string): string {
+    const content = this.contentByPath.get(path);
+    if (content === undefined) {
+      throw new Error(`File not found: ${path}`);
+    }
+    return content;
   }
 }

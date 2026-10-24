@@ -33,6 +33,8 @@ interface HeaderProps {
   hiddenNoVisitCount: number;
   /** The current view's color-field timestamps are clustered (e.g. after a sync); undefined = no banner. */
   clusteredTimestamps: ClusteredTimestamps | undefined;
+  /** Shows a "Restore from git" button beside the clustered-timestamps banner; undefined = no button. */
+  onRestoreFromGit: (() => void) | undefined;
 }
 
 function hiddenNotesLabel(count: number): string {
@@ -71,6 +73,7 @@ export function Header({
   onResetZoom,
   hiddenNoVisitCount,
   clusteredTimestamps,
+  onRestoreFromGit,
 }: HeaderProps) {
   return (
     <div id="header">
@@ -106,6 +109,16 @@ export function Header({
         <span className="hdr-cluster-banner" role="status" title={clusteredTimestampsText(clusteredTimestamps)}>
           {clusteredTimestampsText(clusteredTimestamps)}
         </span>
+      )}
+      {clusteredTimestamps && onRestoreFromGit && (
+        <button
+          type="button"
+          className="header-btn hdr-git-restore-btn"
+          onClick={onRestoreFromGit}
+          title="Set each file's modified time to its last git commit time"
+        >
+          Restore from git
+        </button>
       )}
       {hiddenNoVisitCount > 0 && (
         <span

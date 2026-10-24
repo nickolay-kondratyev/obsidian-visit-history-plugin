@@ -54,6 +54,25 @@ export class NoteFileUtilDefault implements NoteFileUtil {
     await this.app.vault.process(file, transform);
   }
 
+  async readBinary(file: TFile): Promise<Uint8Array> {
+    return new Uint8Array(await this.app.vault.readBinary(file));
+  }
+
+  async setModifiedTimeKeepingContent(
+    file: TFile,
+    mtimeMs: number,
+    shouldWrite: (bytes: Uint8Array) => Promise<boolean>,
+  ): Promise<boolean> {
+    // Binary read + write: bytes round-trip untouched (line endings, BOM,
+    // invalid UTF-8) — a text round-trip could alter them. Vault (not
+    // adapter) write, so Obsidian updates TFile.stat.mtime right away.
+    // WHY-NOT Vault.process: text-only, and it cannot set the mtime.
+    const bytes = await this.app.vault.readBinary(file);
+    if (!(await shouldWrite(new Uint8Array(bytes)))) return false;
+    await this.app.vault.modifyBinary(file, bytes, { mtime: mtimeMs });
+    return true;
+  }
+
   async trashFile(file: TFile): Promise<void> {
     await this.app.fileManager.trashFile(file);
   }
