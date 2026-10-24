@@ -20,7 +20,10 @@ heatmap tile labels for many long Chinese + Latin names
 (`heatmapLabelsScreenshot.e2e.ts` — journey assert only; writes fitted + zoomed
 screenshots to the git-ignored `.out/` for human review), and the heatmap's
 clustered-timestamps banner — shown on a vault whose notes share one modified time, absent
-when the times are spread (`heatmapClusteredTimestamps.e2e.ts`).
+when the times are spread (`heatmapClusteredTimestamps.e2e.ts`), and its "Restore from git"
+button — a synced git vault ends with commit times on disk and in `TFile.stat.mtime`, content
+byte-identical, the edited note untouched, the banner gone; no button without `.git`
+(`heatmapRestoreFromGit.e2e.ts`).
 
 ## Run it
 
@@ -103,6 +106,10 @@ bounded timeout (never a fixed sleep).
 A seed file's optional `mtimeMs` sets its modified time (`utimes`) before Obsidian starts,
 so the vault scan reads it — `heatmapClusteredTimestamps.e2e.ts` seeds one shared vs.
 spread-out times. Created time cannot be set from Node.
+
+`prepareVault: (vaultDir) => void` runs node-side after seeding, before Obsidian starts —
+for setups seed files can't express (`heatmapRestoreFromGit.e2e.ts` turns the vault into a
+git repo with fixed commit dates, then stamps the notes with one sync time).
 
 ## Dev config overrides (bypass hard-limited config)
 

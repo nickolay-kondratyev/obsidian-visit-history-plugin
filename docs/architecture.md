@@ -61,6 +61,12 @@ core/init/PluginFactory ──── DI container: constructs & wires everything
    │                         link census + placement rules (pure) behind
    │                         InlineNoteAction; ModalInlineNoteDialogs (impl/)
    │
+   ├── core/service/gitMtimeRestore ── "Restore modified times from git":
+   │                         GitHistory seam (IsomorphicGitHistory over the
+   │                         read-only ReadOnlyDataAdapterFs; FakeGitHistory in
+   │                         tests) → GitCommitTimeResolver (walk) →
+   │                         GitMtimeRestorer (write) ← GitMtimeRestoreAction (impl/)
+   │
    ├── editorChrome/embedInlineIcon ── inline-note icon on a note embed:
    │                         EmbedInlineIconRule (pure) → EmbedInlineIconDecorator
    │                         (DOM) ← reading-view post-processor + live-preview
