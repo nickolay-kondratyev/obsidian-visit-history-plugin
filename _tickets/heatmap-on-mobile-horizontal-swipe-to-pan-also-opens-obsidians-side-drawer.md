@@ -58,3 +58,32 @@ only.
 - Changing Obsidian's drawer behavior outside the heatmap.
 - The tap-wobble tolerance of the tap filter (a finger moving more than ~3 px counts as a drag).
   Watch for that on a real device first.
+
+## Root cause
+
+Observed over raw CDP (`getEventListeners`) on Obsidian 1.14.4 Android: the drawer swipe is a
+BUBBLE-phase `touchstart` listener on `.workspace`. It returns early when any HTMLElement ancestor
+of the touch target has `dataset.ignoreSwipe` (Obsidian sets `data-ignore-swipe` on its own tab
+headers and leaf resize handles), when the target is an `<audio>`, or when the touched element is a
+`<canvas>`. Our svg matched none, so the drawer took the swipe. `touch-action` is irrelevant: the
+handler reads raw touch events. Fix: `data-ignore-swipe="true"` on `#viz` (Obsidian's own opt-out;
+no stopPropagation, no patching).
+
+## Verification
+
+Android tablet emulator (Obsidian 1.14.4, 2560x1600), real `adb shell input swipe`, state read
+over CDP (`leftSplit/rightSplit.collapsed`, treemap `<g>` transform). Screenshots in the lane's
+git-ignored `.out/swipe/`.
+
+- Before: canvas swipe right (800,1000 -> 1600,1000) panned (tx 0 -> 146.7) AND opened the left
+  drawer (`01-before-fix-swipe-right.png`).
+- After: canvas swipe right panned (tx -59 -> 137.7), no drawer (`02-after-fix-swipe-right.png`);
+  canvas swipe left (1800,1000 -> 700,1000) panned (tx 137.7 -> -133.7), no drawer
+  (`03-after-fix-swipe-left.png`).
+- After: swipe over the view header (300,200 -> 1300,200) opened the left drawer
+  (`04-after-fix-header-swipe-right-opens-left-drawer.png`); swipe over the heatmap toolbar
+  (1800,290 -> 600,290) opened the right drawer (`05-...right-drawer.png`).
+- After: tap on `Big touch target.md` docked the details card
+  (`06-after-fix-tap-file-shows-card.png`).
+- Swipes starting at the very screen edge (x=10 / x=2550) are taken by Android's system back
+  gesture (it backgrounded Obsidian) — a system gesture, not affected by this fix.
