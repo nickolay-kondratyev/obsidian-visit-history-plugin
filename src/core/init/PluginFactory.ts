@@ -37,6 +37,10 @@ import { NoteReferenceCollectorDefault } from '../service/inlineNote/NoteReferen
 import { ModalInlineNoteDialogs } from '../service/inlineNote/impl/ModalInlineNoteDialogs';
 import { EmbedInlineIconDecorator } from '../../editorChrome/embedInlineIcon/EmbedInlineIconDecorator';
 import { EmbedInlineIconRule } from '../../editorChrome/embedInlineIcon/EmbedInlineIconRule';
+import { GitMtimeRestoreAction } from '../service/gitMtimeRestore/impl/GitMtimeRestoreAction';
+import { GitMtimeRestorer } from '../service/gitMtimeRestore/GitMtimeRestorer';
+import { IsomorphicGitHistory } from '../service/gitMtimeRestore/impl/IsomorphicGitHistory';
+import { ReadOnlyDataAdapterFs } from '../service/gitMtimeRestore/impl/ReadOnlyDataAdapterFs';
 
 // ── PluginFactory ─────────────────────────────────────────────────────────────
 // Constructs and wires all plugin dependencies.
@@ -69,6 +73,8 @@ export class PluginFactory {
   readonly embedInlineIconDecorator: EmbedInlineIconDecorator;
   /** Its show-or-not rule; main.ts feeds it metadataCache link-change events. */
   readonly embedInlineIconRule: EmbedInlineIconRule;
+  /** "Restore modified times from git" — command + heatmap banner button entry point. */
+  readonly gitMtimeRestoreAction: GitMtimeRestoreAction;
 
   // Held for activateUserScopedRecording (post-pin wiring).
   private readonly plugin: VisitHistoryPlugin;
@@ -158,6 +164,14 @@ export class PluginFactory {
     this.embedInlineIconDecorator = new EmbedInlineIconDecorator(
       this.embedInlineIconRule,
       (note2) => void this.inlineNoteAction.run(note2),
+    );
+    this.gitMtimeRestoreAction = new GitMtimeRestoreAction(
+      app,
+      this.vaultUtil,
+      new GitMtimeRestorer(noteFileUtil),
+      () => new IsomorphicGitHistory(new ReadOnlyDataAdapterFs(app.vault.adapter)),
+      this.userNotifier,
+      () => plugin.refreshOpenHeatmaps(),
     );
   }
 

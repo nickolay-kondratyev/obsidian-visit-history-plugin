@@ -213,6 +213,14 @@ body.theme-light .vault-heatmap-view {
   flex: 0 1 auto;
 }
 
+/* "Restore from git" beside the clustered-timestamps banner: the .header-btn look,
+   but it stays in narrow panes (the field button's hide rule above must not catch it). */
+@container (max-width: 480px) {
+  .vault-heatmap-view #header > button.header-btn.hdr-git-restore-btn {
+    display: inline-block;
+  }
+}
+
 .vault-heatmap-view .legend {
   display: flex;
   gap: 10px;

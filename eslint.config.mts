@@ -7,6 +7,7 @@ export default defineConfig(
 		'node_modules',
 		'dist',
 		'esbuild.config.mjs',
+		'esbuild.buffer-inject.mjs',
 		'version-bump.mjs',
 		'versions.json',
 		'main.js',

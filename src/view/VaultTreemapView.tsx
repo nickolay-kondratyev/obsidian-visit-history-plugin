@@ -27,7 +27,8 @@ export const CSS_CLASS_HEATMAP_ACTIVE = 'vault-heatmap-active';
  * Responsibilities:
  * - Mounts/unmounts the React tree inside an Obsidian leaf panel.
  * - Builds the VaultNode tree from the plugin's visit tracking infrastructure.
- * - Re-renders on vault change events (create/delete/rename).
+ * - Re-renders on vault change events (create/delete/rename) and on an
+ *   explicit refresh() (e.g. after modified times were restored from git).
  */
 export class VaultTreemapView extends ItemView {
   private root: Root | null = null;
@@ -68,6 +69,11 @@ export class VaultTreemapView extends ItemView {
 
   private readonly handleAtVaultRootChange = (atRoot: boolean): void => {
     this.atVaultRoot = atRoot;
+  };
+
+  /** Same entry point as the command (one code path); it refreshes the views when done. */
+  private readonly handleRestoreFromGit = (): void => {
+    void this.pluginFactory.gitMtimeRestoreAction.run();
   };
 
   getViewType(): string {
@@ -140,7 +146,8 @@ export class VaultTreemapView extends ItemView {
     }, this.REFRESH_DEBOUNCE_MS);
   }
 
-  private async refresh(): Promise<void> {
+  /** Re-reads the vault and re-renders (also called after restoring modified times from git). */
+  async refresh(): Promise<void> {
     const vaultUtil = this.pluginFactory.vaultUtil;
     // Single vault walk: visit stamps ride along on TrackedFile (LRU-cached
     // per doc id inside VisitHistoryServiceV3).
@@ -148,6 +155,8 @@ export class VaultTreemapView extends ItemView {
     const data = buildVaultTree(vaultUtil.getName(), trackedFiles);
 
     const fileOpener = new ObsidianFileOpener(this.app);
+    // Re-probed per refresh (one cheap stat): a vault can become a repo while open.
+    const hasGitRepo = await this.pluginFactory.gitMtimeRestoreAction.hasGitRepo();
 
     this.root?.render(
       // key: remount App (fresh nav state) when the target folder changes;
@@ -160,6 +169,7 @@ export class VaultTreemapView extends ItemView {
         configStore={this.pluginFactory.heatmapConfigStore}
         contentTermMatcher={this.pluginFactory.contentTermMatcher}
         onAtVaultRootChange={this.handleAtVaultRootChange}
+        onRestoreModifiedTimesFromGit={hasGitRepo ? this.handleRestoreFromGit : undefined}
       />,
     );
   }

@@ -14,7 +14,7 @@ describe('ReadOnlyDataAdapterFs', () => {
     root = mkdtempSync(join(tmpdir(), 'vh-rofs-'));
     mkdirSync(join(root, '.git/objects/ab'), { recursive: true });
     writeFileSync(join(root, '.git/HEAD'), 'ref: refs/heads/main\n');
-    writeFileSync(join(root, '.git/objects/ab/cd'), Buffer.from([0, 1, 2, 255]));
+    writeFileSync(join(root, '.git/objects/ab/cd'), Uint8Array.from([0, 1, 2, 255]));
     fs = new ReadOnlyDataAdapterFs(new NodeFsGitDirReader(root));
   });
 

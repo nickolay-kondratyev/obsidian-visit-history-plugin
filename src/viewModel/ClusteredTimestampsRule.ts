@@ -57,6 +57,15 @@ export class ClusteredTimestampsRule {
     return finding;
   }
 
+  /**
+   * Whether the banner offers "Restore from git" for `finding`: only for
+   * modified times — the restore never touches created times, so offering it
+   * on a created-time banner would leave that banner standing.
+   */
+  static offersGitRestore(finding: ClusteredTimestamps): boolean {
+    return finding.field === 'lastModifiedAt';
+  }
+
   private static isSyncStamped(field: HeatField): field is SyncStampedHeatField {
     return field === 'lastModifiedAt' || field === 'createdAt';
   }
