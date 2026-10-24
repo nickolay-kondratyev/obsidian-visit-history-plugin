@@ -43,6 +43,23 @@ export default defineConfig(
 	},
 	...obsidianmd.configs.recommended,
 	{
+		// Unit tests + their test-only helpers run under vitest in NODE, never
+		// inside Obsidian or on mobile (testSupport/ is imported by tests only),
+		// so Node builtins/globals are fine there — e.g. integration tests that
+		// build a temp git repo with the git CLI. Production code keeps the rule.
+		// WHY-NOT inline eslint-disable: the obsidianmd config forbids disabling
+		// obsidianmd/* rules inline (eslint-comments/no-restricted-disable).
+		files: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'src/testSupport/**'],
+		languageOptions: {
+			globals: {
+				...globals.node,
+			},
+		},
+		rules: {
+			'obsidianmd/no-nodejs-modules': 'off',
+		},
+	},
+	{
 		// Type-checked safety rules: forbid operating on `any`-typed values,
 		// which defeat TypeScript's guarantees at call/member/assignment sites.
 		rules: {
