@@ -61,6 +61,7 @@ export const VIEW_TYPE_HEATMAP = 'vault-heatmap';
 
 // Full command id (`<plugin-id>:<command-id>`) that opens the vault heatmap.
 export const CMD_OPEN_VAULT_HEATMAP = `${PLUGIN_ID}:open-vault-heatmap`;
+export const CMD_RESTORE_MODIFIED_TIMES_FROM_GIT = `${PLUGIN_ID}:restore-modified-times-from-git`;
 
 export const FILE_A = 'A.md';
 export const FILE_B = 'B.md';

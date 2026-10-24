@@ -83,6 +83,12 @@ export interface LaunchOptions {
    * active-leaf-change ever reaches the plugin for it. Absent → nothing is opened.
    */
   readonly openFileBeforeEnable?: string;
+  /**
+   * Runs node-side against the fresh vault copy AFTER seeding and BEFORE Obsidian
+   * starts — for setups seed files can't express (e.g. turning the vault into a git
+   * repo with fixed commit dates). Absent → nothing runs.
+   */
+  readonly prepareVault?: (vaultDir: string) => void;
 }
 
 export class ObsidianHarness {
@@ -126,6 +132,7 @@ export class ObsidianHarness {
       writeFileSync(dest, seed.content);
       if (seed.mtimeMs !== undefined) utimesSync(dest, new Date(seed.mtimeMs), new Date(seed.mtimeMs));
     }
+    opts.prepareVault?.(vaultDir);
 
     // Per-test settings. Overwrites any stray data.json from the copy.
     const pluginDir = join(vaultDir, '.obsidian', 'plugins', PLUGIN_ID);
@@ -473,7 +480,11 @@ declare global {
         leftSplit: { collapse(): void };
         rightSplit: { collapse(): void };
       };
-      vault: { getAbstractFileByPath(path: string): unknown; getMarkdownFiles(): unknown[] };
+      vault: {
+        getAbstractFileByPath(path: string): unknown;
+        getFileByPath(path: string): { stat: { mtime: number } } | null;
+        getMarkdownFiles(): unknown[];
+      };
       metadataCache: {
         resolvedLinks: Record<string, Record<string, number> | undefined>;
         getFileCache(file: unknown): unknown;
