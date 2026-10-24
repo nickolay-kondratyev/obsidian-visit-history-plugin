@@ -144,7 +144,8 @@ user input events  ──► (idle detection)       │   main at load, popouts 
 
 Known limitation (owner-accepted): a hard app quit can lose the last open
 session (unload cannot await the write). A visit becomes visible to the
-heatmap only once its session closes.
+heatmap only once its session closes; the recorder then re-renders open
+heatmaps (`refreshOpenHeatmaps`).
 
 ## Heatmap read flow
 

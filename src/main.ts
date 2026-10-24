@@ -200,7 +200,8 @@ export default class VisitHistoryPlugin extends Plugin {
 
   /**
    * Re-reads every open heatmap (all windows) — after changes the views
-   * don't listen for, e.g. restored modified times (no create/delete/rename).
+   * don't listen for: restored modified times (no create/delete/rename) and
+   * newly recorded visit sessions (VH files are invisible to the Vault API).
    */
   refreshOpenHeatmaps(): void {
     for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_TREEMAP)) {

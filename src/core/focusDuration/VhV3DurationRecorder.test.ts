@@ -31,15 +31,18 @@ function setup(hidden: FakeHiddenFileUtil = new FakeHiddenFileUtil()): {
   recorder: VhV3DurationRecorder;
   hidden: FakeHiddenFileUtil;
   cache: VisitStatsCache;
+  onSessionPersisted: ReturnType<typeof vi.fn>;
 } {
   const cache = new VisitStatsCache();
+  const onSessionPersisted = vi.fn();
   const recorder = new VhV3DurationRecorder(
     new VhV3DurationStore(hidden),
     cache,
     new FixedDeviceNameProvider(DEVICE),
     USER,
+    onSessionPersisted,
   );
-  return { recorder, hidden, cache };
+  return { recorder, hidden, cache, onSessionPersisted };
 }
 
 describe('VhV3DurationRecorder', () => {
@@ -143,6 +146,31 @@ describe('VhV3DurationRecorder', () => {
       await recorder.flush();
       // THEN the failure is reported
       expect(errorSpy).toHaveBeenCalledTimes(1);
+      errorSpy.mockRestore();
+    });
+
+    it('should notify once the session is persisted', async () => {
+      // GIVEN a recorder
+      const { recorder, onSessionPersisted } = setup();
+      // WHEN a session is recorded and persisted
+      recorder.recordFocusDuration('docid_A_E', Date.parse('2026-07-09T22:02:15.745Z'), 5600);
+      await recorder.flush();
+      // THEN the persisted-session listener is told (e.g. so open heatmaps re-render)
+      expect(onSessionPersisted).toHaveBeenCalledTimes(1);
+    });
+
+    it('should NOT notify when the write fails', async () => {
+      // GIVEN a write that will fail
+      const { recorder, hidden, onSessionPersisted } = setup();
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      hidden.append = async () => {
+        throw new Error('disk full');
+      };
+      // WHEN a session is recorded
+      recorder.recordFocusDuration('docid_A_E', 2000, 50);
+      await recorder.flush();
+      // THEN no listener is told about a visit that never landed
+      expect(onSessionPersisted).not.toHaveBeenCalled();
       errorSpy.mockRestore();
     });
 

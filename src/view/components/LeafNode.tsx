@@ -74,6 +74,8 @@ export function LeafNode({
       width={lw}
       height={lh}
       overflow="hidden"
+      // Identifies the file's tile for e2e specs (labels can be truncated or hidden).
+      data-path={d.data.path}
       onPointerMove={onPointerMove}
       onPointerLeave={onPointerLeave}
       onClick={onClick ? (e: MouseEvent) => {

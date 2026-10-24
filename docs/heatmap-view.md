@@ -27,6 +27,9 @@ VaultTreemapView (Obsidian ItemView — the only obsidian import in view/)
                         contentTermMatcher initialFolderPath>
                                           re-rendered on vault
                                           create/delete/rename (500 ms debounce)
+                                          and on every recorded visit session
+                                          (refreshOpenHeatmaps — VH writes are
+                                          invisible to the Vault API)
 ```
 
 Folder targeting: the `file-menu` handler (`main.ts`) opens the view with
@@ -296,7 +299,8 @@ Pure rules in `viewModel/tileSize.ts`; `App` resolves the ACTIVE mode into a
   visit history`, full sentence on hover) counts them for the CURRENT view.
   If every note in the view is hidden, an empty state offers "size by
   content". Raw `.excalidraw` files never get a doc id, so they are always
-  hidden here (accepted gap). Visit times refresh with the view, not live.
+  hidden here (accepted gap). Visit times refresh when a session is
+  recorded (i.e. once it closes — ~10 s after leaving the note).
 - Tooltip shows "visited for" (total focus) and "tile size" — the active
   computation, e.g. `sqrt(12.3 KB) ×0.30` or `log(3h 05m) ×1.00`.
 

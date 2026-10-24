@@ -30,7 +30,7 @@ function setup(): {
   const store = new VhV3DurationStore(hidden);
   const service = new VisitHistoryServiceV3(docIdService, store, cache);
   // The real writer side of the cache protocol (begin → append → end).
-  const recorder = new VhV3DurationRecorder(store, cache, new FixedDeviceNameProvider('host-a'), USER);
+  const recorder = new VhV3DurationRecorder(store, cache, new FixedDeviceNameProvider('host-a'), USER, () => undefined);
   return { service, hidden, docIdService, recorder };
 }
 

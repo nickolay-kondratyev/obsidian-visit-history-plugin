@@ -13,8 +13,13 @@ import { DeviceNameProvider } from '../util/env/DeviceNameProvider';
  *
  * Each persisted session is also written through to the shared VisitStatsCache
  * (begin/end write-window protocol — see VisitStatsCache), so visit-stats
- * lookups see it without re-reading disk.
+ * lookups see it without re-reading disk, and then announced via
+ * {@link SessionPersistedListener} (open heatmaps re-render — they get no vault
+ * event for VH writes, which live under a dot-folder the Vault API never sees).
  */
+/** Told after each session is persisted (never on a failed write). Must never throw. */
+export type SessionPersistedListener = () => void;
+
 export class VhV3DurationRecorder implements FocusDurationSink {
   private writeChain: Promise<void> = Promise.resolve();
 
@@ -24,6 +29,7 @@ export class VhV3DurationRecorder implements FocusDurationSink {
     private readonly deviceNameProvider: DeviceNameProvider,
     /** The PINNED user name — the recorder only exists once a name is pinned. */
     private readonly userName: string,
+    private readonly onSessionPersisted: SessionPersistedListener,
   ) {
   }
 
@@ -48,6 +54,7 @@ export class VhV3DurationRecorder implements FocusDurationSink {
         // Write-through AFTER the append succeeds: the cache must never
         // claim a visit that failed to persist.
         this.visitStatsCache.endSessionWrite(docId, focusStartEpochMs, durationMs);
+        this.onSessionPersisted();
       })
       .catch((error) => {
         console.error(`[VHP][VhV3DurationRecorder] failed to record focus duration docId=[${docId}]`, error);

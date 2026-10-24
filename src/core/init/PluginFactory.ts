@@ -195,6 +195,7 @@ export class PluginFactory {
 
     this.vhV3DurationRecorder = new VhV3DurationRecorder(
       this.vhV3DurationStore, this.visitStatsCache, this.deviceNameProvider, userName,
+      () => this.plugin.refreshOpenHeatmaps(),
     );
     this.focusDurationTracker = new FocusDurationTracker(
       // Min-focus gate: sessions shorter than the configured minimum are dropped
