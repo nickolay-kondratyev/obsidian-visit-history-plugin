@@ -186,7 +186,8 @@ swallows the click that ends a drag; the canvas sets `touch-action: none` so the
 browser never claims a touch pan as a scroll (pointercancel), and `#viz` carries
 `data-ignore-swipe` so Obsidian mobile's drawer swipe (a bubble-phase
 `touchstart` on `.workspace`; undocumented, verified on 1.14.4 Android) skips
-touches that start on the canvas; swipes elsewhere still open the drawers.
+touches that start on the canvas; swipes elsewhere still open the drawers
+(`e2e/heatmapMobileSwipe.e2e.ts`, via `app.emulateMobile`).
 Tiles stop click propagation, so a click
 reaching the svg means empty space. The selection is a file PATH; the card
 derives from the rendered leaves (a refresh/filter that removes the file

@@ -17,7 +17,9 @@ the interim-top-dir → `.plugin_data/visit_history` migration (`pluginDataMoveM
 the inline-note key journey (`inlineNote.e2e.ts`: content moved, note2 trashed, history merged in),
 inlining via the embed icon in live preview (`inlineNoteEmbedIcon.e2e.ts`),
 heatmap touch taps with REAL touch input (`heatmapTouchTap.e2e.ts`: tap a file → details
-card, tap Open → file active; writes a card screenshot to `.out/`),
+card, tap Open → file active; writes a card screenshot to `.out/`), a horizontal swipe on
+the heatmap canvas in Obsidian's mobile UI panning without opening the side drawer
+(`heatmapMobileSwipe.e2e.ts`; `ObsidianHarness.emulateMobile`),
 heatmap tile labels for many long Chinese + Latin names
 (`heatmapLabelsScreenshot.e2e.ts` — journey assert only; writes fitted + zoomed
 screenshots to the git-ignored `.out/` for human review), and the heatmap's

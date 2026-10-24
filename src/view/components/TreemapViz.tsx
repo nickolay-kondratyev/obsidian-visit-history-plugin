@@ -427,8 +427,9 @@ export function TreemapViz({
     // bubble-phase `touchstart` on `.workspace`, which bails out when any
     // HTMLElement ancestor of the touch target has `dataset.ignoreSwipe`
     // (Obsidian sets it on its own tab headers / resize handles). Undocumented;
-    // verified on Obsidian 1.14.4 Android. Without it a horizontal pan here also
-    // opens a drawer (`touch-action: none` does not help — it is not a scroll).
+    // verified on Obsidian 1.14.4 Android; guarded by heatmapMobileSwipe.e2e.ts.
+    // Without it a horizontal pan here also opens a drawer (`touch-action: none`
+    // does not help — it is not a scroll).
     // On #viz, not the view root: an edge swipe over the header still opens it.
     // WHY-NOT stopPropagation: it would also hide touches from React's root
     // listeners and any other ancestor listener; the opt-out targets only this.

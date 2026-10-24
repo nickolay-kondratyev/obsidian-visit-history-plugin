@@ -297,6 +297,30 @@ export class ObsidianHarness {
     await this.page.locator('.modal.mod-trust-folder').waitFor({ state: 'detached' });
   }
 
+  /**
+   * Switches Obsidian into its MOBILE UI (`app.emulateMobile`) — e.g. to get mobile-only
+   * behavior like the side-drawer swipe. That RELOADS the renderer, after which community
+   * plugins come back disabled, so this re-enables ours the same way `launch` does.
+   * localStorage (pinned identity) and the trust-author decision survive the reload.
+   */
+  async emulateMobile(): Promise<void> {
+    const reloaded = this.page.waitForEvent('load');
+    // The evaluate may reject when the reload tears down its execution context; the
+    // `load` wait + the checks below are what prove the switch happened.
+    await this.page.evaluate(() => window.app.emulateMobile(true)).catch(() => undefined);
+    await reloaded;
+    await this.page.waitForFunction(() => window.app?.workspace?.layoutReady === true && window.app.isMobile, undefined, {
+      timeout: 30_000,
+    });
+    await this.page.evaluate(async (pluginId) => {
+      await window.app.plugins.setEnable(true);
+      await window.app.plugins.enablePlugin(pluginId);
+    }, PLUGIN_ID);
+    await this.page.waitForFunction((pluginId) => !!window.app.plugins.plugins[pluginId], PLUGIN_ID, {
+      timeout: 30_000,
+    });
+  }
+
   /** Runs a command by its full id (`<plugin-id>:<command-id>`); throws when it did not run. */
   async runCommand(commandId: string): Promise<void> {
     const ran = await this.page.evaluate((id) => window.app.commands.executeCommandById(id), commandId);
@@ -470,8 +494,8 @@ declare global {
         getLeavesOfType(viewType: string): ObsidianLeaf[];
         setActiveLeaf(leaf: ObsidianLeaf, params: { focus: boolean }): void;
         openPopoutLeaf(): ObsidianLeaf;
-        leftSplit: { collapse(): void };
-        rightSplit: { collapse(): void };
+        leftSplit: { collapsed: boolean; collapse(): void };
+        rightSplit: { collapsed: boolean; collapse(): void };
       };
       vault: { getAbstractFileByPath(path: string): unknown; getMarkdownFiles(): unknown[] };
       metadataCache: {
@@ -486,6 +510,8 @@ declare global {
         disablePlugin(id: string): Promise<void>;
       };
       setting: { open(): void; close(): void };
+      isMobile: boolean;
+      emulateMobile(enabled: boolean): void;
     };
   }
 }

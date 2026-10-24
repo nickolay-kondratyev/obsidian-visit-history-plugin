@@ -85,5 +85,9 @@ git-ignored `.out/swipe/`.
   (1800,290 -> 600,290) opened the right drawer (`05-...right-drawer.png`).
 - After: tap on `Big touch target.md` docked the details card
   (`06-after-fix-tap-file-shows-card.png`).
+- Regression guard: `e2e/heatmapMobileSwipe.e2e.ts` (desktop Obsidian 1.12.7 switched to the
+  mobile UI via `app.emulateMobile`, which installs the same `.workspace` handler): canvas swipe
+  pans with the drawer closed; toolbar swipe opens it (control). The canvas test fails without
+  the attribute.
 - Swipes starting at the very screen edge (x=10 / x=2550) are taken by Android's system back
   gesture (it backgrounded Obsidian) — a system gesture, not affected by this fix.
