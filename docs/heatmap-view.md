@@ -114,11 +114,13 @@ App                     state owner: HeatmapConfig (color mode, gradient,
      ├─ FolderNode      click → drill into subtree (root-relative segments)
      ├─ CollapsedFolderNode  dense folder as ONE tile: name + "N files",
      │                  most-recent-file color, dashed border; click → drill in
-     ├─ LeafNode        click → IFileOpener.openFile(path); wrapped title
+     ├─ LeafNode        click → TileTapRules (mouse: open; touch: select);
+     │                  wrapped title
      │                  top-left, active-field age ("3d ago" — created/modified/
      │                  visited per the timestamp field) bottom-right when the
      │                  tile fits title + blank line + label (TileLabelLayout)
-     └─ Tooltip
+     ├─ Tooltip         hover (mouse/pen only) ─┐ both render FileDetails
+     └─ FileDetailsCard touch-selected file ─────┘ (name + stats) — one source
 ```
 
 Popovers are always-rendered siblings of `#header` (it clips overflow),
@@ -158,6 +160,33 @@ so it sticks across restarts:
   out-of-bounds values are clamped, `hot < cold` is enforced.
 - Two heatmap views open at once each hold their own state; last save
   wins, and a view picks up persisted config when (re)opened.
+
+## Touch input
+
+Pure rules in `viewModel/TileTapRules.ts` (unit-tested), decided PER EVENT
+from the pointer type (a touchscreen laptop mixes both):
+
+- **Mouse / pen** (unchanged): hover shows the tooltip, a click opens the file
+  or drills into a folder.
+- **Touch**: a tap on a file tile SELECTS it (accent ring) and docks a
+  `FileDetailsCard` at the bottom of `#viz` — full name, the tooltip's stats
+  (shared `FileDetails`), a touch-sized **Open** and a close button (tiles
+  cover nearly all of the canvas, so "tap empty space" alone is a thin
+  target). Open, or a second tap on the selected tile, opens the file; another
+  tile moves the selection; empty space closes the card; a folder (incl.
+  collapsed) drills in at once and closes it. Long-press is NOT used (Obsidian
+  mobile = context menu).
+
+Mechanics (`TreemapViz`): the pointer kind comes from the canvas's latest
+`pointerdown` (capture) — every `click` has its own. A touch tap is handled on
+its ONE `click`; hover listens to POINTER events only, so the browser's compat
+mouse events after a tap neither flash the tooltip nor act twice. A pan/drag
+never reaches the handlers: @visx/zoom's @use-gesture drag (`filterTaps`)
+swallows the click that ends a drag; the canvas sets `touch-action: none` so the
+browser never claims a touch pan as a scroll (pointercancel). Tiles stop click propagation, so a click
+reaching the svg means empty space. The selection is a file PATH; the card
+derives from the rendered leaves (a refresh/filter that removes the file
+closes the card and drops the selection). Covered by `e2e/heatmapTouchTap.e2e.ts` (real CDP touch input).
 
 ## Dense-folder collapse
 
@@ -287,7 +316,9 @@ Button rules are written as `.vault-heatmap-view button.<class>`, not
 `.is-tablet button:not(.clickable-icon) { padding: 4px 20px }` (specificity
 0,2,1), which beats a 0,2,0 class rule and squeezed the 28px icon buttons'
 SVGs to 0 width. A new `<button>` class in the view must follow the same
-pattern. Check on the tablet emulator (`docs/android-tablet-testing.md`).
+pattern (the details card's Open/close do). Anything rendered INSIDE `#viz`
+(the details card) must also out-specify the canvas rule `#viz svg` (100% size,
+grab cursor) for its own icons. Check on the tablet emulator (`docs/android-tablet-testing.md`).
 The same applies to text inputs: Obsidian mobile's `.is-mobile input[type="text"]
 { width: 100% }` (0,2,1) widened the slider bound inputs and squeezed the range
 tracks to 0px, so their rule carries an extra class (0,3,0).
