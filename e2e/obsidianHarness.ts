@@ -62,6 +62,11 @@ export interface LaunchOptions {
    * is off unless a spec explicitly tests it.
    */
   readonly minFocusSecondsToRecord: number;
+  /**
+   * Written to the plugin's data.json before enable when present. Absent → the
+   * key is omitted, so the plugin's default (on) applies.
+   */
+  readonly heatmapFollowsFolderNotes?: boolean;
   /** Optional dev overrides file (bypasses hard-limited config for e2e). */
   readonly devConfigOverrides?: DevConfigOverrides;
   /**
@@ -141,6 +146,7 @@ export class ObsidianHarness {
       JSON.stringify({
         idleTimeoutSeconds: opts.idleTimeoutSeconds,
         minFocusSecondsToRecord: opts.minFocusSecondsToRecord,
+        heatmapFollowsFolderNotes: opts.heatmapFollowsFolderNotes,
       }),
     );
 

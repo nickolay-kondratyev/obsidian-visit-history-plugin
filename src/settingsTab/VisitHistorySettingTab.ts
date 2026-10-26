@@ -1,6 +1,7 @@
 import { App, PluginSettingTab, Setting, SettingDefinitionItem } from 'obsidian';
 import type VisitHistoryPlugin from '../main';
 import {
+  DEFAULT_HEATMAP_FOLLOWS_FOLDER_NOTES,
   DEFAULT_IDLE_TIMEOUT_SECONDS,
   DEFAULT_MIN_FOCUS_SECONDS_TO_RECORD,
   IdleTimeoutSeconds,
@@ -39,6 +40,10 @@ export class VisitHistorySettingTab extends PluginSettingTab {
     + `${DEFAULT_MIN_FOCUS_SECONDS_TO_RECORD}. Applies immediately.`;
   private static readonly MIN_FOCUS_ERROR =
     'Enter a whole number ≥ 0 (0 records everything).';
+  private static readonly FOLLOW_FOLDER_NOTES_NAME = 'Heatmap follows folder notes';
+  private static readonly FOLLOW_FOLDER_NOTES_DESC =
+    'When you open a folder note — a note named like its folder, e.g. '
+    + 'Projects/Projects.md — open heatmaps drill into that folder.';
   private static readonly BACKFILL_HEADING = 'File modifying actions';
   // "ids" not "'id' field": the sentence-case lint rule force-uppercases a
   // bare "id" to "ID", which would misrepresent the lowercase key we write.
@@ -99,6 +104,15 @@ export class VisitHistorySettingTab extends PluginSettingTab {
         },
       },
       {
+        name: VisitHistorySettingTab.FOLLOW_FOLDER_NOTES_NAME,
+        desc: VisitHistorySettingTab.FOLLOW_FOLDER_NOTES_DESC,
+        control: {
+          type: 'toggle',
+          key: 'heatmapFollowsFolderNotes',
+          defaultValue: DEFAULT_HEATMAP_FOLLOWS_FOLDER_NOTES,
+        },
+      },
+      {
         type: 'group',
         heading: VisitHistorySettingTab.BACKFILL_HEADING,
         items: [
@@ -121,8 +135,8 @@ export class VisitHistorySettingTab extends PluginSettingTab {
   /**
    * Persist a declarative control value through the plugin's own save path
    * (single, explicit save; live-applied because the config seam reads the
-   * settings live). Handles any declared number key (`idleTimeoutSeconds`,
-   * `minFocusSecondsToRecord`) — the body is key-generic.
+   * settings live). Handles any declared key (`idleTimeoutSeconds`,
+   * `minFocusSecondsToRecord`, `heatmapFollowsFolderNotes`) — the body is key-generic.
    */
   async setControlValue(key: string, value: unknown): Promise<void> {
     // Boundary: Obsidian's declarative persistence contract is generic
@@ -137,6 +151,7 @@ export class VisitHistorySettingTab extends PluginSettingTab {
 
     this.displayIdleTimeoutSetting();
     this.displayMinFocusSetting();
+    this.displayFollowFolderNotesSetting();
 
     new Setting(this.containerEl)
       .setName(VisitHistorySettingTab.BACKFILL_HEADING)
@@ -184,6 +199,18 @@ export class VisitHistorySettingTab extends PluginSettingTab {
             return;
           }
           this.visitHistoryPlugin.settings.minFocusSecondsToRecord = seconds;
+          await this.visitHistoryPlugin.saveSettings();
+        }));
+  }
+
+  private displayFollowFolderNotesSetting(): void {
+    new Setting(this.containerEl)
+      .setName(VisitHistorySettingTab.FOLLOW_FOLDER_NOTES_NAME)
+      .setDesc(VisitHistorySettingTab.FOLLOW_FOLDER_NOTES_DESC)
+      .addToggle(toggle => toggle
+        .setValue(this.visitHistoryPlugin.settings.heatmapFollowsFolderNotes)
+        .onChange(async (value) => {
+          this.visitHistoryPlugin.settings.heatmapFollowsFolderNotes = value;
           await this.visitHistoryPlugin.saveSettings();
         }));
   }

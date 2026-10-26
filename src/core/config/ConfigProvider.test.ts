@@ -3,11 +3,15 @@ import { ConfigProviderDefault, ConfigSettingsHost } from './ConfigProvider';
 import { DevConfigOverrides } from './DevConfigOverridesReader';
 
 type MutableHost = ConfigSettingsHost & {
-  settings: { idleTimeoutSeconds: number; minFocusSecondsToRecord: number };
+  settings: {
+    idleTimeoutSeconds: number;
+    minFocusSecondsToRecord: number;
+    heatmapFollowsFolderNotes: boolean;
+  };
 };
 
 function makeHost(idleTimeoutSeconds: number, minFocusSecondsToRecord = 2): MutableHost {
-  return { settings: { idleTimeoutSeconds, minFocusSecondsToRecord } };
+  return { settings: { idleTimeoutSeconds, minFocusSecondsToRecord, heatmapFollowsFolderNotes: true } };
 }
 
 describe(ConfigProviderDefault.name, () => {
@@ -73,6 +77,16 @@ describe(ConfigProviderDefault.name, () => {
       const provider = new ConfigProviderDefault(host, {});
       host.settings.minFocusSecondsToRecord = 7;
       expect(provider.getMinFocusMsToRecord()).toBe(7_000);
+    });
+  });
+
+  describe('isHeatmapFollowingFolderNotes', () => {
+    // Live-read: a settings-tab toggle applies to the next opened file.
+    it('should reflect a live settings change', () => {
+      const host = makeHost(180);
+      const provider = new ConfigProviderDefault(host, {});
+      host.settings.heatmapFollowsFolderNotes = false;
+      expect(provider.isHeatmapFollowingFolderNotes()).toBe(false);
     });
   });
 });

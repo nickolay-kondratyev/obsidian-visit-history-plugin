@@ -47,6 +47,7 @@ src/
                            # user-scope layout move + recording activation on onLayoutReady
   settings.ts              # Persisted settings: idleTimeoutSeconds (default 180, min 5),
                            # minFocusSecondsToRecord (default 2, min 0; 0 disables)
+                           # + heatmapFollowsFolderNotes (default on)
                            # + heatmap (HeatmapConfig — sticky heatmap view config);
                            # SettingsSanitizer validates loadData() at the boundary
   Constants.ts             # Tracked view types, file extensions, top-level dir names
@@ -144,7 +145,8 @@ src/
                             # userComm/ (UserNotifier)
 
   settingsTab/              # VisitHistorySettingTab (Settings → Visit History):
-                            # "Idle timeout (seconds)" (persisted, applies live) +
+                            # idle timeout, min focus time, heatmap follows folder
+                            # notes (persisted, apply live) +
                             # "File modifying actions" (doc id backfill) behind a
                             # ConfirmModal
 
@@ -187,6 +189,7 @@ src/
                             # view/label/CanvasLabelFontProbe
     TileTapRules.ts         # Pure tap rules: touch select/open/dismiss, folder drill-in,
                             # mouse unchanged (per-event pointer kind)
+    FolderNoteRule.ts       # Pure: is this file its folder's folder note (X/X.md)?
     tileSize.ts             # Pure tile sizing (TileSizing: mode + curve + type scales;
                             # tileValue, hideUnvisitedFiles for visit-time mode)
     ClusteredTimestampsRule.ts # When the header warns of clustered (sync-stamped) times
@@ -217,6 +220,7 @@ src/
 - **Heatmap filtering** is include-only OR over `HeatmapConfig.filterTerms` (`path` = ci-substring of the FULL vault path; `content` = ci-substring of file content). Pure `filterVaultTree` composes AFTER archive pruning in TreemapViz, so stats/legend reflect the filtered view. Content terms resolve at the Obsidian boundary via `ContentTermMatcher` (PluginFactory → App prop); `App`'s latest-wins effect depends on the content-term set AND `data` (renames re-resolve; file edits accepted-stale). `undefined` matched-set = content filtering inactive; EMPTY set = terms matched nothing/scan pending. Terms persist like all heatmap config (sticky across restarts + drill-down).
 - **Heatmap drill-down nav is PATH-based**: `App` stores only vault-relative `folderSegments`; trail/current root/breadcrumb derive from the canonical tree each render — clicked nodes are never stored (TreemapViz renders pruned/filtered COPIES; storing nodes would pin nav to stale copies). Header popovers (filter/field/info/config) share a single `openPanel` state — at most one open; ALL close on click-outside (pointerdown on the header chrome wrapper's `ownerDocument` — popout-safe); Esc dismissal still ticketed.
 - **VaultTreemapView** is the **only file** in `view/` that imports from `obsidian`. All React components are Obsidian-agnostic and receive data/callbacks as props.
+- **Heatmap follows folder notes** (setting `heatmapFollowsFolderNotes`, default on, live via `ConfigProvider`): opening a folder note (`FolderNoteRule`: `X/X.md` — same-name-inside convention only) drills every open heatmap into that folder; host → App via `registerFollowFolder`. Details: `docs/heatmap-view.md`.
 - **Vault-level open dedupes-then-reveals**: a command/ribbon `open-vault-heatmap` REVEALS an existing vault-level view that is CURRENTLY at vault root (silent `revealLeaf`, first-found on multiples) instead of duplicating; a drilled-in vault view or any folder-targeted open still opens fresh. `App` reports at-root via `onAtVaultRootChange` → `VaultTreemapView.isAtVaultRoot()`; pure obsidian-free `VaultRootHeatmapFinder` picks the leaf.
 - **Heatmap view is theme-aware end-to-end**: chrome AND treemap canvas colors derive from Obsidian theme vars (`--vt-*` mapping in `styles.css`; folder chrome via `color-mix` depth tiers `d1..d4`; leaf labels white with dark halo via `paint-order: stroke`; `body.theme-light` swaps type fg tints). No hard-coded dark-only colors in view components — node styling lives in CSS classes, inline styles only for per-node computed fills.
 - **Heatmap config is sticky**: `App` owns a single `HeatmapConfig` and writes every change through `HeatmapConfigStore` into `settings.heatmap` (data.json) — saves debounced (slider drags), flushed on unload, sanitized on load. Every slider is a `BoundedValue`: its min/max bounds are user-editable and persist too.

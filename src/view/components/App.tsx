@@ -43,6 +43,11 @@ interface AppProps {
    * not a git repo (no button then).
    */
   onRestoreModifiedTimesFromGit?: () => void;
+  /**
+   * Hands the host a "drill into this vault folder path" function (re-handed
+   * whenever it changes). The host calls it when a folder note is opened.
+   */
+  registerFollowFolder?: (followFolder: (folderPath: string) => void) => void;
 }
 
 /**
@@ -71,6 +76,7 @@ export function App({
   initialFolderPath,
   onAtVaultRootChange,
   onRestoreModifiedTimesFromGit,
+  registerFollowFolder,
 }: AppProps) {
   const [config, setConfig] = useState<HeatmapConfig>(() => configStore.load());
   /** The single open header panel — at most one popover/panel at a time. */
@@ -228,6 +234,19 @@ export function App({
     },
     [trail],
   );
+
+  // Host-driven drill (folder note opened). Ignored when the folder is not in
+  // the tree (e.g. it holds no tracked files yet): an unresolvable path would
+  // fall back to the vault root, yanking the user away from where they were.
+  const followFolder = useCallback(
+    (folderPath: string) => {
+      if (findFolderTrail(data, folderPath)) setFolderSegments(folderPath.split('/'));
+    },
+    [data],
+  );
+  useEffect(() => {
+    registerFollowFolder?.(followFolder);
+  }, [followFolder, registerFollowFolder]);
 
   const handleBack = useCallback(() => {
     setFolderSegments(trail.slice(0, -1).map(n => n.name));

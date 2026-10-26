@@ -1,9 +1,10 @@
-import { ItemView, ViewStateResult, WorkspaceLeaf } from 'obsidian';
+import { ItemView, TFile, ViewStateResult, WorkspaceLeaf } from 'obsidian';
 import { Root, createRoot } from 'react-dom/client';
 import { App as TreemapApp } from './components/App';
 import { buildVaultTree } from '../viewModel/buildVaultTree';
 import { PluginFactory } from "../core/init/PluginFactory";
 import { ObsidianFileOpener } from '../viewModel/FileOpener';
+import { FolderNoteRule } from '../viewModel/FolderNoteRule';
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
@@ -29,6 +30,8 @@ export const CSS_CLASS_HEATMAP_ACTIVE = 'vault-heatmap-active';
  * - Builds the VaultNode tree from the plugin's visit tracking infrastructure.
  * - Re-renders on vault change events (create/delete/rename) and on an
  *   explicit refresh() (e.g. after modified times were restored from git).
+ * - Follows folder notes: opening one drills the heatmap into its folder
+ *   (setting-gated, see FolderNoteRule).
  */
 export class VaultTreemapView extends ItemView {
   private root: Root | null = null;
@@ -49,6 +52,8 @@ export class VaultTreemapView extends ItemView {
    * mis-triggers the guard because {@link isVaultLevel} is false there.
    */
   private atVaultRoot = true;
+  /** App's "drill into folder" function; undefined until App mounts. */
+  private followFolder: ((folderPath: string) => void) | undefined;
 
   constructor(leaf: WorkspaceLeaf, pluginFactory: PluginFactory) {
     super(leaf);
@@ -69,6 +74,17 @@ export class VaultTreemapView extends ItemView {
 
   private readonly handleAtVaultRootChange = (atRoot: boolean): void => {
     this.atVaultRoot = atRoot;
+  };
+
+  private readonly registerFollowFolder = (followFolder: (folderPath: string) => void): void => {
+    this.followFolder = followFolder;
+  };
+
+  /** Drills into the folder of an opened folder note (setting read live). */
+  private readonly handleFileOpen = (file: TFile | null): void => {
+    if (!file || !this.pluginFactory.configProvider.isHeatmapFollowingFolderNotes()) return;
+    const folderPath = FolderNoteRule.folderPathOf(file.path);
+    if (folderPath !== undefined) this.followFolder?.(folderPath);
   };
 
   /** Same entry point as the command (one code path); it refreshes the views when done. */
@@ -102,6 +118,8 @@ export class VaultTreemapView extends ItemView {
     this.registerEvent(this.app.vault.on('create', () => this.scheduleRefresh()));
     this.registerEvent(this.app.vault.on('delete', () => this.scheduleRefresh()));
     this.registerEvent(this.app.vault.on('rename', () => this.scheduleRefresh()));
+    // file-open also fires when switching to a tab of an already-open note.
+    this.registerEvent(this.app.workspace.on('file-open', this.handleFileOpen));
   }
 
   async onClose(): Promise<void> {
@@ -170,6 +188,7 @@ export class VaultTreemapView extends ItemView {
         contentTermMatcher={this.pluginFactory.contentTermMatcher}
         onAtVaultRootChange={this.handleAtVaultRootChange}
         onRestoreModifiedTimesFromGit={hasGitRepo ? this.handleRestoreFromGit : undefined}
+        registerFollowFolder={this.registerFollowFolder}
       />,
     );
   }

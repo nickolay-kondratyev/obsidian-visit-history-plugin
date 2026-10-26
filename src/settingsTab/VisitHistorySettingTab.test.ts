@@ -4,9 +4,11 @@ import type {
   SettingDefinitionControl,
   SettingDefinitionGroup,
   SettingNumberControl,
+  SettingToggleControl,
 } from 'obsidian';
 import { VisitHistorySettingTab } from './VisitHistorySettingTab';
 import {
+  DEFAULT_HEATMAP_FOLLOWS_FOLDER_NOTES,
   DEFAULT_IDLE_TIMEOUT_SECONDS,
   DEFAULT_MIN_FOCUS_SECONDS_TO_RECORD,
   MIN_IDLE_TIMEOUT_SECONDS,
@@ -68,8 +70,13 @@ function minFocusControl(): SettingNumberControl {
   return definition.control as SettingNumberControl;
 }
 
+function followFolderNotesControl(): SettingToggleControl {
+  const definition = buildTab().getSettingDefinitions()[2] as SettingDefinitionControl;
+  return definition.control as SettingToggleControl;
+}
+
 function backfillGroup(): SettingDefinitionGroup {
-  return buildTab().getSettingDefinitions()[2] as SettingDefinitionGroup;
+  return buildTab().getSettingDefinitions()[3] as SettingDefinitionGroup;
 }
 
 describe('VisitHistorySettingTab', () => {
@@ -172,6 +179,18 @@ describe('VisitHistorySettingTab', () => {
       // WHEN validating a negative value
       // THEN an inline error string is returned
       expect(minFocusControl().validate?.(-1)).toBeTypeOf('string');
+    });
+
+    it('should expose the follow-folder-notes control as a toggle', () => {
+      expect(followFolderNotesControl().type).toBe('toggle');
+    });
+
+    it('should bind the follow-folder-notes control to the persisted settings key', () => {
+      expect(followFolderNotesControl().key).toBe('heatmapFollowsFolderNotes');
+    });
+
+    it('should default the follow-folder-notes control to the shared default', () => {
+      expect(followFolderNotesControl().defaultValue).toBe(DEFAULT_HEATMAP_FOLLOWS_FOLDER_NOTES);
     });
 
     it('should group the backfill action under its heading', () => {

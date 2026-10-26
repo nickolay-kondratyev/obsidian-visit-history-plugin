@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  DEFAULT_HEATMAP_FOLLOWS_FOLDER_NOTES,
   DEFAULT_IDLE_TIMEOUT_SECONDS,
   DEFAULT_MIN_FOCUS_SECONDS_TO_RECORD,
   IdleTimeoutSeconds,
@@ -187,6 +188,30 @@ describe('SettingsSanitizer', () => {
       const settings = SettingsSanitizer.sanitize({ idleTimeoutSeconds: 600 });
       // THEN the default applies
       expect(settings.minFocusSecondsToRecord).toBe(DEFAULT_MIN_FOCUS_SECONDS_TO_RECORD);
+    });
+
+    it('should turn heatmap folder-note following ON by default (older data.json)', () => {
+      // GIVEN persisted data without the key
+      // WHEN sanitizing
+      const settings = SettingsSanitizer.sanitize({ idleTimeoutSeconds: 600 });
+      // THEN following is on
+      expect(settings.heatmapFollowsFolderNotes).toBe(true);
+    });
+
+    it('should keep a persisted OFF heatmap folder-note following', () => {
+      // GIVEN the user turned it off
+      // WHEN sanitizing
+      const settings = SettingsSanitizer.sanitize({ heatmapFollowsFolderNotes: false });
+      // THEN it stays off
+      expect(settings.heatmapFollowsFolderNotes).toBe(false);
+    });
+
+    it('should fall back to the default heatmap folder-note following for a non-boolean value', () => {
+      // GIVEN a corrupt value (hand-edited data.json)
+      // WHEN sanitizing
+      const settings = SettingsSanitizer.sanitize({ heatmapFollowsFolderNotes: 'no' });
+      // THEN the default applies
+      expect(settings.heatmapFollowsFolderNotes).toBe(DEFAULT_HEATMAP_FOLLOWS_FOLDER_NOTES);
     });
 
     it('should apply the default heatmap config when missing (pre-heatmap data.json)', () => {

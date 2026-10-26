@@ -18,6 +18,12 @@ export interface ConfigProvider {
    * reload. 0 means "record everything" (filter disabled).
    */
   getMinFocusMsToRecord(): number;
+
+  /**
+   * Whether open heatmaps should drill into a folder when its folder note is
+   * opened. Read live per open-file event (settings-tab toggle applies at once).
+   */
+  isHeatmapFollowingFolderNotes(): boolean;
 }
 
 /**
@@ -28,6 +34,7 @@ export interface ConfigSettingsHost {
   readonly settings: {
     readonly idleTimeoutSeconds: number;
     readonly minFocusSecondsToRecord: number;
+    readonly heatmapFollowsFolderNotes: boolean;
   };
 }
 
@@ -60,5 +67,9 @@ export class ConfigProviderDefault implements ConfigProvider {
   // this method does not re-clamp.
   getMinFocusMsToRecord(): number {
     return this.host.settings.minFocusSecondsToRecord * 1000;
+  }
+
+  isHeatmapFollowingFolderNotes(): boolean {
+    return this.host.settings.heatmapFollowsFolderNotes;
   }
 }

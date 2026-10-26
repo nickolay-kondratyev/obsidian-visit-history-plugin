@@ -46,13 +46,21 @@ export class MinFocusSecondsToRecord {
   }
 }
 
+/**
+ * Whether open heatmaps drill into a folder when its FOLDER NOTE is opened
+ * (see FolderNoteRule). On by default.
+ */
+export const DEFAULT_HEATMAP_FOLLOWS_FOLDER_NOTES = true;
+
 // Persisted via loadData()/saveData() in main.ts; edited in
-// src/settingsTab/VisitHistorySettingTab.ts (idle timeout, min focus time) and
+// src/settingsTab/VisitHistorySettingTab.ts (idle timeout, min focus time,
+// heatmap follows folder notes) and
 // the heatmap view's config panel (heatmap — persisted through
 // HeatmapConfigStore).
 export interface VisitHistoryPluginSettings {
   idleTimeoutSeconds: number;
   minFocusSecondsToRecord: number;
+  heatmapFollowsFolderNotes: boolean;
   heatmap: HeatmapConfig;
 }
 
@@ -69,6 +77,9 @@ export class SettingsSanitizer {
     return {
       idleTimeoutSeconds: SettingsSanitizer.sanitizeIdleTimeoutSeconds(raw.idleTimeoutSeconds),
       minFocusSecondsToRecord: SettingsSanitizer.sanitizeMinFocusSecondsToRecord(raw.minFocusSecondsToRecord),
+      heatmapFollowsFolderNotes: typeof raw.heatmapFollowsFolderNotes === 'boolean'
+        ? raw.heatmapFollowsFolderNotes
+        : DEFAULT_HEATMAP_FOLLOWS_FOLDER_NOTES,
       heatmap: HeatmapConfigSanitizer.sanitize(raw.heatmap),
     };
   }
