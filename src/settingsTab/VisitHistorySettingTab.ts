@@ -42,8 +42,9 @@ export class VisitHistorySettingTab extends PluginSettingTab {
     'Enter a whole number ≥ 0 (0 records everything).';
   private static readonly FOLLOW_FOLDER_NOTES_NAME = 'Heatmap follows folder notes';
   private static readonly FOLLOW_FOLDER_NOTES_DESC =
-    'When you open a folder note — a note named like its folder, e.g. '
-    + 'Projects/Projects.md — open heatmaps drill into that folder.';
+    'When you open a folder note — a note named like its folder, inside it '
+    + '(Projects/Projects.md) or next to it (Projects.md beside Projects) — '
+    + 'open heatmaps drill into that folder.';
   private static readonly BACKFILL_HEADING = 'File modifying actions';
   // "ids" not "'id' field": the sentence-case lint rule force-uppercases a
   // bare "id" to "ID", which would misrepresent the lowercase key we write.

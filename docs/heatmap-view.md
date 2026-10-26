@@ -48,14 +48,15 @@ an unresolvable path falls back to the vault root.
 
 Folder-note following (setting `heatmapFollowsFolderNotes`, default ON, read
 live): on workspace `file-open` of a FOLDER NOTE (`viewModel/FolderNoteRule.ts`:
-name minus extension == parent folder name, e.g. `Projects/Projects.md`),
-every open heatmap drills into that folder — same state change as clicking
+name minus extension == its parent folder's name — INSIDE, `Projects/Projects.md`
+— or == an existing folder next to it — SIBLING, `Projects.md` beside
+`Projects/`; INSIDE wins when both apply), every open heatmap drills into that folder — same state change as clicking
 it. `App` hands the host its drill function via
 `registerFollowFolder` (like the zoom-reset relay). A folder absent from the
 tree (e.g. created moments ago, before the debounced refresh) is ignored
 rather than falling back to the root. Opening a non-folder note never moves
-the view. Ceiling: sibling (`Projects.md` next to `Projects/`), `index.md`
-and `.excalidraw.md` folder notes are not recognized.
+the view. Ceiling: `index.md` and `.excalidraw.md` folder notes are not
+recognized.
 
 Archive hiding: folders named `_archive` are hidden below the current view
 root — `viewModel/pruneArchiveFolders.ts` prunes them (and folders left

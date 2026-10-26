@@ -1,5 +1,6 @@
-// An OPEN heatmap follows folder notes: opening `Projects/Projects.md` (a note named like
-// its folder) drills the heatmap into `Projects` — unless the setting is turned off.
+// An OPEN heatmap follows folder notes: opening `Projects/Projects.md` (named like its
+// folder, INSIDE it) or `Areas.md` (named like the folder NEXT TO it) drills the heatmap
+// into that folder — unless the setting is turned off.
 import { expect, test } from '@playwright/test';
 import { CMD_OPEN_VAULT_HEATMAP, VIEW_TYPE_HEATMAP } from './constants';
 import { HIGH_IDLE_SECONDS } from './harnessFixture';
@@ -10,6 +11,8 @@ const VIEWPORT = { width: 1200, height: 800 } as const;
 const FOLDER = 'Projects';
 const FOLDER_NOTE = `${FOLDER}/${FOLDER}.md`;
 const SIBLING_NOTE = `${FOLDER}/Other.md`;
+const SIBLING_LAYOUT_FOLDER = 'Areas';
+const SIBLING_LAYOUT_FOLDER_NOTE = `${SIBLING_LAYOUT_FOLDER}.md`;
 const BREADCRUMB = '.vault-heatmap-view .breadcrumb-path';
 // The follow is synchronous on file-open (+ one React render); this only bounds how long
 // the OFF spec waits for a drill that must never come.
@@ -26,6 +29,8 @@ async function launchWithHeatmapOpen(heatmapFollowsFolderNotes?: boolean): Promi
     seedFiles: [
       { path: FOLDER_NOTE, content: 'folder note' },
       { path: SIBLING_NOTE, content: 'other note' },
+      { path: SIBLING_LAYOUT_FOLDER_NOTE, content: 'folder note next to its folder' },
+      { path: `${SIBLING_LAYOUT_FOLDER}/Inner.md`, content: 'inner note' },
     ],
   });
   await harness.trustVaultAuthor(); // its modal would cover the heatmap
@@ -58,6 +63,16 @@ test.describe('heatmap follows folder notes', () => {
 
     // THEN the heatmap shows that folder
     await expect(h.page.locator(BREADCRUMB)).toHaveText(`/${FOLDER}`);
+  });
+
+  test('should drill into the folder WHEN its folder note NEXT TO it is opened', async () => {
+    h = await launchWithHeatmapOpen();
+
+    // WHEN Areas.md (beside the Areas/ folder) is opened
+    await openInNewTab(h, SIBLING_LAYOUT_FOLDER_NOTE);
+
+    // THEN the heatmap shows that folder
+    await expect(h.page.locator(BREADCRUMB)).toHaveText(`/${SIBLING_LAYOUT_FOLDER}`);
   });
 
   test('should stay at the vault root WHEN a non-folder note is opened', async () => {

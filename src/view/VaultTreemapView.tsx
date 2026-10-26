@@ -83,7 +83,10 @@ export class VaultTreemapView extends ItemView {
   /** Drills into the folder of an opened folder note (setting read live). */
   private readonly handleFileOpen = (file: TFile | null): void => {
     if (!file || !this.pluginFactory.configProvider.isHeatmapFollowingFolderNotes()) return;
-    const folderPath = FolderNoteRule.folderPathOf(file.path);
+    const folderPath = FolderNoteRule.folderPathOf(
+      file.path,
+      path => this.app.vault.getFolderByPath(path) !== null,
+    );
     if (folderPath !== undefined) this.followFolder?.(folderPath);
   };
 

@@ -1,28 +1,36 @@
+/** Whether a vault-relative path is an existing folder (Obsidian-backed at the call site). */
+export type IsFolderPath = (path: string) => boolean;
+
 /**
- * Decides whether a file is a FOLDER NOTE — the note that describes its own
- * folder. Convention: the file's name (minus its final extension) equals its
- * parent folder's name, e.g. `Projects/Alpha/Alpha.md` → folder `Projects/Alpha`
- * (the default of the popular "Folder notes" plugins; works for `.canvas` too).
+ * Decides whether a file is a FOLDER NOTE — the note that describes a folder.
+ * Two conventions (those of the popular "Folder notes" plugins; `.canvas` too):
+ * - INSIDE: named like its parent folder — `Projects/Alpha/Alpha.md` → `Projects/Alpha`.
+ * - SIBLING: named like an existing folder next to it — `Projects/Alpha.md`
+ *   beside `Projects/Alpha/` → `Projects/Alpha` (incl. vault root: `Alpha.md` → `Alpha`).
+ * When both apply (`Alpha/Alpha.md` AND a folder `Alpha/Alpha/`), INSIDE wins.
  *
- * Pure (Obsidian-free) — works on vault-relative paths.
+ * Pure (Obsidian-free) — works on vault-relative paths; folder existence is
+ * asked through `isFolder`.
  *
- * Ceiling (deliberate): other conventions — a sibling `Alpha.md` NEXT TO the
- * `Alpha/` folder, `index.md`/`README.md`, `Alpha.excalidraw.md` — are not
- * recognized. Upgrade path: add them here; the heatmap follow wiring is unaffected.
+ * Ceiling (deliberate): `index.md`/`README.md` and `Alpha.excalidraw.md` folder
+ * notes are not recognized. Upgrade path: add them here; the heatmap follow
+ * wiring is unaffected.
  */
 export class FolderNoteRule {
   /**
    * @returns The vault-relative folder path the file is the folder note of,
-   *          or undefined when it is not a folder note (incl. vault-root files).
+   *          or undefined when it is not a folder note.
    */
-  static folderPathOf(filePath: string): string | undefined {
+  static folderPathOf(filePath: string, isFolder: IsFolderPath): string | undefined {
     const segments = filePath.split('/');
     const fileName = segments.at(-1);
-    const folderName = segments.at(-2);
-    if (fileName === undefined || folderName === undefined) return undefined;
-    return FolderNoteRule.stripExtension(fileName) === folderName
-      ? segments.slice(0, -1).join('/')
-      : undefined;
+    if (fileName === undefined) return undefined;
+    const stem = FolderNoteRule.stripExtension(fileName);
+    const parentSegments = segments.slice(0, -1);
+    // INSIDE needs no existence check — the parent folder holds the file.
+    if (parentSegments.at(-1) === stem) return parentSegments.join('/');
+    const siblingFolderPath = [...parentSegments, stem].join('/');
+    return isFolder(siblingFolderPath) ? siblingFolderPath : undefined;
   }
 
   private static stripExtension(fileName: string): string {
