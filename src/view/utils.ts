@@ -1,9 +1,9 @@
 import { color as d3Color } from 'd3-color';
 import type { HierarchyNode } from 'd3-hierarchy';
-import { interpolateRgb } from 'd3-interpolate';
-import { GRADIENTS, TYPE_C, type ColorMode, type GradientKey, type HeatField } from './constants';
+import type { ColorMode, GradientKey, HeatField } from './constants';
 import type { VaultNode } from '../core/data/VaultNode';
 import { typeScale, type TileSizing } from '../viewModel/tileSize';
+import { LeafColorRule } from '../viewModel/LeafColorRule';
 
 // ── Color helpers ──────────────────────────────────────────────────────────
 
@@ -14,7 +14,7 @@ const MS_PER_DAY = 86400000;
 
 /**
  * Returns the fill color for a leaf given a timestamp and heatmap thresholds.
- * Pure function — no React, no DOM.
+ * Delegates to {@link LeafColorRule.heatColor} (the color rule's single owner).
  */
 export function heatColor(
   ts: number | null | undefined,
@@ -22,18 +22,12 @@ export function heatColor(
   hotDays: number,
   coldDays: number,
 ): string {
-  const g = GRADIENTS[gradKey];
-  if (ts == null) return g.nil;
-
-  const daysOld = (Date.now() - ts) / MS_PER_DAY;
-  if (daysOld <= hotDays) return g.hot;
-  if (daysOld >= coldDays) return g.cold;
-
-  return interpolateRgb(g.hot, g.cold)((daysOld - hotDays) / (coldDays - hotDays));
+  return LeafColorRule.heatColor(ts, gradKey, hotDays, coldDays, Date.now());
 }
 
 /**
- * Resolves the fill color for a leaf depending on active color mode.
+ * Resolves the fill color for a leaf depending on active color mode. The base
+ * color is {@link LeafColorRule}'s; only the hover brightening lives here.
  * Pure function — no React, no DOM.
  */
 export function leafFill(
@@ -45,21 +39,17 @@ export function leafFill(
   hotDays: number,
   coldDays: number,
 ): string {
+  const base = LeafColorRule.baseColor(d.data, { colorMode, gradKey, field, hotDays, coldDays }, Date.now());
+  if (!hovered) return base.fill;
   if (colorMode === 'heatmap') {
-    const ts = d.data[field];
-    const base = heatColor(ts, gradKey, hotDays, coldDays);
-    return hovered && ts != null
-      ? d3Color(base)!.brighter(0.45).formatHex()
-      : base;
+    return base.hasData ? d3Color(base.fill)!.brighter(0.45).formatHex() : base.fill;
   }
-
-  const c = TYPE_C[d.data.type ?? ''] ?? { fill: '#555', hover: '#777' };
-  return hovered ? c.hover : c.fill;
+  return LeafColorRule.typeColors(d.data.type).hover;
 }
 
 /**
- * Opacity is reduced for null-timestamp cells to visually signal "no data".
- * Pure function — no React, no DOM.
+ * Opacity is reduced for no-data cells (see {@link LeafColorRule.hasData}) to
+ * visually signal "no data". Pure function — no React, no DOM.
  */
 export function leafOpacity(
   d: HierarchyNode<VaultNode>,
@@ -67,8 +57,7 @@ export function leafOpacity(
   field: HeatField,
 ): number {
   if (colorMode === 'heatmap') {
-    const ts = d.data[field];
-    return ts == null ? 0.55 : 0.88;
+    return LeafColorRule.hasData(d.data, colorMode, field) ? 0.88 : 0.55;
   }
   return 0.78;
 }

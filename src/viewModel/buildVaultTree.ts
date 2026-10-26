@@ -31,11 +31,11 @@ function classifyFile(file: TFile): FileType | null {
 export function buildVaultTree(vaultName: string, trackedFiles: TrackedFile[]): VaultNode {
   const root: VaultNode = {name: vaultName, children: []};
 
-  for (const {file, timeMetadata} of trackedFiles) {
-    const type = classifyFile(file);
-    if (!type) continue;
+  for (const trackedFile of trackedFiles) {
+    const leaf = buildLeafNode(trackedFile);
+    if (!leaf) continue;
 
-    const parts = file.path.split('/');
+    const parts = trackedFile.file.path.split('/');
     let node = root;
 
     // Walk/create intermediate folder nodes
@@ -50,17 +50,29 @@ export function buildVaultTree(vaultName: string, trackedFiles: TrackedFile[]): 
       node = child;
     }
 
-    node.children!.push({
-      name: file.name,
-      path: file.path,
-      type,
-      size: file.stat.size,
-      createdAt: timeMetadata.createdMs,
-      lastModifiedAt: timeMetadata.modifiedMs,
-      lastVisitedAt: timeMetadata.visitedMs,
-      totalFocusMs: timeMetadata.totalFocusMs,
-    });
+    node.children!.push(leaf);
   }
 
   return root;
+}
+
+/**
+ * The heatmap leaf node for one tracked file, or undefined when its type is
+ * not shown (not md/canvas/excalidraw). The ONE place file fields map onto
+ * leaf fields — the public API builds its leaves here too, so its colors use
+ * exactly the heatmap's type and timestamps.
+ */
+export function buildLeafNode({file, timeMetadata}: TrackedFile): VaultNode | undefined {
+  const type = classifyFile(file);
+  if (!type) return undefined;
+  return {
+    name: file.name,
+    path: file.path,
+    type,
+    size: file.stat.size,
+    createdAt: timeMetadata.createdMs,
+    lastModifiedAt: timeMetadata.modifiedMs,
+    lastVisitedAt: timeMetadata.visitedMs,
+    totalFocusMs: timeMetadata.totalFocusMs,
+  };
 }
