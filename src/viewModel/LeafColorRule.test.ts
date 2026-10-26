@@ -3,6 +3,7 @@ import { color as d3Color } from 'd3-color';
 import { LeafColorRule, type LeafColorSettings } from './LeafColorRule';
 import { GRADIENTS, TYPE_C } from '../view/constants';
 import type { VaultNode } from '../core/data/VaultNode';
+import { DEFAULT_HEATMAP_CONFIG } from './heatmapConfig';
 
 const MS_PER_DAY = 86400000;
 const NOW_MS = Date.UTC(2026, 9, 22, 12, 0, 0);
@@ -12,6 +13,7 @@ const COLD_DAYS = 30;
 const MIDPOINT_DAYS = 20;
 /** nature hot #1db954 and cold #1a3a7a averaged per channel (rounded): (28, 122, 103). */
 const NATURE_MIDPOINT_HEX = '#1c7a67';
+const HEX_COLOR_RE = /^#[0-9a-f]{6}$/;
 
 function daysAgo(days: number): number {
   return NOW_MS - days * MS_PER_DAY;
@@ -161,12 +163,36 @@ describe('LeafColorRule', () => {
       expect(d3Color(fill)?.formatHex()).toBe(NATURE_MIDPOINT_HEX);
     });
 
+    it('should return the interpolated color as #rrggbb', () => {
+      // GIVEN a stamp between the thresholds
+      // WHEN coloring
+      const fill = LeafColorRule.heatColor(daysAgo(MIDPOINT_DAYS), 'nature', HOT_DAYS, COLD_DAYS, NOW_MS);
+      // THEN it is a 6-digit hex color
+      expect(fill).toMatch(HEX_COLOR_RE);
+    });
+
     it('should return the nil color for an undefined stamp', () => {
       // GIVEN no stamp at all
       // WHEN coloring
       const fill = LeafColorRule.heatColor(undefined, 'mono', HOT_DAYS, COLD_DAYS, NOW_MS);
       // THEN it is the nil color
       expect(fill).toBe(GRADIENTS.mono.nil);
+    });
+  });
+
+  describe('settingsOf', () => {
+    it('should take the day thresholds from the slider values', () => {
+      // GIVEN a heatmap config
+      // WHEN extracting its color settings
+      const settings = LeafColorRule.settingsOf(DEFAULT_HEATMAP_CONFIG);
+      // THEN the thresholds are the sliders' current values
+      expect(settings).toEqual({
+        colorMode: DEFAULT_HEATMAP_CONFIG.colorMode,
+        gradKey: DEFAULT_HEATMAP_CONFIG.gradKey,
+        field: DEFAULT_HEATMAP_CONFIG.field,
+        hotDays: DEFAULT_HEATMAP_CONFIG.hotDays.value,
+        coldDays: DEFAULT_HEATMAP_CONFIG.coldDays.value,
+      });
     });
   });
 
@@ -192,6 +218,13 @@ describe('LeafColorRule', () => {
       // WHEN resolving its colors
       // THEN its hover is the TYPE_C hover
       expect(LeafColorRule.typeColors('excalidraw').hover).toBe(TYPE_C.excalidraw!.hover);
+    });
+
+    it('should return a #rrggbb unknown-type fill', () => {
+      // GIVEN no type
+      // WHEN resolving colors
+      // THEN the fill is a 6-digit hex color (the public API's promised format)
+      expect(LeafColorRule.typeColors(undefined).fill).toMatch(HEX_COLOR_RE);
     });
 
     it('should return the unknown-type colors for no type', () => {

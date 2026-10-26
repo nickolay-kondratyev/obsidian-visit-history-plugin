@@ -17,10 +17,16 @@ export class FakeVaultUtil implements VaultUtil {
   }
 
   async getTrackedFiles(): Promise<TrackedFile[]> {
-    return this.files.map(file => ({
-      file,
-      timeMetadata: { createdMs: 0, modifiedMs: 0, visitedMs: null, totalFocusMs: 0 },
-    }));
+    return this.files.map(file => FakeVaultUtil.neverVisited(file));
+  }
+
+  async getTrackedFile(path: string): Promise<TrackedFile | undefined> {
+    const file = this.files.find(f => f.path === path);
+    return file === undefined ? undefined : FakeVaultUtil.neverVisited(file);
+  }
+
+  private static neverVisited(file: TFile): TrackedFile {
+    return { file, timeMetadata: { createdMs: 0, modifiedMs: 0, visitedMs: null, totalFocusMs: 0 } };
   }
 }
 

@@ -522,6 +522,7 @@ declare global {
       commands: { executeCommandById(id: string): boolean };
       plugins: {
         plugins: Record<string, unknown>;
+        getPlugin(id: string): unknown;
         setEnable(enabled: boolean): Promise<void>;
         enablePlugin(id: string): Promise<void>;
         disablePlugin(id: string): Promise<void>;

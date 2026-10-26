@@ -98,4 +98,29 @@ describe('PluginHeatmapConfigStore', () => {
       expect(saveSettings).not.toHaveBeenCalled();
     });
   });
+
+  describe('onConfigApplied', () => {
+    it('should run AFTER the debounced config landed in the settings', () => {
+      // GIVEN a store whose callback captures the settings at call time
+      let seenHotDays: number | undefined;
+      const store = new PluginHeatmapConfigStore(host, () => {
+        seenHotDays = host.settings.heatmap.hotDays.value;
+      });
+      store.save(makeConfig(30));
+      // WHEN the debounce window elapses
+      vi.runAllTimers();
+      // THEN the callback already saw the new config
+      expect(seenHotDays).toBe(30);
+    });
+
+    it('should not run WHILE a save is still inside its debounce window', () => {
+      // GIVEN a store with a callback
+      const onConfigApplied = vi.fn();
+      const store = new PluginHeatmapConfigStore(host, onConfigApplied);
+      // WHEN saving without the window elapsing
+      store.save(makeConfig(30));
+      // THEN the callback has not run
+      expect(onConfigApplied).not.toHaveBeenCalled();
+    });
+  });
 });

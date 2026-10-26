@@ -1,5 +1,7 @@
+import { color as d3Color } from 'd3-color';
 import { interpolateRgb } from 'd3-interpolate';
 import type { VaultNode } from '../core/data/VaultNode';
+import type { HeatmapConfig } from './heatmapConfig';
 import { GRADIENTS, TYPE_C, type ColorMode, type GradientKey, type HeatField, type TypeColors } from '../view/constants';
 
 const MS_PER_DAY = 86400000;
@@ -15,6 +17,7 @@ export interface LeafColorSettings {
 
 /** A leaf's un-hovered color. */
 export interface LeafBaseColor {
+  /** Always `#rrggbb` (the public API promises this format). */
   readonly fill: string;
   /** false → `fill` is the gradient's "no data" (nil) color; the heatmap dims these tiles. */
   readonly hasData: boolean;
@@ -32,7 +35,18 @@ export type TypeFillColors = Pick<TypeColors, 'fill' | 'hover'>;
  */
 export class LeafColorRule {
   /** Type-mode colors for a file type with no TYPE_C entry. */
-  static readonly UNKNOWN_TYPE_COLORS: TypeFillColors = { fill: '#555', hover: '#777' };
+  static readonly UNKNOWN_TYPE_COLORS: TypeFillColors = { fill: '#555555', hover: '#777777' };
+
+  /** The color settings of a heatmap config (day thresholds = the sliders' current values). */
+  static settingsOf(config: HeatmapConfig): LeafColorSettings {
+    return {
+      colorMode: config.colorMode,
+      gradKey: config.gradKey,
+      field: config.field,
+      hotDays: config.hotDays.value,
+      coldDays: config.coldDays.value,
+    };
+  }
 
   /** The leaf's un-hovered fill and whether it has data under `settings`. */
   static baseColor(leaf: VaultNode, settings: LeafColorSettings, nowMs: number): LeafBaseColor {
@@ -52,6 +66,7 @@ export class LeafColorRule {
   /**
    * Gradient color for a timestamp: hot within `hotDays`, cold from
    * `coldDays`, interpolated in between; the nil color when there is no timestamp.
+   * Always `#rrggbb`.
    */
   static heatColor(
     ts: number | null | undefined,
@@ -67,7 +82,10 @@ export class LeafColorRule {
     if (daysOld <= hotDays) return g.hot;
     if (daysOld >= coldDays) return g.cold;
 
-    return interpolateRgb(g.hot, g.cold)((daysOld - hotDays) / (coldDays - hotDays));
+    // interpolateRgb yields `rgb(r, g, b)` — normalized to hex (same color) so
+    // every fill this rule returns has ONE format.
+    const interpolated = interpolateRgb(g.hot, g.cold)((daysOld - hotDays) / (coldDays - hotDays));
+    return d3Color(interpolated)!.formatHex();
   }
 
   /** Type-mode colors for a file type (UNKNOWN_TYPE_COLORS when the type has no entry). */

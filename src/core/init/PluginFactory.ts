@@ -41,6 +41,9 @@ import { GitMtimeRestoreAction } from '../service/gitMtimeRestore/impl/GitMtimeR
 import { GitMtimeRestorer } from '../service/gitMtimeRestore/GitMtimeRestorer';
 import { IsomorphicGitHistory } from '../service/gitMtimeRestore/impl/IsomorphicGitHistory';
 import { ReadOnlyDataAdapterFs } from '../service/gitMtimeRestore/impl/ReadOnlyDataAdapterFs';
+import { VisitHistoryApi } from '../../api/VisitHistoryApi';
+import { VisitHistoryApiDefault } from '../../api/VisitHistoryApiDefault';
+import { VisitHistoryChangeNotifier } from '../../api/VisitHistoryChangeNotifier';
 
 // ── PluginFactory ─────────────────────────────────────────────────────────────
 // Constructs and wires all plugin dependencies.
@@ -75,6 +78,8 @@ export class PluginFactory {
   readonly embedInlineIconRule: EmbedInlineIconRule;
   /** "Restore modified times from git" — command + heatmap banner button entry point. */
   readonly gitMtimeRestoreAction: GitMtimeRestoreAction;
+  /** Public read-only cross-plugin API (main.ts exposes it as `plugin.api`). */
+  readonly visitHistoryApi: VisitHistoryApi;
 
   // Held for activateUserScopedRecording (post-pin wiring).
   private readonly plugin: VisitHistoryPlugin;
@@ -84,6 +89,8 @@ export class PluginFactory {
   private readonly deviceNameProvider: DeviceNameProvider;
   private readonly visitStatsCache: VisitStatsCache;
   private readonly vhV3DurationStore: VhV3DurationStore;
+  /** Fans "colors/stats may have changed" out to public-API subscribers. */
+  private readonly apiChangeNotifier: VisitHistoryChangeNotifier;
   /** V3 duration state machine; undefined until a user name is pinned. */
   private focusDurationTracker?: FocusDurationTracker;
   /** Held so inline note can flush a released session; undefined until pinned. */
@@ -102,7 +109,9 @@ export class PluginFactory {
     this.plugin = plugin;
 
     this.userNotifier = new UserNotifierDefault(plugin);
-    this.heatmapConfigStore = new PluginHeatmapConfigStore(plugin);
+    this.apiChangeNotifier = new VisitHistoryChangeNotifier();
+    // A persisted heatmap config may change API colors (they mirror it).
+    this.heatmapConfigStore = new PluginHeatmapConfigStore(plugin, () => this.apiChangeNotifier.notify());
 
     // Effective config seam. Dev overrides are read ONCE here (env-gated file);
     // absent in production, so the provider just returns live settings values.
@@ -142,6 +151,12 @@ export class PluginFactory {
     this.vaultUtil = new VaultUtilDefault(app, visitStatsProvider, this.isTrackedProvider);
     this.docIdBackfillService = new DocIdBackfillServiceDefault(this.vaultUtil, this.docIdService);
     this.contentTermMatcher = new ContentTermMatcherDefault(this.vaultUtil, noteFileUtil);
+    // Name-independent (reads aggregate across all users) — usable before the pin.
+    this.visitHistoryApi = new VisitHistoryApiDefault(
+      this.vaultUtil,
+      () => plugin.settings.heatmap,
+      this.apiChangeNotifier,
+    );
 
     // Name-independent: moves ALL users' local history files; the session
     // release reads the recording fields lazily (no-op before the pin).
@@ -195,7 +210,7 @@ export class PluginFactory {
 
     this.vhV3DurationRecorder = new VhV3DurationRecorder(
       this.vhV3DurationStore, this.visitStatsCache, this.deviceNameProvider, userName,
-      () => this.plugin.refreshOpenHeatmaps(),
+      () => this.onVisitSessionPersisted(),
     );
     this.focusDurationTracker = new FocusDurationTracker(
       // Min-focus gate: sessions shorter than the configured minimum are dropped
@@ -221,14 +236,22 @@ export class PluginFactory {
     void new VhStartupTasks(new VhV3ReadmeWriter(this.hiddenFileUtil, userName)).run();
   }
 
+  /** A new session changes visit stats: re-render open heatmaps + tell API subscribers. */
+  private onVisitSessionPersisted(): void {
+    this.plugin.refreshOpenHeatmaps();
+    this.apiChangeNotifier.notify();
+  }
+
   /**
    * Best-effort flush of an in-progress V3 focus session (main.ts onunload).
    * Safe when recording was never activated (no pinned name this session).
    * Also closes a still-open user-name modal — it must not outlive the
    * plugin (a post-unload confirm would pin and activate on a dead plugin).
+   * Drops all public-API change subscribers.
    */
   dispose(): void {
     this.modalUserNamePrompt.closeOpenPrompt();
     this.focusDurationTracker?.dispose();
+    this.apiChangeNotifier.dispose();
   }
 }

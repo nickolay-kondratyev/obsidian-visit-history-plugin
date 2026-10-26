@@ -15,11 +15,18 @@ import { INLINE_NOTE_ACTION_NAME } from './core/service/inlineNote/impl/ModalInl
 import { ReadingViewEmbedIconProcessor } from './editorChrome/embedInlineIcon/ReadingViewEmbedIconProcessor';
 import { LivePreviewEmbedIconExtension } from './editorChrome/embedInlineIcon/LivePreviewEmbedIconExtension';
 import { GitMtimeRestoreTexts } from './core/service/gitMtimeRestore/GitMtimeRestoreTexts';
+import { VISIT_HISTORY_API_READY_EVENT, VisitHistoryApi } from './api/VisitHistoryApi';
 
 // ── VisitHistoryPlugin ────────────────────────────────────────────────────────
 export default class VisitHistoryPlugin extends Plugin {
   settings!: VisitHistoryPluginSettings;
   userNotifier!: UserNotifier;
+  /**
+   * PUBLIC cross-plugin API (read-only; contract + docs: src/api/VisitHistoryApi.ts,
+   * API.md). Other plugins read `app.plugins.getPlugin('visit-history')?.api`.
+   * undefined before onload wires it and after unload. Never rename.
+   */
+  api: VisitHistoryApi | undefined;
   // Optional: onunload must not throw when onload failed before wiring.
   private factory?: PluginFactory;
   // Guards pinUserNameAndStartRecording: its awaits (modal, migration) can
@@ -59,6 +66,7 @@ export default class VisitHistoryPlugin extends Plugin {
     const factory = new PluginFactory(this);
     this.factory = factory;
     this.userNotifier = factory.userNotifier;
+    this.exposeApi(factory.visitHistoryApi);
 
     this.initVaultTreeMapView(factory);
     this.initInlineNote(factory);
@@ -80,6 +88,15 @@ export default class VisitHistoryPlugin extends Plugin {
       factory.focusTracker.syncWithActiveLeaf();
       void this.pinUserNameAndStartRecording(factory, hiddenFileUtil);
     });
+  }
+
+  /**
+   * Publishes the public API: the `api` field for plugins loading AFTER us,
+   * plus the ready event for those that loaded first and listen for it.
+   */
+  private exposeApi(api: VisitHistoryApi): void {
+    this.api = api;
+    this.app.workspace.trigger(VISIT_HISTORY_API_READY_EVENT, api);
   }
 
   /**
@@ -279,6 +296,8 @@ export default class VisitHistoryPlugin extends Plugin {
 
   onunload() {
     this.unloaded = true;
+    // Consumers must not keep reaching a dead plugin through `getPlugin(...).api`.
+    this.api = undefined;
     // Best-effort flush of an in-progress V3 focus session. The append is
     // async and unload cannot await it — on a hard app quit the last open
     // session may be lost (accepted limitation). Safe with no pinned name
