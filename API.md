@@ -47,7 +47,11 @@ export default class MyPlugin extends Plugin {
   }
 
   private refreshColors(): void {
-    void this.visitHistory?.getFileColorV1('notes/a.md').then((color) => {
+    // Re-fetch per use: a held api keeps answering after Visit History is
+    // disabled, but stops notifying — this way you notice it is gone.
+    const api = getVisitHistoryApi(this.app);
+    if (!api) return;
+    void api.getFileColorV1('notes/a.md').then((color) => {
       if (color) console.log(color.fill, color.hasData);
     });
   }
@@ -55,7 +59,9 @@ export default class MyPlugin extends Plugin {
 ```
 
 When Visit History is disabled, `getPlugin('visit-history')` returns `null`
-(and its `api` is `undefined`) — treat the data as unavailable.
+(and its `api` is `undefined`) — treat the data as unavailable. An `api` object
+you kept still answers reads but never notifies again, so look it up again
+before use (as `refreshColors` does above).
 
 ## 2. The interface
 
@@ -111,8 +117,9 @@ export interface VisitStatsV1 {
   windows, opens Settings, or goes idle. An open session is not counted yet.
 - **All users and devices** in the vault are included (per-device history only
   syncs if the vault's sync copies dot-folders).
-- **`onChangeV1` fires** after the user changes heatmap color settings and after
-  each saved visit session. It does NOT fire on file edits, renames, or deletes —
+- **`onChangeV1` fires** after the heatmap settings are saved (any heatmap
+  setting, so expect some calls where colors did not change) and after each
+  saved visit session. It does NOT fire on file edits, renames, or deletes —
   listen to Obsidian's vault events for those. A throwing callback is logged and
   never affects other callbacks.
 

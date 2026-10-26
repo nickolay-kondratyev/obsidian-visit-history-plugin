@@ -39,8 +39,9 @@ export interface VisitHistoryApi {
   getVisitStatsV1(path: string): Promise<VisitStatsV1 | undefined>;
 
   /**
-   * Subscribes to "colors/stats may have changed": the heatmap color settings
-   * were persisted, or a visit session was persisted. The callback gets no
+   * Subscribes to "colors/stats may have changed": the heatmap settings were
+   * saved (ANY heatmap setting — extra calls with unchanged colors are
+   * expected), or a visit session was persisted. The callback gets no
    * arguments — re-query what you show. File edits/renames/deletes are NOT
    * signalled here (listen to Obsidian's vault events for those).
    * A throwing callback is logged and never affects other callbacks.

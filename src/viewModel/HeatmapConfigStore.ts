@@ -73,6 +73,8 @@ export class PluginHeatmapConfigStore implements HeatmapConfigStore {
     if (this.pending === null) return;
     this.plugin.settings.heatmap = this.pending;
     this.pending = null;
+    // On the unload flush this may notify API subscribers during teardown —
+    // accepted: the API still answers then, and dispose() drops them right after.
     this.onConfigApplied();
     void this.plugin.saveSettings();
   }
