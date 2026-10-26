@@ -52,6 +52,12 @@ src/
                            # SettingsSanitizer validates loadData() at the boundary
   Constants.ts             # Tracked view types, file extensions, top-level dir names
 
+  api/                     # PUBLIC read-only cross-plugin API (contract — see API.md):
+                           # VisitHistoryApi (interface + V1 payloads + ready-event name),
+                           # VisitHistoryApiDefault (over VaultUtil.getTrackedFile +
+                           # buildLeafNode + LeafColorRule), VisitHistoryChangeNotifier
+                           # (onChangeV1 fan-out; throwing subscribers isolated)
+
   core/
     config/
       ConfigProvider.ts    # EFFECTIVE runtime config seam (getIdleTimeoutMs) —
@@ -179,7 +185,10 @@ src/
     constants.ts, utils.ts  # Palettes + ColorMode/HeatField/GradientKey unions; pure helpers
 
   viewModel/
-    buildVaultTree.ts       # TrackedFile[] → VaultNode tree (single vault walk)
+    buildVaultTree.ts       # TrackedFile[] → VaultNode tree (single vault walk);
+                            # buildLeafNode = the ONE file → leaf-fields mapping
+    LeafColorRule.ts        # Pure: leaf base fill (#rrggbb) + hasData — single owner
+                            # of tile color (heatmap leafFill/leafOpacity + public API)
     pruneArchiveFolders.ts  # Hides _archive folders below the heatmap view root
                             # (scope into an archive via its folder context menu)
     partitionTreemapNodes.ts # Laid-out treemap → folders / collapsed dense folders / leaves
@@ -237,6 +246,7 @@ src/
 - **Doc-id machinery is EXTRACTED to `stable-ids-for-obsidian`** (a published npm dependency with its own git repo; wired by `DocIdServices.createDefault(app.vault)` in PluginFactory). `ensureDocId` is guarded by the lib's `CrossPluginPathLock`: a per-path promise-chain registry on the versioned window/globalThis key `__obsidian_id_lib_path_lock_registry_v1__` (public cross-plugin contract — see the lib README), so two plugins bundling the lib serialize same-path id creation; `getDocId` stays lock-free. The in-transform re-check remains the idempotency backstop. Lib tests run in the lib's own repo.
 - **LRU caching** (instance fields, never module-level; self-written `core/util/cache/LruCache` — no lru-cache dep, its `fetch()` methods false-positived the scorecard's network-call check): per-note visit stats (`VisitStats`: last visit + total focus time, ALL users/devices, closed sessions only) live in memory in `VisitStatsCache` (10k doc ids; no on-disk cache — derivable), read via `VisitStatsProvider.getVisitStats` (`VisitHistoryServiceV3`; caches misses incl. EMPTY) and kept current by `VhV3DurationRecorder` write-through. A write-seq protocol (not max-merge — a total can't be max-merged) keeps it race-safe: a disk read overlapping a session write is never cached; write-through never creates an entry; a failed append drops it. Heatmap reads resolve ids via the READ-ONLY `DocIdService.getDocId` — bulk read paths must never write into user files.
 - **Malformed files never throw**: session parsing (`VhV3SessionLineParser` / `StampLineParser` / `VhV3DurationStore`) skips bad lines and `CanvasDocIdStore` returns `null` for unparseable content, so one bad file can't break aggregation or focus handling. Empty/whitespace-only canvas content is NOT malformed — it's a brand-new canvas, treated as `{}`, and gets an id on first focus.
+- **Public cross-plugin API** (`src/api/`, docs `API.md`): `plugin.api` (`app.plugins.getPlugin('visit-history')?.api`), set in onload, then workspace event `visit-history:api-ready` (arg = api); cleared on unload. Versioning is PER METHOD — every method/payload carries a `V<n>` suffix; a V1 shape never changes, incompatible changes add `...V2` alongside; no `apiVersion` (consumers feature-detect). READ-ONLY by construction (heatmap read path; `getDocId`, never `ensureDocId`); returns plain object literals. Colors mirror the LIVE `settings.heatmap` via `LeafColorRule` (single owner — never re-implement tile color elsewhere). `onChangeV1` fires after a heatmap config lands in settings and after each persisted session (owner decisions; never rename/reshape a V1 member).
 - **Console logging**: only `console.error` for real failures (obsidianmd no-console rule); no debug logs.
 - **Config seam (`ConfigProvider`)**: effective runtime config lives behind one interface — the idle closure in `PluginFactory` reads `configProvider.getIdleTimeoutMs()`, never `settings` directly. A DEV overrides JSON file (named by env var `__VISIT_HISTORY_DEV_OVERRIDES_FILE_JSON_PATH__`, set ONLY by the e2e harness, read once via the desktop-guarded `DevOverridesFileSource`) can override values — bypassing hard limits like the min-5 s idle floor for e2e (`idleTimeoutOverride.e2e.ts`) — WITHOUT touching persisted settings/data.json. Inert in prod (no env var → live settings, byte-for-byte unchanged); mobile-safe (no override); only `idleTimeoutSeconds` is consumed today.
 

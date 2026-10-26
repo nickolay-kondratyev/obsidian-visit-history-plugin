@@ -72,6 +72,14 @@ core/init/PluginFactory ──── DI container: constructs & wires everything
    │                         (DOM) ← reading-view post-processor + live-preview
    │                         CM6 ViewPlugin
    │
+   ├── api/ ──────────────── PUBLIC read-only cross-plugin API (`plugin.api`,
+   │                         contract in VisitHistoryApi.ts, docs in /API.md):
+   │                         VisitHistoryApiDefault reads via VaultUtil
+   │                         .getTrackedFile + buildLeafNode + LeafColorRule
+   │                         (same path + color rule as the heatmap);
+   │                         VisitHistoryChangeNotifier fans out onChangeV1
+   │                         (config persisted / session persisted)
+   │
    ├── settingsTab/ ───────── VisitHistorySettingTab (Settings → Visit History):
    │                         "File modifying actions" → doc id backfill button
    │                         (ConfirmModal gate) + "Idle timeout (seconds)"
@@ -87,6 +95,9 @@ core/init/PluginFactory ──── DI container: constructs & wires everything
    └── view/ ─────────────── VaultTreemapView (Obsidian ItemView) hosts React app
           │
           └── viewModel/ ─── buildVaultTree: TrackedFile[] → VaultNode tree
+                             (buildLeafNode: one file → leaf fields)
+                             LeafColorRule: leaf base fill + hasData (shared
+                             with the public API)
                              tileSize: tile area per sizing mode/curve
                              FileOpener: IFileOpener abstraction
 ```

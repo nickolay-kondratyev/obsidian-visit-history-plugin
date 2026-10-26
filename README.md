@@ -138,6 +138,11 @@ keep them, so after a clone or pull the whole vault looks freshly modified. Run
 reset each file's modified time to its last commit. Visit-based colouring is
 unaffected.
 
+## For plugin developers
+
+To use visit history data (visit stats, heatmap colors) from your own plugin,
+see [API.md](API.md).
+
 ## License
 
 Released under the Kondratyev Source Available License (KSAL-3.0). See [LICENSE.md](LICENSE.md).
