@@ -6,10 +6,13 @@ import {
   fmtDuration,
   fmtFileCount,
   fmtTileSize,
-  heatColor,
+  HOVER_BRIGHTEN,
   leafFieldAgo,
+  leafFill,
 } from './utils';
-import { GRADIENTS } from './constants';
+import { color as d3Color } from 'd3-color';
+import { hierarchy } from 'd3-hierarchy';
+import { GRADIENTS, TYPE_C } from './constants';
 import type { VaultNode } from '../core/data/VaultNode';
 
 const MS_PER_MINUTE = 60000;
@@ -22,24 +25,28 @@ function daysAgo(days: number): number {
 }
 
 describe('view utils', () => {
-  describe('heatColor', () => {
-    it('should return the hot color within hotDays', () => {
-      expect(heatColor(daysAgo(1), 'nature', 7, 180)).toBe(GRADIENTS.nature.hot);
+  describe('leafFill', () => {
+    // GIVEN shared setup: a leaf modified yesterday (hot under 7/180 days), never visited
+    const leafNode = hierarchy<VaultNode>({
+      name: 'a.md', path: 'a.md', type: 'md', size: 1,
+      createdAt: daysAgo(500), lastModifiedAt: daysAgo(1), lastVisitedAt: null, totalFocusMs: 0,
     });
 
-    it('should return the cold color beyond coldDays', () => {
-      expect(heatColor(daysAgo(500), 'nature', 7, 180)).toBe(GRADIENTS.nature.cold);
+    it('should return the hot color WHEN not hovered and coloring by modified time', () => {
+      expect(leafFill(leafNode, false, 'heatmap', 'nature', 'lastModifiedAt', 7, 180)).toBe(GRADIENTS.nature.hot);
     });
 
-    it('should return the nil color for a null timestamp', () => {
-      expect(heatColor(null, 'nature', 7, 180)).toBe(GRADIENTS.nature.nil);
+    it('should brighten the heat color WHEN hovered and the field has a timestamp', () => {
+      const hovered = leafFill(leafNode, true, 'heatmap', 'nature', 'lastModifiedAt', 7, 180);
+      expect(hovered).toBe(d3Color(GRADIENTS.nature.hot)!.brighter(HOVER_BRIGHTEN).formatHex());
     });
 
-    it('should interpolate between hot and cold in the middle', () => {
-      // GIVEN a timestamp between the thresholds
-      const color = heatColor(daysAgo(90), 'nature', 7, 180);
-      // THEN neither endpoint is returned verbatim
-      expect([GRADIENTS.nature.hot, GRADIENTS.nature.cold, GRADIENTS.nature.nil]).not.toContain(color);
+    it('should keep the nil color WHEN hovered and the field has no timestamp', () => {
+      expect(leafFill(leafNode, true, 'heatmap', 'nature', 'lastVisitedAt', 7, 180)).toBe(GRADIENTS.nature.nil);
+    });
+
+    it('should return the type hover color WHEN hovered in type mode', () => {
+      expect(leafFill(leafNode, true, 'type', 'nature', 'lastModifiedAt', 7, 180)).toBe(TYPE_C.md!.hover);
     });
   });
 

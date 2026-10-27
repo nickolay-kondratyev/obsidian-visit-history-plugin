@@ -38,7 +38,15 @@ export class PluginHeatmapConfigStore implements HeatmapConfigStore {
   private saveTimer: number | null = null;
   private pending: HeatmapConfig | null = null;
 
-  constructor(private readonly plugin: HeatmapSettingsHost) {
+  /**
+   * @param onConfigApplied runs right after a config lands in
+   *        `settings.heatmap` (the public API's change notification hooks
+   *        here). Optional: tests and callers without listeners omit it.
+   */
+  constructor(
+    private readonly plugin: HeatmapSettingsHost,
+    private readonly onConfigApplied: () => void = () => {},
+  ) {
     plugin.register(() => this.flush());
   }
 
@@ -65,6 +73,9 @@ export class PluginHeatmapConfigStore implements HeatmapConfigStore {
     if (this.pending === null) return;
     this.plugin.settings.heatmap = this.pending;
     this.pending = null;
+    // On the unload flush this may notify API subscribers during teardown —
+    // accepted: the API still answers then, and dispose() drops them right after.
+    this.onConfigApplied();
     void this.plugin.saveSettings();
   }
 }

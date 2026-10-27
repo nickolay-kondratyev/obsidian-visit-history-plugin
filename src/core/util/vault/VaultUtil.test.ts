@@ -12,6 +12,7 @@ function makeVaultUtil(files: TFile[], visitStats: VisitStats = VisitStats.EMPTY
     vault: {
       getName: () => 'test-vault',
       getFiles: () => files,
+      getFileByPath: (path: string) => files.find(f => f.path === path) ?? null,
     },
   } as unknown as App;
   const visitStatsProvider: VisitStatsProvider = {
@@ -65,6 +66,54 @@ describe('VaultUtilDefault', () => {
       const [trackedFile] = await vaultUtil.getTrackedFiles();
       // THEN totalFocusMs is the summed focus time
       expect(trackedFile?.timeMetadata.totalFocusMs).toBe(999);
+    });
+  });
+
+  describe('getTrackedFile', () => {
+    it('should return the tracked file with its time metadata', async () => {
+      // GIVEN a tracked file with recorded visit stats
+      const tracked = makeTFile({ path: 'notes/a.md', ctime: 11, mtime: 22 });
+      const vaultUtil = makeVaultUtil([tracked], new VisitStats(1234, 999));
+      // WHEN resolving it by path
+      const trackedFile = await vaultUtil.getTrackedFile('notes/a.md');
+      // THEN it carries the same metadata getTrackedFiles would
+      expect(trackedFile).toEqual(
+        { file: tracked, timeMetadata: { createdMs: 11, modifiedMs: 22, visitedMs: 1234, totalFocusMs: 999 } },
+      );
+    });
+
+    it('should normalize the path before the lookup', async () => {
+      // GIVEN a tracked file
+      const tracked = makeTFile({ path: 'notes/a.md' });
+      const vaultUtil = makeVaultUtil([tracked]);
+      // WHEN resolving it by a leading-slash path
+      const trackedFile = await vaultUtil.getTrackedFile('/notes/a.md');
+      // THEN the file is found
+      expect(trackedFile?.file).toBe(tracked);
+    });
+
+    it('should return undefined WHEN no file exists at the path', async () => {
+      // GIVEN an empty vault
+      const vaultUtil = makeVaultUtil([]);
+      // WHEN resolving a missing path
+      // THEN nothing comes back
+      expect(await vaultUtil.getTrackedFile('missing.md')).toBeUndefined();
+    });
+
+    it('should return undefined WHEN the file has an untracked extension', async () => {
+      // GIVEN a pdf
+      const vaultUtil = makeVaultUtil([makeTFile({ path: 'c.pdf' })]);
+      // WHEN resolving it
+      // THEN nothing comes back
+      expect(await vaultUtil.getTrackedFile('c.pdf')).toBeUndefined();
+    });
+
+    it('should return undefined WHEN the file is under a legacy visit-history dir', async () => {
+      // GIVEN a legacy VH file
+      const vaultUtil = makeVaultUtil([makeTFile({ path: '_visit_history/x.md' })]);
+      // WHEN resolving it
+      // THEN nothing comes back
+      expect(await vaultUtil.getTrackedFile('_visit_history/x.md')).toBeUndefined();
     });
   });
 });

@@ -1,4 +1,4 @@
-import { App, TFile } from 'obsidian';
+import { App, normalizePath, TFile } from 'obsidian';
 import { FileTimeMetadata } from "../../data/FileTimeMetadata";
 import { VisitStatsProvider } from "../../service/visitHistoryService/VisitStatsProvider";
 import { IsTrackedProvider } from "./IsTrackedProvider";
@@ -14,6 +14,13 @@ export interface VaultUtil {
   getTrackedTFiles(): TFile[];
 
   getTrackedFiles(): Promise<TrackedFile[]>;
+
+  /**
+   * The tracked file at a vault-relative path with its time/visit metadata
+   * (same metadata as {@link getTrackedFiles}), or undefined when no file
+   * exists there or it is not tracked. Read-only.
+   */
+  getTrackedFile(path: string): Promise<TrackedFile | undefined>;
 }
 
 /** File in vault that is part of
@@ -43,18 +50,28 @@ export class VaultUtilDefault implements VaultUtil {
   }
 
   async getTrackedFiles(): Promise<TrackedFile[]> {
-    const promises = this.getTrackedTFiles().map(f =>
-      this.visitStatsProvider.getVisitStats(f).then(visitStats => ({
-        file: f,
-        timeMetadata: {
-          createdMs: f.stat.ctime,
-          modifiedMs: f.stat.mtime,
-          visitedMs: visitStats.lastVisitMs,
-          totalFocusMs: visitStats.totalFocusMs,
-        },
-      }))
-    );
+    return Promise.all(this.getTrackedTFiles().map(f => this.toTrackedFile(f)));
+  }
 
-    return Promise.all(promises);
+  async getTrackedFile(path: string): Promise<TrackedFile | undefined> {
+    const file = this.app.vault.getFileByPath(normalizePath(path));
+    if (file === null || !this.isTrackedProvider.isTrackedFile(file)) {
+      return undefined;
+    }
+    return this.toTrackedFile(file);
+  }
+
+  /** The ONE mapping of a tracked file onto its time metadata (heatmap + API read the same). */
+  private async toTrackedFile(file: TFile): Promise<TrackedFile> {
+    const visitStats = await this.visitStatsProvider.getVisitStats(file);
+    return {
+      file,
+      timeMetadata: {
+        createdMs: file.stat.ctime,
+        modifiedMs: file.stat.mtime,
+        visitedMs: visitStats.lastVisitMs,
+        totalFocusMs: visitStats.totalFocusMs,
+      },
+    };
   }
 }
