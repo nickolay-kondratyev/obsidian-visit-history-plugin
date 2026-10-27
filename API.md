@@ -9,7 +9,9 @@ Read visit stats and heatmap colors from your own Obsidian plugin.
 ## 1. Get the API
 
 The API is the `api` field of the Visit History plugin (id `visit-history`).
-Plugins load in no fixed order, so handle both cases:
+It is set only once Visit History is ready (Obsidian's layout is ready and the
+vault is fully indexed): **if `api` exists, it is ready** — there is nothing to
+poll. Plugins load in no fixed order, so handle both cases:
 
 ```ts
 import { App, Events, Plugin } from 'obsidian';
@@ -25,12 +27,12 @@ export default class MyPlugin extends Plugin {
   private visitHistory: VisitHistoryApi | undefined;
 
   onload(): void {
-    // Visit History loaded BEFORE us: pick it up once the layout is ready.
+    // Visit History already ready: pick it up once OUR layout-ready runs.
     this.app.workspace.onLayoutReady(() => {
       const api = getVisitHistoryApi(this.app);
       if (api) this.connect(api);
     });
-    // Visit History loads AFTER us (or is re-enabled later): it announces itself.
+    // Visit History not ready yet (or re-enabled later): it announces itself.
     // (Custom event names are not in Obsidian's Workspace typings → upcast to Events.)
     this.registerEvent(
       (this.app.workspace as Events).on('visit-history:api-ready', (api) => this.connect(api as VisitHistoryApi)),
