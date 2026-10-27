@@ -12,18 +12,8 @@ const MS_PER_MINUTE = 60000;
 const MS_PER_HOUR = 3600000;
 const MS_PER_DAY = 86400000;
 
-/**
- * Returns the fill color for a leaf given a timestamp and heatmap thresholds.
- * Delegates to {@link LeafColorRule.heatColor} (the color rule's single owner).
- */
-export function heatColor(
-  ts: number | null | undefined,
-  gradKey: GradientKey,
-  hotDays: number,
-  coldDays: number,
-): string {
-  return LeafColorRule.heatColor(ts, gradKey, hotDays, coldDays, Date.now());
-}
+/** d3 `brighter(k)` factor for a hovered heat tile. */
+export const HOVER_BRIGHTEN = 0.45;
 
 /**
  * Resolves the fill color for a leaf depending on active color mode. The base
@@ -42,7 +32,7 @@ export function leafFill(
   const base = LeafColorRule.baseColor(d.data, { colorMode, gradKey, field, hotDays, coldDays }, Date.now());
   if (!hovered) return base.fill;
   if (colorMode === 'heatmap') {
-    return base.hasData ? d3Color(base.fill)!.brighter(0.45).formatHex() : base.fill;
+    return base.hasData ? d3Color(base.fill)!.brighter(HOVER_BRIGHTEN).formatHex() : base.fill;
   }
   return LeafColorRule.typeColors(d.data.type).hover;
 }

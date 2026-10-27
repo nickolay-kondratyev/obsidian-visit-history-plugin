@@ -171,6 +171,30 @@ describe('LeafColorRule', () => {
       expect(fill).toMatch(HEX_COLOR_RE);
     });
 
+    it('should return the hot color WHEN the stamp is within hotDays', () => {
+      // GIVEN a stamp one day old
+      // WHEN coloring
+      const fill = LeafColorRule.heatColor(daysAgo(1), 'nature', HOT_DAYS, COLD_DAYS, NOW_MS);
+      // THEN it is hot
+      expect(fill).toBe(GRADIENTS.nature.hot);
+    });
+
+    it('should return the cold color WHEN the stamp is beyond coldDays', () => {
+      // GIVEN a stamp 500 days old
+      // WHEN coloring
+      const fill = LeafColorRule.heatColor(daysAgo(500), 'nature', HOT_DAYS, COLD_DAYS, NOW_MS);
+      // THEN it is cold
+      expect(fill).toBe(GRADIENTS.nature.cold);
+    });
+
+    it('should return the nil color for a null stamp', () => {
+      // GIVEN a null stamp (never visited)
+      // WHEN coloring
+      const fill = LeafColorRule.heatColor(null, 'nature', HOT_DAYS, COLD_DAYS, NOW_MS);
+      // THEN it is the nil color
+      expect(fill).toBe(GRADIENTS.nature.nil);
+    });
+
     it('should return the nil color for an undefined stamp', () => {
       // GIVEN no stamp at all
       // WHEN coloring
