@@ -66,7 +66,6 @@ export default class VisitHistoryPlugin extends Plugin {
     const factory = new PluginFactory(this);
     this.factory = factory;
     this.userNotifier = factory.userNotifier;
-    this.exposeApi(factory.visitHistoryApi);
 
     this.initVaultTreeMapView(factory);
     this.initInlineNote(factory);
@@ -83,6 +82,10 @@ export default class VisitHistoryPlugin extends Plugin {
     // writes user-scoped VH data — onLayoutReady keeps UI and file IO off
     // the load path.
     this.app.workspace.onLayoutReady(() => {
+      // Published only now: before layout-ready the vault may not be fully
+      // indexed, and the API would answer `undefined` for not-yet-listed files.
+      // So `api` present == ready — consumers never need to poll a status.
+      this.exposeApi(factory.visitHistoryApi);
       // FIRST: a doc already open at plugin enable got no leaf-change — sync
       // it onto the dispatch chain BEFORE activation enqueues its replay.
       factory.focusTracker.syncWithActiveLeaf();
@@ -91,10 +94,14 @@ export default class VisitHistoryPlugin extends Plugin {
   }
 
   /**
-   * Publishes the public API: the `api` field for plugins loading AFTER us,
-   * plus the ready event for those that loaded first and listen for it.
+   * Publishes the public API: the `api` field for plugins checking AFTER us,
+   * plus the ready event for those that checked first and listen for it.
    */
   private exposeApi(api: VisitHistoryApi): void {
+    // onLayoutReady is not Component-tied: never publish a dead plugin's API.
+    if (this.unloaded) {
+      return;
+    }
     this.api = api;
     this.app.workspace.trigger(VISIT_HISTORY_API_READY_EVENT, api);
   }
