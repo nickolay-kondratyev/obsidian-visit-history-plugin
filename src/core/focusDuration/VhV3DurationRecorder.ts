@@ -23,9 +23,11 @@ export type RecordTimeDocIdResolver = (file: TFile) => Promise<string | null>;
  * it — an external editor (e.g. an AI agent) creating/editing the file while
  * Obsidian shows it would otherwise race our id write. Composed AFTER the
  * min-focus filter, so a dropped (too short) session never assigns an id.
- * Accepted ceilings: a file deleted while focused that had no id yet loses
- * that session (the id write fails → dropped); the id write can still race an
- * external edit when the file is open at the moment its session closes.
+ * Accepted ceilings: a file deleted (or trashed) before its session is
+ * recorded — e.g. deleted while open, its close lands after the unfocus grace
+ * — loses that session, id or not (resolution fails on the missing file →
+ * dropped + logged); the id write can still race an external edit when the
+ * file is open at the moment its session closes.
  *
  * Writes — id resolution included — are SERIALIZED through one promise chain:
  * session ends are fire-and-forget (DOM/timer callbacks can't await), two

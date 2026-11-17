@@ -216,8 +216,9 @@ chars}_e` (lowercase; 36^24 ≈ 2.2e37 keeps the random space above UUID v4's
 2^122). Focusing alone never writes it — an external editor (e.g. an AI agent)
 creating/editing the file Obsidian shows would otherwise race our write. The
 id is ensured only when a session closes AND passes the min-focus gate.
-Accepted ceilings: a file deleted while focused that had no id loses that
-session; the id write can still race an external edit if the file is open when
+Accepted ceilings: a file deleted before its session is recorded (e.g. deleted
+while open — the close lands after the unfocus grace) loses that session, id or
+not; the id write can still race an external edit if the file is open when
 its session closes; before a user name is pinned (no recording) only backfill
 and inline note assign ids.
 The id machinery lives in the `stable-ids-for-obsidian` npm package (its own git
