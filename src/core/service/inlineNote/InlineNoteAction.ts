@@ -19,7 +19,9 @@ import { FrontmatterMerger } from './FrontmatterMerger';
  * Flow: plan (refuse early, with reasons) → confirm → RE-plan (the vault may
  * have changed while the dialog was open) → execute:
  *   1. close note2's open focus session and flush it (no line may land at
- *      the old path after the move),
+ *      the old path after the move) — BEFORE reading the doc ids: ids are
+ *      assigned when a session is recorded, so a first-time-visited note2
+ *      only gets its id (and history) through this flush,
  *   2. edit note1 atomically (Vault.process; the link is re-verified at its
  *      offsets inside the transform — nothing is guessed),
  *   3. ensure note1's doc id (AFTER the edit: adding an id line would shift
@@ -79,6 +81,9 @@ export class InlineNoteAction {
     const note1Name = plan.note1.basename;
     let note2Id: string | null;
     try {
+      // Unconditional and FIRST (see class doc). A refusal below then still
+      // costs note2 the rest of its open session — accepted (rare refusals).
+      await this.focusSessionReleaser.releaseAndFlush(plan.note2);
       note2Id = await this.docIdService.getDocId(plan.note2);
       const note1Id = await this.docIdService.getDocId(plan.note1);
       if (note2Id !== null && note2Id === note1Id) {
@@ -91,9 +96,6 @@ export class InlineNoteAction {
       if (note2MayHaveHistory && note1Id !== null && !DocIdFilenameSafety.isFilenameSafeId(note1Id)) {
         this.dialogs.showRefusal(InlineRefusals.unusableReceivingId(note2Name, plan.note1.path, note1Id));
         return;
-      }
-      if (note2Id !== null) {
-        await this.focusSessionReleaser.releaseAndFlush(note2Id);
       }
       if (!(await this.editReceivingNote(plan))) {
         this.dialogs.showRefusal(InlineRefusals.noteChanged(plan.note1.path));

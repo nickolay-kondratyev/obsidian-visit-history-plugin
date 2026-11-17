@@ -30,7 +30,11 @@ function setup(): {
   const store = new VhV3DurationStore(hidden);
   const service = new VisitHistoryServiceV3(docIdService, store, cache);
   // The real writer side of the cache protocol (begin → append → end).
-  const recorder = new VhV3DurationRecorder(store, cache, new FixedDeviceNameProvider('host-a'), USER, () => undefined);
+  const recorder = new VhV3DurationRecorder(
+    store, cache, new FixedDeviceNameProvider('host-a'), USER,
+    (file) => docIdService.ensureDocId(file),
+    () => undefined,
+  );
   return { service, hidden, docIdService, recorder };
 }
 
@@ -134,7 +138,7 @@ describe('VisitHistoryServiceV3', () => {
       await service.getVisitStats(FILE);
       // WHEN a newer session is recorded
       const newerStartMs = Date.parse('2026-07-10T10:00:00.000Z');
-      recorder.recordFocusDuration(DOC_ID, newerStartMs, 50);
+      recorder.recordFocusDuration(FILE, newerStartMs, 50);
       await recorder.flush();
       // THEN the lookup reflects it
       expect(await service.getVisitStats(FILE)).toEqual({ lastVisitMs: newerStartMs, totalFocusMs: 150 });
@@ -149,7 +153,7 @@ describe('VisitHistoryServiceV3', () => {
         sessionLine('2026-07-09T10:00:00.000Z', 100),
       );
       // WHEN another session is recorded, then looked up
-      recorder.recordFocusDuration(DOC_ID, Date.parse('2026-07-10T10:00:00.000Z'), 50);
+      recorder.recordFocusDuration(FILE, Date.parse('2026-07-10T10:00:00.000Z'), 50);
       await recorder.flush();
       // THEN both sessions count (no one-session total was cached)
       expect((await service.getVisitStats(FILE)).totalFocusMs).toBe(150);
@@ -176,7 +180,7 @@ describe('VisitHistoryServiceV3', () => {
       const staleLookup = service.getVisitStats(FILE);
       await readStarted.promise;
       // WHEN a session is recorded while the read is in flight, then the read completes
-      recorder.recordFocusDuration(DOC_ID, Date.parse('2026-07-10T10:00:00.000Z'), 50);
+      recorder.recordFocusDuration(FILE, Date.parse('2026-07-10T10:00:00.000Z'), 50);
       await recorder.flush();
       releaseRead.resolve();
       await staleLookup;

@@ -22,7 +22,7 @@ interface RecordedSession {
   durationMs: number;
 }
 
-class RecordingSink implements FocusDurationSink {
+class RecordingSink implements FocusDurationSink<string> {
   readonly records: RecordedSession[] = [];
 
   recordFocusDuration(docId: string, focusStartEpochMs: number, durationMs: number): void {
@@ -32,7 +32,7 @@ class RecordingSink implements FocusDurationSink {
 
 describe('FocusDurationTracker', () => {
   let sink: RecordingSink;
-  let tracker: FocusDurationTracker;
+  let tracker: FocusDurationTracker<string>;
   // Mutable so tests can change the timeout mid-run (settings are live-read).
   let idleTimeoutMs: number;
 

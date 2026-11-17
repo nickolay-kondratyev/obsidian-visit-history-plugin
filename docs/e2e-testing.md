@@ -10,8 +10,9 @@ Settings (ends the session; re-opens on close), opening the heatmap
 idle timeout, a sub-floor idle timeout via a dev overrides file, the minimum focus time
 (`minFocusToRecord.e2e.ts`), real input resuming after
 an idle close (`idleResumeOnInput.e2e.ts`), a doc already open when the plugin is enabled
-(`docOpenAtPluginEnable.e2e.ts`), first focus of an id-less note
-(`firstFocusAssignsDocId.e2e.ts`), the first-run user-name modal — cancel records nothing,
+(`docOpenAtPluginEnable.e2e.ts`), an id-less note getting its doc id only once a visit is
+recorded — untouched while focused or after a below-min-focus visit
+(`docIdAssignedWhenVisitRecorded.e2e.ts`), the first-run user-name modal — cancel records nothing,
 confirm records under the new name (`userNameModal.e2e.ts`),
 the interim-top-dir → `.plugin_data/visit_history` migration (`pluginDataMoveMigration.e2e.ts`),
 the inline-note key journey (`inlineNote.e2e.ts`: content moved, note2 trashed, history merged in),

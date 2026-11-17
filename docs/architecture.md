@@ -21,12 +21,14 @@ core/init/PluginFactory ──── DI container: constructs & wires everything
    │      │                  syncs once with the already-active leaf on
    │      │                  layout ready, so a doc open at plugin enable
    │      │                  is tracked)
-   │      └── listener/ ──── DocIdFocusListener → ensures doc id (runs first)
-   │                         VhV3FocusDurationListener → V3 duration sessions
+   │      └── listener/ ──── VhV3FocusDurationListener → V3 duration sessions
+   │                         (forwards the focused FILE; never touches doc ids)
    │
    ├── core/focusDuration ── FocusDurationTracker (V3 session state machine),
-   │                         VhV3DurationRecorder (serialized store appends +
-   │                         VisitStatsCache write-through),
+   │                         MinDurationFilteringSink (min-focus gate),
+   │                         VhV3DurationRecorder (serialized: record-time doc
+   │                         id resolution + store appends + VisitStatsCache
+   │                         write-through),
    │                         WindowActivityMonitor (DOM boundary: window
    │                         blur/focus, visibility, user-input events,
    │                         Settings modal open/close = blur/refocus)
@@ -44,7 +46,7 @@ core/init/PluginFactory ──── DI container: constructs & wires everything
    │                         visit + total focus time; heatmap uses last visit)
    │                         (VisitStatsCache, LRU keyed by doc id)
    │                         DocIdService (stable-ids-for-obsidian): ensure
-   │                         per-document id on focus — generator/stores/
+   │                         per-document id when a visit is RECORDED — generator/stores/
    │                         service/lock live in the stable-ids-for-obsidian
    │                         npm package (its own repo)
    │                         DocIdBackfillService: vault-wide doc id backfill
@@ -117,7 +119,7 @@ core/init/PluginFactory ──── DI container: constructs & wires everything
 ## V3 duration flow (the only recording flow)
 
 ```
-active-leaf-change ──► VhV3FocusDurationListener (ensureDocId → docId
+active-leaf-change ──► VhV3FocusDurationListener (focused TFile = doc handle
                        + hosting window via FocusEvent.ownerDocument)
 window blur/focus  ──► WindowActivityMonitor ─┐   registered on EVERY window:
 Settings open/close──► (= blur / refocus)     │
@@ -126,8 +128,9 @@ user input events  ──► (idle detection)       │   main at load, popouts 
                                               │   popouts already open at load
                                               │   found via leaf enumeration
                                               ▼
-                              FocusDurationTracker (state machine; a window's
-                                │  Document object is its identity handle)
+                              FocusDurationTracker (state machine; a TFile is
+                                │  the doc handle — same instance across renames;
+                                │  a window's Document object is its identity handle)
                                 │  session CLOSES on: navigate away (10 s
                                 │  grace: same-doc refocus within it continues
                                 │  the session; close is stamped at the
@@ -143,8 +146,13 @@ user input events  ──► (idle detection)       │   main at load, popouts 
                                 │  session; a tab DRAGGED to another window
                                 │  keeps its session
                                 ▼
-                              VhV3DurationRecorder (one serialized write chain;
-                                │  writes each session through to
+                              MinDurationFilteringSink (drops sessions under
+                                │  the min focus time — no trace, no doc id)
+                                ▼
+                              VhV3DurationRecorder (one serialized write chain:
+                                │  ensureDocId(file) — assigns a missing id NOW;
+                                │  null/unsafe/failed id → session dropped —
+                                │  then append; writes each session through to
                                 │  VisitStatsCache after a successful append)
                                 ▼
                               VhV3DurationStore.appendFocusDuration
@@ -192,7 +200,8 @@ file menu (.md) / command 'inline-note' on note2
             → refuse; whole-note self-links → link to the new section;
             output keeps note1's line ending)
       → InlineNoteDialogs.confirmInline → re-plan → execute:
-          FocusSessionReleaser (close + flush note2's session)
+          FocusSessionReleaser (close + flush note2's session — FIRST, before
+            reading ids: the flush may assign note2's id)
           → Vault.process(note1): MarkdownSectionPlacer + FrontmatterMerger
             (raw-text, add-only; link re-verified at its offsets)
           → ensureDocId(note1) → VhV3HistoryMerger.mergeInto(note2 → note1)
@@ -202,17 +211,25 @@ file menu (.md) / command 'inline-note' on note2
 
 ## Doc id flow
 
-Every focused document gets a persistent id: `docid_{24 base36 chars}_e`
-(lowercase; 36^24 ≈ 2.2e37 keeps the random space above UUID v4's 2^122).
+Every document with a RECORDED visit gets a persistent id: `docid_{24 base36
+chars}_e` (lowercase; 36^24 ≈ 2.2e37 keeps the random space above UUID v4's
+2^122). Focusing alone never writes it — an external editor (e.g. an AI agent)
+creating/editing the file Obsidian shows would otherwise race our write. The
+id is ensured only when a session closes AND passes the min-focus gate.
+Accepted ceilings: a file deleted before its session is recorded (e.g. deleted
+while open — the close lands after the unfocus grace) loses that session, id or
+not; the id write can still race an external edit if the file is open when
+its session closes; before a user name is pinned (no recording) only backfill
+and inline note assign ids.
 The id machinery lives in the `stable-ids-for-obsidian` npm package (its own git
 repo) so a second plugin can share it; the plugin wires it in
 `PluginFactory` via `DocIdServices.createDefault(app.vault)`.
 
 ```
-active-leaf-change
-  → FocusTracker
-  → DocIdFocusListener (registered FIRST; in-flight DROP guard per path)
-  → DocIdService (stable-ids-for-obsidian; dispatch by extension)
+session closes (FocusDurationTracker)
+  → MinDurationFilteringSink (too short → dropped, no id)
+  → VhV3DurationRecorder write chain (serialized; flush() covers the id write)
+  → DocIdService.ensureDocId (stable-ids-for-obsidian; dispatch by extension)
   → CrossPluginPathLock — per-path cross-plugin window lock around the whole
        read-decide-write (registry on the versioned globalThis key
        __obsidian_id_lib_path_lock_registry_v1__, so two plugins bundling
@@ -231,7 +248,8 @@ Rules:
 - An id slot occupied by an unusable value (e.g. a nested mapping) is never
   overwritten; ensure returns null.
 - Empty/whitespace-only canvas content (a brand-new canvas) is treated as an
-  empty canvas `{}` — an id is written on first focus (and by backfill).
+  empty canvas `{}` — an id is written on its first recorded visit (and by
+  backfill).
 - Writes are atomic `Vault.process` transforms for both md and canvas (id
   re-checked inside the transform).
 - md writes are targeted raw-text edits that only add/fill the single id
@@ -243,7 +261,7 @@ Rules:
 
 The settings tab button "Add ids to all eligible files" runs
 `DocIdBackfillService`: all tracked files → filter `DocIdService.isEligible`
-(md/canvas) → the SAME `ensureDocId` path as focus. Sequential (gentle vault
+(md/canvas) → the SAME `ensureDocId` path as recording. Sequential (gentle vault
 I/O), per-file errors collected without aborting the run, concurrent calls
 JOIN the in-flight run.
 

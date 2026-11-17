@@ -1,6 +1,9 @@
-/** Receives completed focus sessions. Implementations must never throw. */
-export interface FocusDurationSink {
-  recordFocusDuration(docId: string, focusStartEpochMs: number, durationMs: number): void;
+/**
+ * Receives completed focus sessions for doc handle `TDoc` (see
+ * {@link FocusDurationTracker}). Implementations must never throw.
+ */
+export interface FocusDurationSink<TDoc> {
+  recordFocusDuration(doc: TDoc, focusStartEpochMs: number, durationMs: number): void;
 }
 
 /**
@@ -40,14 +43,14 @@ export interface WindowTimers {
   clearTimeout(handle: unknown): void;
 }
 
-interface CurrentDoc {
-  docId: string;
+interface CurrentDoc<TDoc> {
+  doc: TDoc;
   /** The window hosting the doc's leaf — sessions live and die with ITS focus. */
   windowHandle: WindowHandle;
 }
 
-interface ActiveSession {
-  docId: string;
+interface ActiveSession<TDoc> {
+  doc: TDoc;
   startMs: number;
 }
 
@@ -67,6 +70,11 @@ interface PendingClose {
 
 /**
  * V3 focus-duration state machine (Obsidian-agnostic).
+ *
+ * `TDoc` is an opaque doc handle compared by identity (`===`) — "same handle"
+ * means "same document". Production uses Obsidian's `TFile` (the vault keeps
+ * ONE instance per file, across renames), so no doc id is needed to track a
+ * session; the id is resolved only when a session is recorded.
  *
  * A session = one continuous stretch of attention on one document. It opens
  * when a tracked doc is focused while ITS OS window (main or popout) is
@@ -94,12 +102,12 @@ interface PendingClose {
  * lastActivityMs; the single timer re-arms itself for the remainder instead
  * of being reset per event.
  */
-export class FocusDurationTracker {
+export class FocusDurationTracker<TDoc> {
   /** Doc shown in the active leaf — outlives sessions closed by blur/idle. */
-  private currentDoc: CurrentDoc | null = null;
+  private currentDoc: CurrentDoc<TDoc> | null = null;
   /** OS-focused Obsidian windows. Multiple only transiently (event ordering). */
   private readonly focusedWindows = new Set<WindowHandle>();
-  private session: ActiveSession | null = null;
+  private session: ActiveSession<TDoc> | null = null;
   private lastActivityMs = 0;
   // `unknown` already admits null — no `| null` (it'd be a redundant union);
   // null still means "no timer armed" (see the checks below).
@@ -112,13 +120,13 @@ export class FocusDurationTracker {
   private graceTimer: unknown = null;
 
   constructor(
-    private readonly sink: FocusDurationSink,
+    private readonly sink: FocusDurationSink<TDoc>,
     private readonly getIdleTimeoutMs: IdleTimeoutMsProvider,
     private readonly timers: WindowTimers,
   ) {
   }
 
-  onDocFocused(docId: string, windowHandle: WindowHandle): void {
+  onDocFocused(doc: TDoc, windowHandle: WindowHandle): void {
     // Timers can fire late (OS sleep suspends them): a pending close whose
     // grace already expired in WALL-CLOCK time must never be cancelled —
     // finalize it first so a post-sleep refocus starts a FRESH session
@@ -129,7 +137,7 @@ export class FocusDurationTracker {
     ) {
       this.finalizePendingClose();
     }
-    if (this.session?.docId === docId) {
+    if (this.session !== null && this.session.doc === doc) {
       // A same-doc refocus within grace: the unfocus was a transient blip
       // (in-canvas picker/modal) — forgive it, the session continues and the
       // gap counts as focus time (owner decision).
@@ -138,7 +146,7 @@ export class FocusDurationTracker {
       // already-running session for the same doc must not be fragmented.
       // Still adopt the (possibly new) hosting window: a tab dragged out to
       // a popout keeps its session but lives in that window from now on.
-      this.currentDoc = { docId, windowHandle };
+      this.currentDoc = { doc, windowHandle };
       return;
     }
     // A DIFFERENT doc resolves the grace: the old session closes at its
@@ -147,9 +155,9 @@ export class FocusDurationTracker {
     // Defense in depth: FocusTracker dispatches unfocus before a new focus,
     // but a missed unfocus must never merge two docs' sessions.
     this.endSession(Date.now());
-    this.currentDoc = { docId, windowHandle };
+    this.currentDoc = { doc, windowHandle };
     if (this.focusedWindows.has(windowHandle)) {
-      this.startSession(docId);
+      this.startSession(doc);
     }
   }
 
@@ -196,7 +204,7 @@ export class FocusDurationTracker {
     // Reopen only when the focused window is the one HOSTING the current doc
     // — focusing an unrelated popout must not revive another window's doc.
     if (this.session === null && this.currentDoc?.windowHandle === windowHandle) {
-      this.startSession(this.currentDoc.docId);
+      this.startSession(this.currentDoc.doc);
     }
   }
 
@@ -222,7 +230,7 @@ export class FocusDurationTracker {
       && this.currentDoc !== null
       && this.focusedWindows.has(this.currentDoc.windowHandle)
     ) {
-      this.startSession(this.currentDoc.docId);
+      this.startSession(this.currentDoc.doc);
     }
   }
 
@@ -233,14 +241,14 @@ export class FocusDurationTracker {
    * (inline note) — no line may land at the old path afterwards. No-op for
    * any other doc.
    */
-  releaseDoc(docId: string): void {
-    if (this.session?.docId === docId) {
+  releaseDoc(doc: TDoc): void {
+    if (this.session !== null && this.session.doc === doc) {
       // finalizePendingClose is a no-op without a pending close; endSession
       // then closes a still-open one (no-op if the pending close ended it).
       this.finalizePendingClose();
       this.endSession(Date.now());
     }
-    if (this.currentDoc?.docId === docId) {
+    if (this.currentDoc !== null && this.currentDoc.doc === doc) {
       this.currentDoc = null;
     }
   }
@@ -257,9 +265,9 @@ export class FocusDurationTracker {
 
   // ── private ─────────────────────────────────────────────────────────────
 
-  private startSession(docId: string): void {
+  private startSession(doc: TDoc): void {
     const now = Date.now();
-    this.session = { docId, startMs: now };
+    this.session = { doc, startMs: now };
     this.lastActivityMs = now;
     this.armIdleTimer(this.getIdleTimeoutMs());
   }
@@ -275,9 +283,9 @@ export class FocusDurationTracker {
     // ends at the last interaction, never counting the gap. Normal closes
     // (gap < timeout) are untouched.
     const effectiveEndMs = this.idleCappedEndMs(endMs);
-    const { docId, startMs } = this.session;
+    const { doc, startMs } = this.session;
     this.session = null;
-    this.sink.recordFocusDuration(docId, startMs, Math.max(0, effectiveEndMs - startMs));
+    this.sink.recordFocusDuration(doc, startMs, Math.max(0, effectiveEndMs - startMs));
   }
 
   private armIdleTimer(delayMs: number): void {

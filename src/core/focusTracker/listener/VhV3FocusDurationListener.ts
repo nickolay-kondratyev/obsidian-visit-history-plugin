@@ -1,19 +1,21 @@
+import { TFile } from 'obsidian';
 import { FocusEvent, FocusListener } from '../FocusTracker';
-import { DocIdService } from 'stable-ids-for-obsidian';
-import { DocIdFilenameSafety } from '../../service/visitHistoryService/DocIdFilenameSafety';
 import { FocusDurationTracker } from '../../focusDuration/FocusDurationTracker';
 
 /**
- * V3 bridge from focus events to the duration tracker: resolves the focused
- * file to its doc id and forwards focus/unfocus.
+ * V3 bridge from focus events to the duration tracker: forwards the focused
+ * FILE (the tracker's doc handle) and its hosting window.
  *
- * No InFlightDropGuard here: FocusTracker serializes dispatch, and the
+ * Deliberately never touches doc ids — focusing a note must not modify it.
+ * The id is resolved (and assigned if missing) only when a session is
+ * recorded (VhV3DurationRecorder).
+ *
+ * No per-event dedup here: FocusTracker serializes dispatch, and the
  * tracker itself ignores duplicate focus events for the same doc.
  */
 export class VhV3FocusDurationListener implements FocusListener {
   constructor(
-    private readonly docIdService: DocIdService,
-    private readonly focusDurationTracker: FocusDurationTracker,
+    private readonly focusDurationTracker: FocusDurationTracker<TFile>,
   ) {
   }
 
@@ -21,39 +23,11 @@ export class VhV3FocusDurationListener implements FocusListener {
     if (!event.file?.path) {
       return;
     }
-    // ensureDocId is a cheap cached read here — DocIdFocusListener (registered
-    // first) has already persisted the id.
-    let docId: string | null;
-    try {
-      docId = await this.docIdService.ensureDocId(event.file);
-    } catch (error) {
-      // Fail toward "this doc's session is lost", never toward "the PREVIOUS
-      // doc's session keeps accruing while the user views this doc".
-      console.error(`[VHP][VhV3FocusDurationListener] ensureDocId failed, duration not tracked path=[${event.file.path}]`, error);
-      docId = null;
-    }
-    if (docId === null || !this.isTrackableId(docId, event.file.path)) {
-      // The newly focused doc cannot be duration-tracked. Still tell the
-      // tracker focus moved away, or a same-leaf navigation from a trackable
-      // doc would leave its session running forever.
-      this.focusDurationTracker.onDocUnfocused();
-      return;
-    }
     // The hosting window's document is the tracker's per-window identity.
-    this.focusDurationTracker.onDocFocused(docId, event.ownerDocument);
+    this.focusDurationTracker.onDocFocused(event.file, event.ownerDocument);
   }
 
   async onUnfocus(_event: FocusEvent): Promise<void> {
     this.focusDurationTracker.onDocUnfocused();
-  }
-
-  // ── private ─────────────────────────────────────────────────────────────
-
-  private isTrackableId(docId: string, path: string): boolean {
-    if (DocIdFilenameSafety.isFilenameSafeId(docId)) {
-      return true;
-    }
-    console.error(`[VHP][VhV3FocusDurationListener] doc id not filename-safe, duration not tracked path=[${path}] docId=[${docId}]`);
-    return false;
   }
 }

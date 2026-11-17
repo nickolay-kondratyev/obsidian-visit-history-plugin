@@ -8,7 +8,7 @@ interface RecordedSession {
   readonly durationMs: number;
 }
 
-class RecordingSink implements FocusDurationSink {
+class RecordingSink implements FocusDurationSink<string> {
   readonly records: RecordedSession[] = [];
   recordFocusDuration(docId: string, focusStartEpochMs: number, durationMs: number): void {
     this.records.push({ docId, focusStartEpochMs, durationMs });
