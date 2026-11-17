@@ -20,7 +20,7 @@ import { DeviceNameProvider } from '../util/env/DeviceNameProvider';
 /** Told after each session is persisted (never on a failed write). Must never throw. */
 export type SessionPersistedListener = () => void;
 
-export class VhV3DurationRecorder implements FocusDurationSink {
+export class VhV3DurationRecorder implements FocusDurationSink<string> {
   private writeChain: Promise<void> = Promise.resolve();
 
   constructor(

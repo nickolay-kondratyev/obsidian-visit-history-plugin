@@ -134,7 +134,7 @@ class StubPlugin {
   }
 }
 
-class RecordingSink implements FocusDurationSink {
+class RecordingSink implements FocusDurationSink<string> {
   readonly records: string[] = [];
 
   recordFocusDuration(docId: string, _focusStartEpochMs: number, durationMs: number): void {
@@ -147,7 +147,7 @@ class MainWindowRig {
   readonly main: FakeWindow;
   readonly stub = new StubPlugin();
   readonly sink = new RecordingSink();
-  readonly tracker: FocusDurationTracker;
+  readonly tracker: FocusDurationTracker<string>;
 
   constructor(opts: { focused?: boolean; settingsOpen?: boolean } = {}) {
     this.main = new FakeWindow('main', opts.focused ?? true);

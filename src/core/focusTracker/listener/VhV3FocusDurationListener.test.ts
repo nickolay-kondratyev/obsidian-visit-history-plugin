@@ -18,7 +18,7 @@ function makeFocusEvent(path: string, ownerDocument: Document = OWNER_DOC): Focu
   return { type: 'markdown', title: file.basename, file, ownerDocument };
 }
 
-class RecordingSink implements FocusDurationSink {
+class RecordingSink implements FocusDurationSink<string> {
   readonly docIds: string[] = [];
   /** `${docId}:${durationMs}` per record — for tests where the close moment matters. */
   readonly sessions: string[] = [];
@@ -31,7 +31,7 @@ class RecordingSink implements FocusDurationSink {
 
 interface Setup {
   listener: VhV3FocusDurationListener;
-  tracker: FocusDurationTracker;
+  tracker: FocusDurationTracker<string>;
   docIdService: FakeDocIdService;
   sink: RecordingSink;
 }

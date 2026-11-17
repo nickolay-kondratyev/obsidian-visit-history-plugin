@@ -21,16 +21,16 @@ export type MinRecordDurationMsProvider = () => number;
  * The threshold is read live per call (`>=` is inclusive: an exactly-threshold
  * session records; a minimum of 0 forwards everything, including 0 ms).
  */
-export class MinDurationFilteringSink implements FocusDurationSink {
+export class MinDurationFilteringSink<TDoc> implements FocusDurationSink<TDoc> {
   constructor(
-    private readonly delegate: FocusDurationSink,
+    private readonly delegate: FocusDurationSink<TDoc>,
     private readonly getMinFocusMs: MinRecordDurationMsProvider,
   ) {}
 
-  recordFocusDuration(docId: string, focusStartEpochMs: number, durationMs: number): void {
+  recordFocusDuration(doc: TDoc, focusStartEpochMs: number, durationMs: number): void {
     if (durationMs < this.getMinFocusMs()) {
       return;
     }
-    this.delegate.recordFocusDuration(docId, focusStartEpochMs, durationMs);
+    this.delegate.recordFocusDuration(doc, focusStartEpochMs, durationMs);
   }
 }

@@ -13,7 +13,7 @@ import { FocusDurationTracker } from '../../focusDuration/FocusDurationTracker';
 export class VhV3FocusDurationListener implements FocusListener {
   constructor(
     private readonly docIdService: DocIdService,
-    private readonly focusDurationTracker: FocusDurationTracker,
+    private readonly focusDurationTracker: FocusDurationTracker<string>,
   ) {
   }
 

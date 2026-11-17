@@ -92,7 +92,7 @@ export class PluginFactory {
   /** Fans "colors/stats may have changed" out to public-API subscribers. */
   private readonly apiChangeNotifier: VisitHistoryChangeNotifier;
   /** V3 duration state machine; undefined until a user name is pinned. */
-  private focusDurationTracker?: FocusDurationTracker;
+  private focusDurationTracker?: FocusDurationTracker<string>;
   /** Held so inline note can flush a released session; undefined until pinned. */
   private vhV3DurationRecorder?: VhV3DurationRecorder;
   /**

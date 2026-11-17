@@ -63,7 +63,8 @@ export class WindowActivityMonitor {
 
   constructor(
     private readonly plugin: Plugin,
-    private readonly tracker: FocusDurationTracker,
+    // Doc-agnostic: the monitor only reports window focus + user activity.
+    private readonly tracker: FocusDurationTracker<unknown>,
     // Injected (PluginFactory passes the globals) — unit-testable without a DOM.
     mainWindow: Window,
     mainDocument: Document,
