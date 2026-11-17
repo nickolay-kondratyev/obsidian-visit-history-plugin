@@ -55,11 +55,15 @@ class RecordingNotifier implements UserNotifier {
 }
 
 class RecordingReleaser implements FocusSessionReleaser {
+  /** Runs inside releaseAndFlush — simulates what the session flush writes. */
+  onFlush: (file: TFile) => void = () => undefined;
+
   constructor(private readonly log: string[]) {
   }
 
-  async releaseAndFlush(docId: string): Promise<void> {
-    this.log.push(`release:${docId}`);
+  async releaseAndFlush(file: TFile): Promise<void> {
+    this.log.push(`release:${file.path}`);
+    this.onFlush(file);
   }
 }
 
@@ -118,16 +122,17 @@ function setup(options: SetupOptions = {}) {
     collector.references = [FixedReferenceCollector.bodyReferenceIn(note1, note1Content, '[[note2]]')];
   }
   hidden.seedFile(NOTE2_HISTORY, SESSION_LINE);
+  const releaser = new RecordingReleaser(log);
   const action = new InlineNoteAction(
     new InlineNotePlanner(collector, notes),
     notes,
     docIds,
     new VhV3HistoryMerger(hidden, new VisitStatsCache()),
-    new RecordingReleaser(log),
+    releaser,
     dialogs,
     notifier,
   );
-  return { action, notes, hidden, dialogs, notifier, docIds, log, note2 };
+  return { action, notes, hidden, dialogs, notifier, docIds, log, note2, releaser };
 }
 
 describe('InlineNoteAction', () => {
@@ -185,7 +190,26 @@ describe('InlineNoteAction', () => {
     it('should release note2 focus session first, then edit note1, and trash note2 last', async () => {
       const { action, log, note2 } = setup();
       await action.inlineConfirmed(note2);
-      expect(log).toEqual([`release:${NOTE2_ID}`, 'edit:note1.md', 'trash:note2.md']);
+      expect(log).toEqual(['release:note2.md', 'edit:note1.md', 'trash:note2.md']);
+    });
+
+    it('should release note2 focus session even when note2 has no doc id yet', async () => {
+      // GIVEN note2 visited for the first time — open session, no id yet
+      const { action, log, note2 } = setup({ note2Id: null });
+      // WHEN inlined
+      await action.inlineConfirmed(note2);
+      // THEN its session was still released (its flush is what assigns the id)
+      expect(log[0]).toBe('release:note2.md');
+    });
+
+    it('should move the history recorded by the release flush under note1', async () => {
+      // GIVEN note2 without an id whose open session's flush assigns NOTE2_ID
+      const { action, hidden, docIds, releaser, note2 } = setup({ note2Id: null });
+      releaser.onFlush = (file) => docIds.seedId(file.path, NOTE2_ID);
+      // WHEN inlined
+      await action.inlineConfirmed(note2);
+      // THEN note2's ids were read AFTER the flush, so its history moved under note1
+      expect(hidden.getContent(mergedHistoryPath(NOTE1_ID))).toBe(SESSION_LINE);
     });
 
     it('should report success', async () => {

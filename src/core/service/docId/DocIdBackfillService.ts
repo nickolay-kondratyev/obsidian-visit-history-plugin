@@ -16,7 +16,7 @@ export interface DocIdBackfillResult {
 /**
  * Vault-wide doc id backfill: ensures every eligible tracked file (md incl.
  * .excalidraw.md, canvas) carries a persistent doc id — the same per-file
- * operation DocIdFocusListener triggers on focus.
+ * operation the duration recorder triggers when it records a visit session.
  * Invoked from the settings tab's "File modifying actions" area.
  */
 export interface DocIdBackfillService {
@@ -28,9 +28,9 @@ export interface DocIdBackfillService {
 }
 
 export class DocIdBackfillServiceDefault implements DocIdBackfillService {
-  // WHY-NOT InFlightDropGuard: it has DROP semantics and returns void, but
-  // callers here need the result — joining the in-flight run is correct for
-  // a vault-wide action (a second click reports the same outcome).
+  // WHY-NOT drop-on-concurrent-call: callers need the result — joining the
+  // in-flight run is correct for a vault-wide action (a second click reports
+  // the same outcome).
   private inFlight: Promise<DocIdBackfillResult> | null = null;
 
   constructor(

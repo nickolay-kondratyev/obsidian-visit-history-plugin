@@ -75,9 +75,11 @@ While a note, canvas, or Excalidraw drawing is in focus, the plugin times it.
 When you navigate away, switch windows, open Settings, or go idle, it saves that
 session (start time + duration). Visits under 2 seconds are not recorded.
 
-The first time you open a document, it gets a small permanent **id** (stored in
-the note's frontmatter or the canvas's metadata). History is saved under that id,
-not the path, so renames and moves keep it.
+The first time a visit to a document is saved, the document gets a small
+permanent **id** (stored in the note's frontmatter or the canvas's metadata).
+Just opening a document never changes it, and a visit too short to record leaves
+it untouched. History is saved under that id, not the path, so renames and moves
+keep it.
 
 **Where it's saved:** the hidden `.plugin_data/visit_history/` folder in your
 vault, organised per user and per device. Because the folder is hidden, it stays

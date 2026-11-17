@@ -1,4 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, MockInstance, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { TFile } from 'obsidian';
 import { VhV3FocusDurationListener } from './VhV3FocusDurationListener';
 import { FocusEvent } from '../FocusTracker';
 import {
@@ -6,49 +7,80 @@ import {
   FocusDurationTracker,
   UNFOCUS_GRACE_MS,
 } from '../../focusDuration/FocusDurationTracker';
-import { FakeDocIdService } from '../../../testSupport/fakes';
+import { MinDurationFilteringSink } from '../../focusDuration/MinDurationFilteringSink';
+import { VhV3DurationRecorder } from '../../focusDuration/VhV3DurationRecorder';
+import { VhV3DurationStore } from '../../service/visitHistoryService/v3/VhV3DurationStore';
+import { VisitStatsCache } from '../../service/visitHistoryService/v3/VisitStatsCache';
+import { FakeHiddenFileUtil } from '../../../testSupport/FakeHiddenFileUtil';
+import { FakeDocIdService, FixedDeviceNameProvider } from '../../../testSupport/fakes';
 import { makeTFile } from '../../../testSupport/fileFactory';
 
 // Window identity is by reference — one shared "main window" document.
 const OWNER_DOC = { name: 'main-window-doc' } as unknown as Document;
 const POPOUT_DOC = { name: 'popout-window-doc' } as unknown as Document;
+const IDLE_MS = 180_000;
+const MIN_FOCUS_MS = 2000;
 
-function makeFocusEvent(path: string, ownerDocument: Document = OWNER_DOC): FocusEvent {
-  const file = makeTFile({ path });
+function focusEventFor(file: TFile, ownerDocument: Document = OWNER_DOC): FocusEvent {
   return { type: 'markdown', title: file.basename, file, ownerDocument };
 }
 
-class RecordingSink implements FocusDurationSink<string> {
-  readonly docIds: string[] = [];
-  /** `${docId}:${durationMs}` per record — for tests where the close moment matters. */
+class RecordingSink implements FocusDurationSink<TFile> {
+  /** `${path}:${durationMs}` per record. */
   readonly sessions: string[] = [];
 
-  recordFocusDuration(docId: string, _focusStartEpochMs: number, durationMs: number): void {
-    this.docIds.push(docId);
-    this.sessions.push(`${docId}:${durationMs}`);
+  recordFocusDuration(file: TFile, _focusStartEpochMs: number, durationMs: number): void {
+    this.sessions.push(`${file.path}:${durationMs}`);
   }
 }
 
 interface Setup {
   listener: VhV3FocusDurationListener;
-  tracker: FocusDurationTracker<string>;
-  docIdService: FakeDocIdService;
+  tracker: FocusDurationTracker<TFile>;
   sink: RecordingSink;
 }
 
 function setup(): Setup {
-  const docIdService = new FakeDocIdService();
   const sink = new RecordingSink();
   // setup() is called inside each test (after vi.useFakeTimers), so this
   // shorthand captures the FAKE clock; advanceTimersByTime drives the tracker.
-  const tracker = new FocusDurationTracker(sink, () => 180_000, { setTimeout, clearTimeout });
+  const tracker = new FocusDurationTracker<TFile>(sink, () => IDLE_MS, { setTimeout, clearTimeout });
   // Mirrors WindowActivityMonitor's hasFocus() seeding at plugin load.
   tracker.onWindowFocused(OWNER_DOC);
-  const listener = new VhV3FocusDurationListener(docIdService, tracker);
-  return { listener, tracker, docIdService, sink };
+  const listener = new VhV3FocusDurationListener(tracker);
+  return { listener, tracker, sink };
+}
+
+interface RecordingChainSetup {
+  listener: VhV3FocusDurationListener;
+  recorder: VhV3DurationRecorder;
+  docIds: FakeDocIdService;
+}
+
+/** The production sink chain: tracker → min-focus filter → recorder (record-time id). */
+function setupRecordingChain(): RecordingChainSetup {
+  const docIds = new FakeDocIdService();
+  const recorder = new VhV3DurationRecorder(
+    new VhV3DurationStore(new FakeHiddenFileUtil()),
+    new VisitStatsCache(),
+    new FixedDeviceNameProvider('host'),
+    'alice',
+    (file) => docIds.ensureDocId(file),
+    () => undefined,
+  );
+  const tracker = new FocusDurationTracker<TFile>(
+    new MinDurationFilteringSink(recorder, () => MIN_FOCUS_MS),
+    () => IDLE_MS,
+    { setTimeout, clearTimeout },
+  );
+  tracker.onWindowFocused(OWNER_DOC);
+  return { listener: new VhV3FocusDurationListener(tracker), recorder, docIds };
 }
 
 describe('VhV3FocusDurationListener', () => {
+  const noteA = makeTFile({ path: 'notes/a.md' });
+  const drawing = makeTFile({ path: 'draw.excalidraw' });
+
   beforeEach(() => {
     vi.useFakeTimers({ now: Date.parse('2026-07-09T22:00:00.000Z') });
   });
@@ -58,89 +90,28 @@ describe('VhV3FocusDurationListener', () => {
   });
 
   describe('onFocus / onUnfocus', () => {
-    it('should record a session keyed by the resolved doc id', async () => {
+    it('should record a session keyed by the focused file', async () => {
       // GIVEN a note focused for 5s
       const { listener, sink } = setup();
-      await listener.onFocus(makeFocusEvent('notes/a.md'));
+      await listener.onFocus(focusEventFor(noteA));
       vi.advanceTimersByTime(5000);
       // WHEN it is unfocused and the unfocus grace resolves
-      await listener.onUnfocus(makeFocusEvent('notes/a.md'));
+      await listener.onUnfocus(focusEventFor(noteA));
       vi.advanceTimersByTime(UNFOCUS_GRACE_MS);
-      // THEN the session was recorded under the doc id
-      expect(sink.docIds).toEqual(['docid-for-notes_a.md']);
+      // THEN the session was recorded for that file
+      expect(sink.sessions).toEqual(['notes/a.md:5000']);
     });
 
-    it('should record nothing for a doc that cannot carry an id', async () => {
-      // GIVEN a raw .excalidraw file (no id location)
-      const { listener, sink } = setup();
-      await listener.onFocus(makeFocusEvent('draw.excalidraw'));
-      vi.advanceTimersByTime(5000);
-      // WHEN it is unfocused and the unfocus grace resolves
-      await listener.onUnfocus(makeFocusEvent('draw.excalidraw'));
-      vi.advanceTimersByTime(UNFOCUS_GRACE_MS);
-      // THEN no session was recorded
-      expect(sink.docIds).toEqual([]);
-    });
-
-    it('should close the running session when focus moves to an id-less doc without an unfocus event', async () => {
+    it('should close the running session when focus moves to another doc without an unfocus event', async () => {
       // GIVEN a note session running
       const { listener, sink } = setup();
-      await listener.onFocus(makeFocusEvent('notes/a.md'));
+      await listener.onFocus(focusEventFor(noteA));
       vi.advanceTimersByTime(5000);
-      // WHEN a same-leaf navigation lands on an id-less doc (focus only, no
-      // unfocus) and the unfocus grace resolves
-      await listener.onFocus(makeFocusEvent('draw.excalidraw'));
-      vi.advanceTimersByTime(UNFOCUS_GRACE_MS);
-      // THEN the note's session was closed (not left running forever)
-      expect(sink.docIds).toEqual(['docid-for-notes_a.md']);
-    });
-
-    describe('when the existing id is not filename-safe', () => {
-      let errorSpy: MockInstance<typeof console.error>;
-      let sink: RecordingSink;
-
-      beforeEach(async () => {
-        // GIVEN a note carrying a pre-existing unsafe id
-        const rig = setup();
-        sink = rig.sink;
-        rig.docIdService.seedId('notes/a.md', 'un/safe');
-        errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-        // WHEN focused for 5s, unfocused, and the unfocus grace resolves
-        await rig.listener.onFocus(makeFocusEvent('notes/a.md'));
-        vi.advanceTimersByTime(5000);
-        await rig.listener.onUnfocus(makeFocusEvent('notes/a.md'));
-        vi.advanceTimersByTime(UNFOCUS_GRACE_MS);
-      });
-
-      afterEach(() => {
-        errorSpy.mockRestore();
-      });
-
-      it('should skip (with console.error) a doc whose existing id is not filename-safe', () => {
-        // THEN nothing was recorded
-        expect(sink.docIds).toEqual([]);
-      });
-
-      it('should report the unsafe id via console.error', () => {
-        // THEN the skip is reported
-        expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('not filename-safe'));
-      });
-    });
-
-    it('should close the running session when id resolution THROWS for the newly focused doc', async () => {
-      // GIVEN a note session running
-      const { listener, docIdService, sink } = setup();
-      await listener.onFocus(makeFocusEvent('notes/a.md'));
-      vi.advanceTimersByTime(5000);
-      // WHEN focus moves (same-leaf, focus only) to a doc whose id resolution fails with an IO error
-      docIdService.throwingPaths.add('notes/b.md');
-      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-      await listener.onFocus(makeFocusEvent('notes/b.md'));
+      // WHEN a same-leaf navigation lands on another doc (focus only, no unfocus)
+      await listener.onFocus(focusEventFor(drawing));
       vi.advanceTimersByTime(60_000);
-      // THEN the note's session was closed at the focus switch — the failure
-      // must not leave it accruing time while the user views the other doc
-      expect(sink.sessions).toEqual(['docid-for-notes_a.md:5000']);
-      errorSpy.mockRestore();
+      // THEN the note's session was closed at the switch (not left accruing)
+      expect(sink.sessions).toEqual(['notes/a.md:5000']);
     });
 
     it('should key the session to the event ownerDocument window (popout)', async () => {
@@ -148,11 +119,11 @@ describe('VhV3FocusDurationListener', () => {
       const { listener, tracker, sink } = setup();
       tracker.onWindowFocused(POPOUT_DOC);
       // WHEN a note hosted in the popout is focused for 5s and the POPOUT blurs
-      await listener.onFocus(makeFocusEvent('notes/a.md', POPOUT_DOC));
+      await listener.onFocus(focusEventFor(noteA, POPOUT_DOC));
       vi.advanceTimersByTime(5000);
       tracker.onWindowBlurred(POPOUT_DOC);
       // THEN the session closed at the popout's blur — the tracker got the popout as the hosting window
-      expect(sink.sessions).toEqual(['docid-for-notes_a.md:5000']);
+      expect(sink.sessions).toEqual(['notes/a.md:5000']);
     });
 
     it('should ignore focus events without a file path', async () => {
@@ -166,7 +137,46 @@ describe('VhV3FocusDurationListener', () => {
       vi.advanceTimersByTime(5000);
       tracker.dispose();
       // THEN nothing happened
-      expect(sink.docIds).toEqual([]);
+      expect(sink.sessions).toEqual([]);
+    });
+  });
+
+  describe('with the recording sink chain (record-time doc id)', () => {
+    it('should not touch the doc id while the note is focused', async () => {
+      // GIVEN the production sink chain
+      const { listener, recorder, docIds } = setupRecordingChain();
+      // WHEN an id-less note is focused for a while (session still open)
+      await listener.onFocus(focusEventFor(noteA));
+      vi.advanceTimersByTime(30_000);
+      await recorder.flush();
+      // THEN no id was ensured — focusing must not modify the note
+      expect(docIds.ensuredPaths).toEqual([]);
+    });
+
+    it('should assign the doc id once the session is recorded', async () => {
+      // GIVEN an id-less note focused longer than the min focus time
+      const { listener, recorder, docIds } = setupRecordingChain();
+      await listener.onFocus(focusEventFor(noteA));
+      vi.advanceTimersByTime(MIN_FOCUS_MS + 1000);
+      // WHEN it is left and the unfocus grace resolves (session recorded)
+      await listener.onUnfocus(focusEventFor(noteA));
+      vi.advanceTimersByTime(UNFOCUS_GRACE_MS);
+      await recorder.flush();
+      // THEN its id was ensured exactly once, at record time
+      expect(docIds.ensuredPaths).toEqual(['notes/a.md']);
+    });
+
+    it('should never assign a doc id for a session below the min focus time', async () => {
+      // GIVEN an id-less note focused SHORTER than the min focus time
+      const { listener, recorder, docIds } = setupRecordingChain();
+      await listener.onFocus(focusEventFor(noteA));
+      vi.advanceTimersByTime(MIN_FOCUS_MS - 1);
+      // WHEN it is left and the unfocus grace resolves (session dropped)
+      await listener.onUnfocus(focusEventFor(noteA));
+      vi.advanceTimersByTime(UNFOCUS_GRACE_MS);
+      await recorder.flush();
+      // THEN no id was ensured — the quick visit leaves the note untouched
+      expect(docIds.ensuredPaths).toEqual([]);
     });
   });
 });

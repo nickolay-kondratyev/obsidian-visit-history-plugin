@@ -1,3 +1,5 @@
+import { TFile } from 'obsidian';
+
 /**
  * Lets an action that MOVES a doc's history files (inline note) first close
  * the doc's open focus session and wait for its record to land, so no
@@ -5,9 +7,11 @@
  */
 export interface FocusSessionReleaser {
   /**
-   * Closes the doc's open session now (no new one opens until the doc is
+   * Closes the file's open session now (no new one opens until it is
    * focused again) and resolves once every queued session write has
-   * settled. No-op while recording is inactive (no pinned user name).
+   * settled — including the record-time doc id assignment, so a file that
+   * had no id yet carries one afterwards if its session was recorded.
+   * No-op while recording is inactive (no pinned user name).
    */
-  releaseAndFlush(docId: string): Promise<void>;
+  releaseAndFlush(file: TFile): Promise<void>;
 }

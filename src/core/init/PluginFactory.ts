@@ -1,4 +1,4 @@
-import { App } from 'obsidian';
+import { App, TFile } from 'obsidian';
 import VisitHistoryPlugin from '../../main';
 import { FocusTracker } from '../focusTracker/FocusTracker';
 import { UserNotifier } from '../util/userComm/UserNotifier';
@@ -19,7 +19,6 @@ import { VhV3FocusDurationListener } from '../focusTracker/listener/VhV3FocusDur
 import { VaultUtil, VaultUtilDefault } from '../util/vault/VaultUtil';
 import { IsTrackedProvider, IsTrackedProviderDefault } from "../util/vault/IsTrackedProvider";
 import { DocIdService, DocIdServices } from 'stable-ids-for-obsidian';
-import { DocIdFocusListener } from '../focusTracker/listener/DocIdFocusListener';
 import { DocIdBackfillService, DocIdBackfillServiceDefault } from '../service/docId/DocIdBackfillService';
 import { VhStartupTasks } from './VhStartupTasks';
 import { HeatmapConfigStore, PluginHeatmapConfigStore } from '../../viewModel/HeatmapConfigStore';
@@ -50,11 +49,13 @@ import { VisitHistoryChangeNotifier } from '../../api/VisitHistoryChangeNotifier
 // The plugin's onload() calls this once and reads from the resulting instance.
 //
 // Wiring is split around the user-name pin: the constructor wires everything
-// NAME-INDEPENDENT (heatmap reads aggregate across all users; doc-id
-// assignment is user-agnostic), while everything that writes user-scoped VH
+// NAME-INDEPENDENT (heatmap reads aggregate across all users; backfill and
+// inline note are user-agnostic), while everything that writes user-scoped VH
 // data waits for activateUserScopedRecording(userName) — called by main.ts
 // once the human confirms a name in the user-name modal. With no pinned name
-// (modal dismissed) recording machinery is simply never constructed.
+// (modal dismissed) recording machinery is simply never constructed — and,
+// since doc ids are assigned only when a session is RECORDED, focusing a note
+// then assigns no id either (accepted; backfill + inline note still do).
 export class PluginFactory {
   readonly userNotifier: UserNotifier;
   readonly focusTracker: FocusTracker;
@@ -92,7 +93,7 @@ export class PluginFactory {
   /** Fans "colors/stats may have changed" out to public-API subscribers. */
   private readonly apiChangeNotifier: VisitHistoryChangeNotifier;
   /** V3 duration state machine; undefined until a user name is pinned. */
-  private focusDurationTracker?: FocusDurationTracker<string>;
+  private focusDurationTracker?: FocusDurationTracker<TFile>;
   /** Held so inline note can flush a released session; undefined until pinned. */
   private vhV3DurationRecorder?: VhV3DurationRecorder;
   /**
@@ -136,12 +137,10 @@ export class PluginFactory {
     // works even before (or without) a pinned user name.
     this.vhV3DurationStore = new VhV3DurationStore(this.hiddenFileUtil);
 
+    // No focus listener writes doc ids: focusing a note must not modify it.
+    // The only listener — V3 durations — joins LATE, in activateUserScopedRecording;
+    // ids are assigned when a session is recorded (VhV3DurationRecorder).
     this.focusTracker = new FocusTracker(plugin, this.isTrackedProvider);
-    // Doc id listener FIRST: assigning the id is the first thing that happens
-    // when a file gains focus (listeners are dispatched in order). The V3
-    // duration listener joins LATE, in activateUserScopedRecording — its
-    // registration order relative to this one is preserved by the push.
-    this.focusTracker.registerListener(new DocIdFocusListener(this.docIdService));
 
     const visitStatsProvider = new VisitHistoryServiceV3(
       this.docIdService,
@@ -161,8 +160,8 @@ export class PluginFactory {
     // Name-independent: moves ALL users' local history files; the session
     // release reads the recording fields lazily (no-op before the pin).
     const focusSessionReleaser: FocusSessionReleaser = {
-      releaseAndFlush: async (docId) => {
-        this.focusDurationTracker?.releaseDoc(docId);
+      releaseAndFlush: async (file) => {
+        this.focusDurationTracker?.releaseDoc(file);
         await this.vhV3DurationRecorder?.flush();
       },
     };
@@ -210,11 +209,15 @@ export class PluginFactory {
 
     this.vhV3DurationRecorder = new VhV3DurationRecorder(
       this.vhV3DurationStore, this.visitStatsCache, this.deviceNameProvider, userName,
+      // Record-time id assignment: the id is written only for a session that
+      // passed the min-focus gate below — never on mere focus.
+      (file) => this.docIdService.ensureDocId(file),
       () => this.onVisitSessionPersisted(),
     );
     this.focusDurationTracker = new FocusDurationTracker(
       // Min-focus gate: sessions shorter than the configured minimum are dropped
-      // BEFORE the recorder, so a quick in-and-out visit leaves no trace at all.
+      // BEFORE the recorder, so a quick in-and-out visit leaves no trace at all
+      // (no session line, and no doc id written into the note).
       // Threshold read live per record (settings change applies without reload).
       new MinDurationFilteringSink(
         this.vhV3DurationRecorder,
@@ -226,7 +229,7 @@ export class PluginFactory {
       mainWindow,
     );
     this.windowActivityMonitor = new WindowActivityMonitor(this.plugin, this.focusDurationTracker, mainWindow, mainDocument);
-    const durationListener = new VhV3FocusDurationListener(this.docIdService, this.focusDurationTracker);
+    const durationListener = new VhV3FocusDurationListener(this.focusDurationTracker);
     this.focusTracker.registerListener(durationListener);
     // Replay: this listener registers AFTER workspace-layout restore (and
     // after any time the user-name modal was open), so the currently focused
